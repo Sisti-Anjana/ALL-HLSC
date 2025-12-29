@@ -1,0 +1,1385 @@
+# Multi-Tenant Application - Complete Project Structure & Architecture
+## 📋 Table of Contents
+1. [Project Overview](#project-overview)
+2. [Complete Folder Structure](#complete-folder-structure)
+3. [System Architecture](#system-architecture)
+4. [Database Design & ER Diagram](#database-design--er-diagram)
+5. [Technology Stack Details](#technology-stack-details)
+6. [API Endpoints Documentation](#api-endpoints-documentation)
+7. [Authentication Flow](#authentication-flow)
+8. [Data Flow Diagrams](#data-flow-diagrams)
+---
+## Project Overview
+**Project Name:** Multi-Tenant Portfolio Issue Tracker  
+**Type:** SaaS (Software as a Service)  
+**Architecture:** Multi-Tenant with Data Isolation  
+**Frontend:** React.js (TypeScript)  
+**Backend:** Node.js + Express.js  
+**Database:** PostgreSQL (via Supabase)  
+**Deployment:** FREE tier (Vercel + Railway + Supabase)
+---
+## Complete Folder Structure
+```
+multi-tenant-portfolio-tracker/
+│
+├── 📁 client/                                    # Frontend Application (React)
+│   ├── 📁 public/                                # Static files served directly
+│   │   ├── index.html                            # Main HTML template
+│   │   ├── favicon.ico                           # App favicon
+│   │   ├── logo192.png                           # PWA icon (192x192)
+│   │   ├── logo512.png                           # PWA icon (512x512)
+│   │   ├── manifest.json                         # PWA manifest
+│   │   └── robots.txt                            # SEO robots file
+│   │
+│   ├── 📁 src/                                   # Source code
+│   │   ├── 📁 assets/                            # Static assets (images, fonts)
+│   │   │   ├── images/
+│   │   │   │   ├── logo.svg                      # App logo
+│   │   │   │   ├── default-avatar.png            # Default user avatar
+│   │   │   │   └── empty-state.svg               # Empty state illustrations
+│   │   │   └── fonts/
+│   │   │       └── CustomFont.ttf                # Custom fonts (optional)
+│   │   │
+│   │   ├── 📁 components/                        # React Components
+│   │   │   │
+│   │   │   ├── 📁 auth/                          # Authentication components
+│   │   │   │   ├── UserLogin.tsx                 # User login form
+│   │   │   │   ├── AdminLogin.tsx                # Admin login form
+│   │   │   │   ├── ForgotPassword.tsx            # Password reset form
+│   │   │   │   └── PrivateRoute.tsx              # Protected route wrapper
+│   │   │   │
+│   │   │   ├── 📁 common/                        # Reusable UI components
+│   │   │   │   ├── Button.tsx                    # Custom button component
+│   │   │   │   ├── Input.tsx                     # Custom input component
+│   │   │   │   ├── Textarea.tsx                  # Custom textarea
+│   │   │   │   ├── Select.tsx                    # Custom select dropdown
+│   │   │   │   ├── Checkbox.tsx                  # Custom checkbox
+│   │   │   │   ├── Radio.tsx                     # Custom radio button
+│   │   │   │   ├── Modal.tsx                     # Reusable modal component
+│   │   │   │   ├── Table.tsx                     # Reusable table component
+│   │   │   │   ├── Card.tsx                      # Card component
+│   │   │   │   ├── Badge.tsx                     # Badge component
+│   │   │   │   ├── Tooltip.tsx                   # Tooltip component
+│   │   │   │   ├── Spinner.tsx                   # Loading spinner
+│   │   │   │   ├── Toast.tsx                     # Toast notification
+│   │   │   │   ├── Tabs.tsx                      # Tab navigation
+│   │   │   │   ├── Pagination.tsx                # Pagination component
+│   │   │   │   ├── SearchBar.tsx                 # Search input
+│   │   │   │   ├── DatePicker.tsx                # Date picker
+│   │   │   │   ├── EmptyState.tsx                # Empty state UI
+│   │   │   │   └── ErrorBoundary.tsx             # Error boundary
+│   │   │   │
+│   │   │   ├── 📁 layout/                        # Layout components
+│   │   │   │   ├── Navbar.tsx                    # Top navigation bar
+│   │   │   │   ├── Sidebar.tsx                   # Side navigation menu
+│   │   │   │   ├── Footer.tsx                    # Footer component
+│   │   │   │   ├── MainLayout.tsx                # Main layout wrapper
+│   │   │   │   └── AuthLayout.tsx                # Auth pages layout
+│   │   │   │
+│   │   │   ├── 📁 dashboard/                     # Dashboard components
+│   │   │   │   ├── Dashboard.tsx                 # Main dashboard page
+│   │   │   │   ├── StatsCard.tsx                 # Stats card component
+│   │   │   │   ├── QuickActions.tsx              # Quick action buttons
+│   │   │   │   └── RecentActivity.tsx            # Recent activity widget
+│   │   │   │
+│   │   │   ├── 📁 portfolio/                     # Portfolio components
+│   │   │   │   ├── PortfolioList.tsx             # List of portfolios
+│   │   │   │   ├── PortfolioCard.tsx             # Single portfolio card
+│   │   │   │   ├── PortfolioForm.tsx             # Add/Edit portfolio form
+│   │   │   │   ├── PortfolioDetails.tsx          # Portfolio detail view
+│   │   │   │   ├── PortfolioStatusHeatMap.tsx    # Status heat map
+│   │   │   │   ├── PortfolioHeatMap.tsx          # Coverage heat map
+│   │   │   │   ├── PortfolioMonitoringMatrix.tsx # Hour × Portfolio matrix
+│   │   │   │   └── PortfolioHourSessionDrawer.tsx # Session info drawer
+│   │   │   │
+│   │   │   ├── 📁 issues/                        # Issue tracking components
+│   │   │   │   ├── IssueList.tsx                 # Issues table view
+│   │   │   │   ├── IssueForm.tsx                 # Log new issue form
+│   │   │   │   ├── IssueCard.tsx                 # Single issue card
+│   │   │   │   ├── IssueDetailsView.tsx          # Issue detail modal
+│   │   │   │   ├── EditIssueModal.tsx            # Edit issue modal
+│   │   │   │   ├── IssuesTable.tsx               # Advanced table
+│   │   │   │   ├── IssuesByUser.tsx              # Issues grouped by user
+│   │   │   │   └── TicketLoggingTable.tsx        # Ticket logging view
+│   │   │   │
+│   │   │   ├── 📁 analytics/                     # Analytics components
+│   │   │   │   ├── HourlyCoverageChart.tsx       # Coverage chart by hour
+│   │   │   │   ├── IssuesChart.tsx               # Issues statistics chart
+│   │   │   │   ├── CoverageChart.tsx             # General coverage chart
+│   │   │   │   ├── PerformanceAnalytics.tsx      # Performance dashboard
+│   │   │   │   └── TrendChart.tsx                # Trend analysis chart
+│   │   │   │
+│   │   │   ├── 📁 admin/                         # Admin components
+│   │   │   │   ├── AdminPanel.tsx                # Main admin panel
+│   │   │   │   ├── AdminLogWidget.tsx            # Admin activity logs
+│   │   │   │   ├── UserManagement.tsx            # Manage users
+│   │   │   │   ├── PortfolioManagement.tsx       # Manage portfolios
+│   │   │   │   └── SystemSettings.tsx            # System settings
+│   │   │   │
+│   │   │   ├── 📁 super-admin/                   # Super admin components
+│   │   │   │   ├── SuperAdminDashboard.tsx       # Super admin dashboard
+│   │   │   │   ├── TenantList.tsx                # List all tenants
+│   │   │   │   ├── TenantForm.tsx                # Add/Edit tenant
+│   │   │   │   ├── TenantDetails.tsx             # Tenant detail view
+│   │   │   │   ├── GlobalAnalytics.tsx           # Cross-tenant analytics
+│   │   │   │   ├── BillingManagement.tsx         # Billing & subscriptions
+│   │   │   │   └── SystemMonitoring.tsx          # System health monitor
+│   │   │   │
+│   │   │   └── SinglePageComplete.tsx            # Main app container
+│   │   │
+│   │   ├── 📁 hooks/                             # Custom React hooks
+│   │   │   ├── useAuth.ts                        # Authentication hook
+│   │   │   ├── useTenant.ts                      # Tenant context hook
+│   │   │   ├── usePermissions.ts                 # Permissions hook
+│   │   │   ├── useApi.ts                         # API calls hook
+│   │   │   ├── useDebounce.ts                    # Debounce hook
+│   │   │   ├── useLocalStorage.ts                # localStorage hook
+│   │   │   ├── useSessionStorage.ts              # sessionStorage hook
+│   │   │   ├── useWindowSize.ts                  # Window resize hook
+│   │   │   ├── useIntersectionObserver.ts        # Scroll visibility hook
+│   │   │   └── useClickOutside.ts                # Click outside hook
+│   │   │
+│   │   ├── 📁 context/                           # React Context providers
+│   │   │   ├── AuthContext.tsx                   # Auth state context
+│   │   │   ├── TenantContext.tsx                 # Tenant state context
+│   │   │   ├── ThemeContext.tsx                  # Theme (light/dark)
+│   │   │   └── NotificationContext.tsx           # Toast notifications
+│   │   │
+│   │   ├── 📁 services/                          # API and external services
+│   │   │   ├── api.ts                            # Main API client
+│   │   │   ├── supabaseClient.ts                 # Supabase client
+│   │   │   ├── authService.ts                    # Auth API calls
+│   │   │   ├── portfolioService.ts               # Portfolio API calls
+│   │   │   ├── issueService.ts                   # Issue API calls
+│   │   │   ├── userService.ts                    # User API calls
+│   │   │   ├── tenantService.ts                  # Tenant API calls
+│   │   │   └── analyticsService.ts               # Analytics API calls
+│   │   │
+│   │   ├── 📁 utils/                             # Utility functions
+│   │   │   ├── constants.ts                      # App constants
+│   │   │   ├── helpers.ts                        # Helper functions
+│   │   │   ├── validators.ts                     # Form validation
+│   │   │   ├── formatters.ts                     # Data formatters
+│   │   │   ├── dateUtils.ts                      # Date/time utilities
+│   │   │   ├── colorUtils.ts                     # Color generation
+│   │   │   ├── exportUtils.ts                    # Excel/CSV export
+│   │   │   └── permissions.ts                    # Permission checks
+│   │   │
+│   │   ├── 📁 types/                             # TypeScript types
+│   │   │   ├── index.ts                          # Main types export
+│   │   │   ├── auth.types.ts                     # Auth types
+│   │   │   ├── tenant.types.ts                   # Tenant types
+│   │   │   ├── user.types.ts                     # User types
+│   │   │   ├── portfolio.types.ts                # Portfolio types
+│   │   │   ├── issue.types.ts                    # Issue types
+│   │   │   ├── analytics.types.ts                # Analytics types
+│   │   │   └── api.types.ts                      # API response types
+│   │   │
+│   │   ├── 📁 styles/                            # CSS/SCSS styles
+│   │   │   ├── index.css                         # Main styles entry
+│   │   │   ├── globals.css                       # Global styles
+│   │   │   ├── variables.css                     # CSS variables
+│   │   │   ├── tailwind.css                      # Tailwind base
+│   │   │   └── animations.css                    # CSS animations
+│   │   │
+│   │   ├── App.tsx                               # Main App component
+│   │   ├── App.css                               # App styles
+│   │   ├── index.tsx                             # React entry point
+│   │   ├── index.css                             # Main CSS entry
+│   │   ├── setupTests.ts                         # Test setup
+│   │   ├── reportWebVitals.ts                    # Performance monitoring
+│   │   └── react-app-env.d.ts                    # React types
+│   │
+│   ├── 📁 tests/                                 # Test files
+│   │   ├── 📁 unit/                              # Unit tests
+│   │   │   ├── components/
+│   │   │   ├── hooks/
+│   │   │   └── utils/
+│   │   ├── 📁 integration/                       # Integration tests
+│   │   └── 📁 e2e/                               # End-to-end tests
+│   │
+│   ├── .env                                      # Environment variables (local)
+│   ├── .env.example                              # Environment template
+│   ├── .env.production                           # Production env
+│   ├── .gitignore                                # Git ignore rules
+│   ├── package.json                              # Dependencies
+│   ├── package-lock.json                         # Locked dependencies
+│   ├── tsconfig.json                             # TypeScript config
+│   ├── tailwind.config.js                        # Tailwind CSS config
+│   ├── postcss.config.js                         # PostCSS config
+│   ├── craco.config.js                           # Create React App config
+│   └── README.md                                 # Frontend documentation
+│
+├── 📁 server/                                    # Backend Application (Node.js)
+│   ├── 📁 src/                                   # Source code
+│   │   ├── 📁 config/                            # Configuration files
+│   │   │   ├── database.config.ts                # Database connection
+│   │   │   ├── auth.config.ts                    # Auth settings
+│   │   │   ├── cors.config.ts                    # CORS settings
+│   │   │   ├── supabase.config.ts                # Supabase settings
+│   │   │   └── constants.ts                      # Server constants
+│   │   │
+│   │   ├── 📁 routes/                            # API Routes
+│   │   │   ├── index.ts                          # Routes entry point
+│   │   │   ├── auth.routes.ts                    # /api/auth/*
+│   │   │   ├── tenant.routes.ts                  # /api/tenants/*
+│   │   │   ├── user.routes.ts                    # /api/users/*
+│   │   │   ├── portfolio.routes.ts               # /api/portfolios/*
+│   │   │   ├── issue.routes.ts                   # /api/issues/*
+│   │   │   ├── analytics.routes.ts               # /api/analytics/*
+│   │   │   ├── admin.routes.ts                   # /api/admin/*
+│   │   │   └── superadmin.routes.ts              # /api/super-admin/*
+│   │   │
+│   │   ├── 📁 controllers/                       # Request handlers
+│   │   │   ├── auth.controller.ts                # Auth logic
+│   │   │   ├── tenant.controller.ts              # Tenant CRUD
+│   │   │   ├── user.controller.ts                # User CRUD
+│   │   │   ├── portfolio.controller.ts           # Portfolio CRUD
+│   │   │   ├── issue.controller.ts               # Issue CRUD
+│   │   │   ├── analytics.controller.ts           # Analytics logic
+│   │   │   ├── admin.controller.ts               # Admin operations
+│   │   │   └── superadmin.controller.ts          # Super admin ops
+│   │   │
+│   │   ├── 📁 services/                          # Business logic layer
+│   │   │   ├── auth.service.ts                   # Auth business logic
+│   │   │   ├── tenant.service.ts                 # Tenant business logic
+│   │   │   ├── user.service.ts                   # User business logic
+│   │   │   ├── portfolio.service.ts              # Portfolio business logic
+│   │   │   ├── issue.service.ts                  # Issue business logic
+│   │   │   ├── analytics.service.ts              # Analytics calculations
+│   │   │   ├── email.service.ts                  # Email notifications
+│   │   │   └── export.service.ts                 # Excel/CSV export
+│   │   │
+│   │   ├── 📁 middleware/                        # Express middleware
+│   │   │   ├── auth.middleware.ts                # JWT verification
+│   │   │   ├── tenantIsolation.middleware.ts     # ⭐ Tenant data filter
+│   │   │   ├── permission.middleware.ts          # Role-based access
+│   │   │   ├── validation.middleware.ts          # Input validation
+│   │   │   ├── rateLimiter.middleware.ts         # Rate limiting
+│   │   │   ├── errorHandler.middleware.ts        # Error handling
+│   │   │   ├── logger.middleware.ts              # Request logging
+│   │   │   └── cors.middleware.ts                # CORS handling
+│   │   │
+│   │   ├── 📁 models/                            # Database models/types
+│   │   │   ├── index.ts                          # Models export
+│   │   │   ├── tenant.model.ts                   # Tenant model
+│   │   │   ├── user.model.ts                     # User model
+│   │   │   ├── portfolio.model.ts                # Portfolio model
+│   │   │   ├── issue.model.ts                    # Issue model
+│   │   │   ├── reservation.model.ts              # Hour reservation model
+│   │   │   ├── adminLog.model.ts                 # Admin log model
+│   │   │   └── subscription.model.ts             # Subscription model
+│   │   │
+│   │   ├── 📁 utils/                             # Utility functions
+│   │   │   ├── jwt.util.ts                       # JWT helper functions
+│   │   │   ├── password.util.ts                  # Bcrypt hashing
+│   │   │   ├── validation.util.ts                # Data validation
+│   │   │   ├── logger.util.ts                    # Winston logger
+│   │   │   ├── email.util.ts                     # Email helpers
+│   │   │   ├── date.util.ts                      # Date utilities
+│   │   │   └── supabase.util.ts                  # Supabase helpers
+│   │   │
+│   │   ├── 📁 types/                             # TypeScript types
+│   │   │   ├── index.d.ts                        # Global types
+│   │   │   ├── express.d.ts                      # Express extensions
+│   │   │   └── environment.d.ts                  # Env variables types
+│   │   │
+│   │   ├── 📁 validators/                        # Validation schemas
+│   │   │   ├── auth.validator.ts                 # Auth validation
+│   │   │   ├── tenant.validator.ts               # Tenant validation
+│   │   │   ├── user.validator.ts                 # User validation
+│   │   │   ├── portfolio.validator.ts            # Portfolio validation
+│   │   │   └── issue.validator.ts                # Issue validation
+│   │   │
+│   │   ├── app.ts                                # Express app setup
+│   │   └── server.ts                             # Server entry point
+│   │
+│   ├── 📁 tests/                                 # Backend tests
+│   │   ├── 📁 unit/                              # Unit tests
+│   │   ├── 📁 integration/                       # Integration tests
+│   │   └── setup.ts                              # Test setup
+│   │
+│   ├── .env                                      # Environment variables
+│   ├── .env.example                              # Environment template
+│   ├── .gitignore                                # Git ignore rules
+│   ├── package.json                              # Dependencies
+│   ├── package-lock.json                         # Locked dependencies
+│   ├── tsconfig.json                             # TypeScript config
+│   ├── nodemon.json                              # Nodemon config
+│   └── README.md                                 # Backend documentation
+│
+├── 📁 database/                                  # Database related files
+│   ├── 📁 migrations/                            # SQL migrations
+│   │   ├── 001_create_tenants.sql                # Create tenants table
+│   │   ├── 002_create_users.sql                  # Create users table
+│   │   ├── 003_create_portfolios.sql             # Create portfolios table
+│   │   ├── 004_create_issues.sql                 # Create issues table
+│   │   ├── 005_create_hour_reservations.sql      # Create reservations
+│   │   ├── 006_create_admin_logs.sql             # Create admin logs
+│   │   ├── 007_create_monitored_personnel.sql    # Create monitored users
+│   │   ├── 008_setup_rls_policies.sql            # Row Level Security
+│   │   ├── 009_create_indexes.sql                # Database indexes
+│   │   └── 010_seed_data.sql                     # Initial seed data
+│   │
+│   ├── 📁 seeds/                                 # Seed data
+│   │   ├── dev_tenants.sql                       # Dev tenant data
+│   │   ├── dev_users.sql                         # Dev user data
+│   │   └── dev_portfolios.sql                    # Dev portfolio data
+│   │
+│   ├── schema.sql                                # Complete schema
+│   ├── schema.md                                 # Schema documentation
+│   └── ER_DIAGRAM.md                             # ER diagram (text)
+│
+├── 📁 docs/                                      # Documentation
+│   ├── API.md                                    # API documentation
+│   ├── SETUP.md                                  # Setup guide
+│   ├── DEPLOYMENT.md                             # Deployment guide
+│   ├── CONTRIBUTING.md                           # Contribution guide
+│   ├── SECURITY.md                               # Security guidelines
+│   └── CHANGELOG.md                              # Version history
+│
+├── 📁 scripts/                                   # Utility scripts
+│   ├── deploy.sh                                 # Deployment script
+│   ├── migrate.sh                                # Database migration
+│   ├── seed.sh                                   # Seed database
+│   ├── backup.sh                                 # Database backup
+│   └── setup.sh                                  # Initial setup
+│
+├── 📁 .github/                                   # GitHub specific
+│   ├── 📁 workflows/                             # GitHub Actions
+│   │   ├── ci.yml                                # Continuous integration
+│   │   ├── cd.yml                                # Continuous deployment
+│   │   └── tests.yml                             # Run tests
+│   └── ISSUE_TEMPLATE.md                         # Issue template
+│
+├── .gitignore                                    # Root git ignore
+├── .editorconfig                                 # Editor config
+├── .prettierrc                                   # Prettier config
+├── .eslintrc.js                                  # ESLint config
+├── docker-compose.yml                            # Docker setup (optional)
+├── LICENSE                                       # License file
+└── README.md                                     # Main project README
+```
+---
+## System Architecture
+### High-Level Architecture Diagram
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                         MULTI-TENANT ARCHITECTURE                       │
+└────────────────────────────────────────────────────────────────────────┘
+                              ┌─────────────┐
+                              │   USERS     │
+                              │ (Browsers)  │
+                              └──────┬──────┘
+                                     │
+                                     │ HTTPS
+                                     ▼
+        ┌────────────────────────────────────────────────────┐
+        │         CDN / Load Balancer (Vercel)               │
+        │              - SSL Termination                     │
+        │              - Static Asset Caching                │
+        │              - DDoS Protection                     │
+        └────────────┬───────────────────────────────────────┘
+                     │
+                     │
+     ┌───────────────┴──────────────┐
+     │                               │
+     ▼                               ▼
+┌─────────────────┐        ┌────────────────────┐
+│   FRONTEND      │        │   BACKEND API      │
+│   React.js      │ ◄────► │   Node.js/Express  │
+│   (Vercel)      │  API   │   (Railway)        │
+│                 │ Calls  │                    │
+│ ┌─────────────┐ │        │ ┌────────────────┐ │
+│ │ Components  │ │        │ │ Controllers    │ │
+│ │ - Dashboard │ │        │ │ - Auth         │ │
+│ │ - Portfolios│ │        │ │ - Portfolios   │ │
+│ │ - Issues    │ │        │ │ - Issues       │ │
+│ │ - Admin     │ │        │ │ - Analytics    │ │
+│ └─────────────┘ │        │ └────────────────┘ │
+│                 │        │                    │
+│ ┌─────────────┐ │        │ ┌────────────────┐ │
+│ │ State Mgmt  │ │        │ │ Middleware     │ │
+│ │ - Auth      │ │        │ │ - Auth         │ │
+│ │ - Tenant    │ │        │ │ - Tenant ISO   │ │⭐
+│ └─────────────┘ │        │ │ - Validation   │ │
+└─────────────────┘        │ │ - Rate Limit   │ │
+                           │ └────────────────┘ │
+                           │                    │
+                           │ ┌────────────────┐ │
+                           │ │ Services       │ │
+                           │ │ - Business     │ │
+                           │ │   Logic        │ │
+                           │ └────────────────┘ │
+                           └──────────┬─────────┘
+                                      │
+                                      │ SQL Queries
+                                      │ (with tenant_id)
+                                      ▼
+                        ┌──────────────────────────┐
+                        │   SUPABASE (PostgreSQL)  │
+                        │                          │
+                        │  ┌────────────────────┐  │
+                        │  │ TENANTS TABLE      │  │
+                        │  │ - tenant_id (PK)   │  │
+                        │  │ - name             │  │
+                        │  │ - subdomain        │  │
+                        │  │ - status           │  │
+                        │  └──────────┬─────────┘  │
+                        │             │            │
+                        │     ┌───────┴────────┐   │
+                        │     │                │   │
+                        │     ▼                ▼   │
+                        │  ┌──────┐       ┌──────┐│
+                        │  │USERS │       │PORT- ││
+                        │  │      │       │FOLIOS││
+                        │  │tenant│       │tenant││
+                        │  │_id   │       │_id   ││
+                        │  └──┬───┘       └──┬───┘│
+                        │     │              │    │
+                        │     └──────┬───────┘    │
+                        │            │            │
+                        │            ▼            │
+                        │        ┌───────┐        │
+                        │        │ISSUES │        │
+                        │        │tenant │        │⭐
+                        │        │_id    │        │
+                        │        └───────┘        │
+                        │                         │
+                        │  ✅ Row Level Security  │
+                        │  ✅ Automatic Backups   │
+                        │  ✅ Real-time Sync      │
+                        └─────────────────────────┘
+⭐ = tenant_id column (ensures data isolation)
+┌─────────────────────────────────────────────────────────────┐
+│               KEY SECURITY FEATURES                         │
+├─────────────────────────────────────────────────────────────┤
+│ 1. JWT Authentication (stateless tokens)                    │
+│ 2. Tenant Isolation Middleware (auto-filters by tenant_id) │
+│ 3. Row Level Security (database-level policies)            │
+│ 4. HTTPS/SSL everywhere (encrypted communication)          │
+│ 5. Rate Limiting (prevent abuse)                           │
+│ 6. Input Validation (prevent SQL injection, XSS)           │
+│ 7. CORS (restrict origins)                                 │
+└─────────────────────────────────────────────────────────────┘
+```
+---
+### Request Flow (Example: Logging an Issue)
+```
+┌────────────────────────────────────────────────────────────────────┐
+│                 REQUEST FLOW: Log New Issue                        │
+└────────────────────────────────────────────────────────────────────┘
+USER (Browser)
+    │
+    │ 1. Clicks "Log Issue" button
+    │
+    ├──► FRONTEND (React)
+    │         │
+    │         │ 2. Opens IssueForm component
+    │         │ 3. User fills form:
+    │         │    - Portfolio: "Portfolio A"
+    │         │    - Site: "Site 1"
+    │         │    - Hour: 10
+    │         │    - Description: "Inverter down"
+    │         │    - Monitored By: "John Doe"
+    │         │
+    │         │ 4. User clicks "Submit"
+    │         │
+    │         │ 5. Frontend calls API:
+    │         │    POST /api/issues
+    │         │    Headers: {
+    │         │      Authorization: "Bearer <JWT_TOKEN>"
+    │         │    }
+    │         │    Body: {
+    │         │      portfolio_id: "uuid-123",
+    │         │      site_name: "Site 1",
+    │         │      issue_hour: 10,
+    │         │      description: "Inverter down",
+    │         │      monitored_by: "John Doe"
+    │         │    }
+    │         │
+    │         ▼
+    BACKEND (Node.js/Express)
+         │
+         │ 6. Middleware Chain:
+         │    a) auth.middleware.ts
+         │       ↓ Verify JWT token
+         │       ↓ Extract user_id & tenant_id from token
+         │       ↓ Attach to req: req.user, req.tenant_id
+         │    b) tenantIsolation.middleware.ts ⭐
+         │       ↓ Verify user belongs to tenant
+         │       ↓ Ensure portfolio_id belongs to tenant
+         │    c) validation.middleware.ts
+         │       ↓ Validate request body
+         │       ↓ Check required fields
+         │       ↓ Validate data types
+         │
+         │ 7. Routes to: issue.controller.ts
+         │    ↓ createIssue() function
+         │
+         │ 8. Calls: issue.service.ts
+         │    ↓ Business logic:
+         │    ↓ - Check for duplicate (same portfolio, same hour, same day)
+         │    ↓ - Verify portfolio exists
+         │    ↓ - Auto-add monitored_by to personnel list if new
+         │
+         │ 9. Prepares SQL query:
+         │    INSERT INTO issues (
+         │      tenant_id,           ← ⭐ Auto-added from req.tenant_id
+         │      portfolio_id,
+         │      site_name,
+         │      issue_hour,
+         │      description,
+         │      monitored_by,
+         │      created_at
+         │    ) VALUES (
+         │      'tenant-abc',        ← ⭐ User's tenant
+         │      'uuid-123',
+         │      'Site 1',
+         │      10,
+         │      'Inverter down',
+         │      'John Doe',
+         │      NOW()
+         │    )
+         │
+         ▼
+    DATABASE (Supabase/PostgreSQL)
+         │
+         │ 10. Row Level Security (RLS) Policy:
+         │     ↓ Check: Does current_user have access to tenant-abc?
+         │     ↓ If YES: Allow INSERT
+         │     ↓ If NO: Reject with error
+         │
+         │ 11. Insert data into issues table
+         │
+         │ 12. Return inserted row with issue_id
+         │
+         ▼
+    BACKEND (continues)
+         │
+         │ 13. issue.service.ts receives inserted data
+         │
+         │ 14. Log admin activity:
+         │     ↓ INSERT INTO admin_logs (
+         │     ↓   tenant_id: 'tenant-abc',
+         │     ↓   action_type: 'issue_logged',
+         │     ↓   action_description: 'Issue logged for Portfolio A'
+         │     ↓ )
+         │
+         │ 15. Release portfolio lock:
+         │     ↓ DELETE FROM hour_reservations
+         │     ↓ WHERE portfolio_id = 'uuid-123'
+         │     ↓   AND tenant_id = 'tenant-abc'
+         │     ↓   AND issue_hour = 10
+         │
+         │ 16. issue.controller.ts sends response:
+         │     ↓ HTTP 201 Created
+         │     ↓ Body: {
+         │     ↓   success: true,
+         │     ↓   data: {
+         │     ↓     issue_id: "issue-456",
+         │     ↓     message: "Issue logged successfully"
+         │     ↓   }
+         │     ↓ }
+         │
+         ▼
+    FRONTEND (React)
+         │
+         │ 17. Receives success response
+         │
+         │ 18. Shows success notification:
+         │     ↓ Toast: "✅ Issue logged successfully!"
+         │
+         │ 19. Closes IssueForm modal
+         │
+         │ 20. Refreshes data:
+         │     ↓ Fetch updated issues list
+         │     ↓ Update dashboard stats
+         │     ↓ Update heat maps
+         │
+         ▼
+    USER (Browser)
+         │
+         │ 21. Sees updated UI with new issue
+         │
+         ✅ COMPLETE
+┌─────────────────────────────────────────────────────────────┐
+│                 SECURITY CHECKPOINTS                        │
+├─────────────────────────────────────────────────────────────┤
+│ ✅ JWT token verified (step 6a)                            │
+│ ✅ User belongs to tenant verified (step 6b)               │
+│ ✅ Portfolio belongs to tenant verified (step 6b)          │
+│ ✅ Input validated (step 6c)                               │
+│ ✅ Database RLS policy enforced (step 10)                  │
+│ ✅ tenant_id auto-added to query (step 9)                  │
+│ ✅ Cross-tenant access IMPOSSIBLE                          │
+└─────────────────────────────────────────────────────────────┘
+```
+---
+## Database Design & ER Diagram
+### Complete Database Schema
+```sql
+-- ============================================
+-- MULTI-TENANT DATABASE SCHEMA
+-- ============================================
+-- ============================================
+-- 1. TENANTS TABLE (Main tenant records)
+-- ============================================
+CREATE TABLE tenants (
+    tenant_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name            VARCHAR(255) NOT NULL UNIQUE,
+    subdomain       VARCHAR(100) NOT NULL UNIQUE,
+    logo_url        TEXT,
+    contact_email   VARCHAR(255) NOT NULL,
+    status          VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended')),
+    subscription_plan VARCHAR(50) DEFAULT 'basic' CHECK (subscription_plan IN ('basic', 'pro', 'enterprise')),
+    settings        JSONB DEFAULT '{}',
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX idx_tenants_subdomain ON tenants(subdomain);
+CREATE INDEX idx_tenants_status ON tenants(status);
+-- ============================================
+-- 2. USERS TABLE (Authentication accounts)
+-- ============================================
+CREATE TABLE users (
+    user_id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id       UUID NOT NULL REFERENCES tenants(tenant_id) ON DELETE CASCADE,
+    username        VARCHAR(100) NOT NULL,
+    password_hash   TEXT NOT NULL,
+    full_name       VARCHAR(255),
+    email           VARCHAR(255),
+    role            VARCHAR(20) DEFAULT 'user' CHECK (role IN ('super_admin', 'tenant_admin', 'user')),
+    is_active       BOOLEAN DEFAULT TRUE,
+    last_login      TIMESTAMP WITH TIME ZONE,
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(tenant_id, username)
+);
+CREATE INDEX idx_users_tenant_id ON users(tenant_id);
+CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_role ON users(role);
+-- ============================================
+-- 3. PORTFOLIOS TABLE (Portfolio/Project records)
+-- ============================================
+CREATE TABLE portfolios (
+    portfolio_id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id                UUID NOT NULL REFERENCES tenants(tenant_id) ON DELETE CASCADE,
+    name                     VARCHAR(255) NOT NULL,
+    subtitle                 VARCHAR(100),
+    site_range               VARCHAR(100),
+    all_sites_checked        VARCHAR(10) CHECK (all_sites_checked IN ('Yes', 'No', 'Pending')),
+    all_sites_checked_hour   INTEGER CHECK (all_sites_checked_hour >= 0 AND all_sites_checked_hour <= 23),
+    all_sites_checked_date   DATE,
+    all_sites_checked_by     VARCHAR(255),
+    sites_checked_details    TEXT,
+    is_locked                BOOLEAN DEFAULT FALSE,
+    locked_by                VARCHAR(255),
+    locked_at                TIMESTAMP WITH TIME ZONE,
+    created_at               TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at               TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(tenant_id, name)
+);
+CREATE INDEX idx_portfolios_tenant_id ON portfolios(tenant_id);
+CREATE INDEX idx_portfolios_name ON portfolios(name);
+CREATE INDEX idx_portfolios_status ON portfolios(all_sites_checked);
+-- ============================================
+-- 4. ISSUES TABLE (Issue/Ticket records)
+-- ============================================
+CREATE TABLE issues (
+    issue_id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id       UUID NOT NULL REFERENCES tenants(tenant_id) ON DELETE CASCADE,
+    portfolio_id    UUID NOT NULL REFERENCES portfolios(portfolio_id) ON DELETE CASCADE,
+    site_name       VARCHAR(255),
+    issue_hour      INTEGER NOT NULL CHECK (issue_hour >= 0 AND issue_hour <= 23),
+    description     TEXT NOT NULL,
+    issue_type      VARCHAR(100),
+    severity        VARCHAR(20) CHECK (severity IN ('low', 'medium', 'high', 'critical')),
+    status          VARCHAR(20) DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved', 'closed')),
+    monitored_by    VARCHAR(255),
+    missed_by       TEXT[],
+    attachments     JSONB DEFAULT '[]',
+    notes           TEXT,
+    resolved_at     TIMESTAMP WITH TIME ZONE,
+    resolved_by     VARCHAR(255),
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_by      UUID REFERENCES users(user_id)
+);
+CREATE INDEX idx_issues_tenant_id ON issues(tenant_id);
+CREATE INDEX idx_issues_portfolio_id ON issues(portfolio_id);
+CREATE INDEX idx_issues_created_at ON issues(created_at);
+CREATE INDEX idx_issues_issue_hour ON issues(issue_hour);
+CREATE INDEX idx_issues_status ON issues(status);
+CREATE INDEX idx_issues_monitored_by ON issues(monitored_by);
+-- ============================================
+-- 5. HOUR_RESERVATIONS TABLE (Portfolio locking)
+-- ============================================
+CREATE TABLE hour_reservations (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id       UUID NOT NULL REFERENCES tenants(tenant_id) ON DELETE CASCADE,
+    portfolio_id    UUID NOT NULL REFERENCES portfolios(portfolio_id) ON DELETE CASCADE,
+    issue_hour      INTEGER NOT NULL CHECK (issue_hour >= 0 AND issue_hour <= 23),
+    monitored_by    VARCHAR(255) NOT NULL,
+    session_id      VARCHAR(255) NOT NULL,
+    reserved_at     TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    expires_at      TIMESTAMP WITH TIME ZONE NOT NULL,
+    UNIQUE(tenant_id, portfolio_id, issue_hour)
+);
+CREATE INDEX idx_reservations_tenant_id ON hour_reservations(tenant_id);
+CREATE INDEX idx_reservations_portfolio_id ON hour_reservations(portfolio_id);
+CREATE INDEX idx_reservations_expires_at ON hour_reservations(expires_at);
+-- ============================================
+-- 6. ADMIN_LOGS TABLE (Audit trail)
+-- ============================================
+CREATE TABLE admin_logs (
+    log_id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id               UUID NOT NULL REFERENCES tenants(tenant_id) ON DELETE CASCADE,
+    admin_name              VARCHAR(255) NOT NULL,
+    action_type             VARCHAR(100) NOT NULL,
+    action_description      TEXT NOT NULL,
+    related_portfolio_id    UUID REFERENCES portfolios(portfolio_id) ON DELETE SET NULL,
+    related_user_id         UUID REFERENCES users(user_id) ON DELETE SET NULL,
+    metadata                JSONB DEFAULT '{}',
+    created_at              TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX idx_admin_logs_tenant_id ON admin_logs(tenant_id);
+CREATE INDEX idx_admin_logs_created_at ON admin_logs(created_at);
+CREATE INDEX idx_admin_logs_action_type ON admin_logs(action_type);
+-- ============================================
+-- 7. MONITORED_PERSONNEL TABLE (Dropdown list)
+-- ============================================
+CREATE TABLE monitored_personnel (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id       UUID NOT NULL REFERENCES tenants(tenant_id) ON DELETE CASCADE,
+    name            VARCHAR(255) NOT NULL,
+    role            VARCHAR(50) DEFAULT 'monitor',
+    is_active       BOOLEAN DEFAULT TRUE,
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(tenant_id, name)
+);
+CREATE INDEX idx_monitored_personnel_tenant_id ON monitored_personnel(tenant_id);
+CREATE INDEX idx_monitored_personnel_name ON monitored_personnel(name);
+-- ============================================
+-- 8. SUBSCRIPTIONS TABLE (Billing)
+-- ============================================
+CREATE TABLE subscriptions (
+    subscription_id     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id           UUID NOT NULL REFERENCES tenants(tenant_id) ON DELETE CASCADE,
+    plan_name           VARCHAR(50) NOT NULL,
+    status              VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'cancelled', 'expired', 'trial')),
+    start_date          DATE NOT NULL,
+    end_date            DATE,
+    billing_cycle       VARCHAR(20) CHECK (billing_cycle IN ('monthly', 'yearly')),
+    amount              DECIMAL(10, 2),
+    currency            VARCHAR(3) DEFAULT 'USD',
+    next_billing_date   DATE,
+    created_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX idx_subscriptions_tenant_id ON subscriptions(tenant_id);
+CREATE INDEX idx_subscriptions_status ON subscriptions(status);
+-- ============================================
+-- ROW LEVEL SECURITY (RLS) POLICIES
+-- ============================================
+-- Enable RLS on all tables
+ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE portfolios ENABLE ROW LEVEL SECURITY;
+ALTER TABLE issues ENABLE ROW LEVEL SECURITY;
+ALTER TABLE hour_reservations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admin_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE monitored_personnel ENABLE ROW LEVEL SECURITY;
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+-- Policy: Users can only access their own tenant's data
+CREATE POLICY tenant_isolation_policy_users
+ON users
+FOR ALL
+USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
+CREATE POLICY tenant_isolation_policy_portfolios
+ON portfolios
+FOR ALL
+USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
+CREATE POLICY tenant_isolation_policy_issues
+ON issues
+FOR ALL
+USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
+CREATE POLICY tenant_isolation_policy_reservations
+ON hour_reservations
+FOR ALL
+USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
+CREATE POLICY tenant_isolation_policy_admin_logs
+ON admin_logs
+FOR ALL
+USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
+CREATE POLICY tenant_isolation_policy_monitored_personnel
+ON monitored_personnel
+FOR ALL
+USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
+CREATE POLICY tenant_isolation_policy_subscriptions
+ON subscriptions
+FOR ALL
+USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
+-- Super admin bypass (can access all tenants)
+CREATE POLICY super_admin_access_tenants
+ON tenants
+FOR ALL
+USING (current_setting('app.user_role') = 'super_admin');
+-- (Repeat for all tables as needed)
+```
+---
+### Entity Relationship Diagram (ER Diagram)
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                     DATABASE ER DIAGRAM                              │
+└──────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────┐
+│       TENANTS           │  ◄─────────────────┐
+│─────────────────────────│                     │
+│ 🔑 tenant_id (PK)       │                     │
+│    name                 │                     │
+│    subdomain            │                     │
+│    logo_url             │                     │
+│    contact_email        │                     │
+│    status               │                     │
+│    subscription_plan    │                     │
+│    settings (JSON)      │                     │
+│    created_at           │                     │
+└───────────┬─────────────┘                     │
+            │                                   │
+            │ 1                                 │
+            │                                   │
+            │ *                                 │
+            ├────────────────────────────────┐  │
+            │                                │  │
+            ▼                                ▼  │
+┌─────────────────────────┐      ┌──────────────────────┐
+│        USERS            │      │    SUBSCRIPTIONS     │
+│─────────────────────────│      │──────────────────────│
+│ 🔑 user_id (PK)         │      │ 🔑 subscription_id   │
+│ 🔗 tenant_id (FK) ─────────┐   │ 🔗 tenant_id (FK) ───┘
+│    username             │  │   │    plan_name         │
+│    password_hash        │  │   │    status            │
+│    full_name            │  │   │    start_date        │
+│    email                │  │   │    end_date          │
+│    role                 │  │   │    billing_cycle     │
+│    is_active            │  │   │    amount            │
+│    last_login           │  │   │    currency          │
+│    created_at           │  │   └──────────────────────┘
+└─────────────────────────┘  │
+            │                │
+            │ 1              │
+            │                │
+            │ *              │
+            ▼                │
+┌─────────────────────────┐  │
+│     ADMIN_LOGS          │  │
+│─────────────────────────│  │
+│ 🔑 log_id (PK)          │  │
+│ 🔗 tenant_id (FK) ─────────┤
+│ 🔗 related_user_id (FK) ┼──┘
+│    admin_name           │
+│    action_type          │
+│    action_description   │
+│    related_portfolio_id │
+│    metadata (JSON)      │
+│    created_at           │
+└─────────────────────────┘
+            ┌─────────────────────────┐
+            │      PORTFOLIOS         │
+            │─────────────────────────│
+            │ 🔑 portfolio_id (PK)    │
+            │ 🔗 tenant_id (FK) ──────┼─────┐
+            │    name                 │     │
+            │    subtitle             │     │
+            │    site_range           │     │
+            │    all_sites_checked    │     │
+            │    all_sites_checked_hr │     │
+            │    all_sites_checked_dt │     │
+            │    all_sites_checked_by │     │
+            │    sites_checked_details│     │
+            │    is_locked            │     │
+            │    locked_by            │     │
+            │    locked_at            │     │
+            │    created_at           │     │
+            └───────────┬─────────────┘     │
+                        │                   │
+                        │ 1                 │
+                        │                   │
+                        │ *                 │
+            ┌───────────┴──────────┐        │
+            │                      │        │
+            ▼                      ▼        │
+┌─────────────────────────┐   ┌────────────────────────┐
+│       ISSUES            │   │  HOUR_RESERVATIONS     │
+│─────────────────────────│   │────────────────────────│
+│ 🔑 issue_id (PK)        │   │ 🔑 id (PK)             │
+│ 🔗 tenant_id (FK) ──────┼───┼─🔗 tenant_id (FK) ─────┘
+│ 🔗 portfolio_id (FK) ───┘   │ 🔗 portfolio_id (FK) ──┘
+│ 🔗 created_by (FK)      │   │    issue_hour          │
+│    site_name            │   │    monitored_by        │
+│    issue_hour           │   │    session_id          │
+│    description          │   │    reserved_at         │
+│    issue_type           │   │    expires_at          │
+│    severity             │   └────────────────────────┘
+│    status               │
+│    monitored_by         │   ┌────────────────────────┐
+│    missed_by (array)    │   │  MONITORED_PERSONNEL   │
+│    attachments (JSON)   │   │────────────────────────│
+│    notes                │   │ 🔑 id (PK)             │
+│    resolved_at          │   │ 🔗 tenant_id (FK) ─────┤
+│    resolved_by          │   │    name                │
+│    created_at           │   │    role                │
+│    updated_at           │   │    is_active           │
+└─────────────────────────┘   │    created_at          │
+                              └────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                    RELATIONSHIP SUMMARY                       │
+├──────────────────────────────────────────────────────────────┤
+│ 1. TENANTS ──<< 1:N >>── USERS                              │
+│    One tenant has many users                                 │
+│                                                              │
+│ 2. TENANTS ──<< 1:N >>── PORTFOLIOS                         │
+│    One tenant has many portfolios                            │
+│                                                              │
+│ 3. TENANTS ──<< 1:N >>── SUBSCRIPTIONS                      │
+│    One tenant has many subscriptions                         │
+│                                                              │
+│ 4. PORTFOLIOS ──<< 1:N >>── ISSUES                          │
+│    One portfolio has many issues                             │
+│                                                              │
+│ 5. PORTFOLIOS ──<< 1:N >>── HOUR_RESERVATIONS               │
+│    One portfolio has many hour reservations (locks)          │
+│                                                              │
+│ 6. USERS ──<< 1:N >>── ISSUES                               │
+│    One user creates many issues                              │
+│                                                              │
+│ 7. TENANTS ──<< 1:N >>── ADMIN_LOGS                         │
+│    One tenant has many admin logs                            │
+│                                                              │
+│ 8. TENANTS ──<< 1:N >>── MONITORED_PERSONNEL                │
+│    One tenant has many monitored personnel                   │
+└──────────────────────────────────────────────────────────────┘
+🔑 = Primary Key (PK)
+🔗 = Foreign Key (FK)
+```
+---
+### Data Flow & Tenant Isolation
+```
+┌──────────────────────────────────────────────────────────────────┐
+│              HOW TENANT ISOLATION WORKS                          │
+└──────────────────────────────────────────────────────────────────┘
+Example: User from Tenant A tries to access data
+Step 1: USER LOGS IN
+───────────────────
+User: john@clientA.com
+Password: ********
+    ↓
+Backend verifies credentials
+    ↓
+Finds user record:
+  - user_id: user-123
+  - tenant_id: tenant-A
+  - role: user
+    ↓
+Generate JWT token with payload:
+{
+  "user_id": "user-123",
+  "tenant_id": "tenant-A",    ← ⭐ KEY FIELD
+  "role": "user",
+  "exp": 1234567890
+}
+    ↓
+Return token to frontend
+Step 2: USER MAKES API REQUEST
+────────────────────────────────
+Frontend: GET /api/portfolios
+Headers: {
+  Authorization: "Bearer <JWT_TOKEN>"
+}
+    ↓
+Backend receives request
+    ↓
+Auth Middleware extracts JWT:
+  - Verifies signature ✅
+  - Decodes payload
+  - Extracts tenant_id = "tenant-A"
+  - Attaches to request: req.tenant_id = "tenant-A"
+    ↓
+Tenant Isolation Middleware:
+  - Ensures req.tenant_id exists
+  - Will auto-filter all queries
+    ↓
+Route handler: portfolio.controller.ts
+  - Calls portfolio.service.ts
+    ↓
+Service builds SQL query:
+  SELECT * FROM portfolios
+  WHERE tenant_id = 'tenant-A'    ← ⭐ AUTO-ADDED
+  ORDER BY name
+    ↓
+Database executes query
+    ↓
+Returns ONLY portfolios for Tenant A
+    ↓
+Response sent to frontend
+Step 3: ATTEMPT TO ACCESS OTHER TENANT'S DATA (Attack)
+────────────────────────────────────────────────────────
+Malicious request: GET /api/portfolios?tenant_id=tenant-B
+Headers: {
+  Authorization: "Bearer <JWT_TOKEN>"  ← Token has tenant-A
+}
+    ↓
+Backend receives request
+    ↓
+Auth Middleware:
+  - Extracts tenant_id from TOKEN = "tenant-A"
+  - Ignores URL parameter (not trusted!)
+  - Sets req.tenant_id = "tenant-A"
+    ↓
+Service builds query:
+  SELECT * FROM portfolios
+  WHERE tenant_id = 'tenant-A'    ← Uses token's tenant_id, NOT URL param
+  ORDER BY name
+    ↓
+Still returns ONLY Tenant A's portfolios
+    ↓
+Attack prevented! ✅
+Step 4: DATABASE-LEVEL PROTECTION (RLS)
+─────────────────────────────────────────
+Even if backend is compromised:
+    ↓
+Backend (compromised) tries:
+  SELECT * FROM portfolios
+  -- (no WHERE clause!)
+    ↓
+PostgreSQL Row Level Security (RLS) kicks in:
+  - Checks current_setting('app.current_tenant_id')
+  - If not set or doesn't match: REJECT query
+  - Only returns rows where tenant_id matches session tenant
+    ↓
+Database-level protection ✅
+┌──────────────────────────────────────────────────────────────┐
+│           MULTI-LAYER SECURITY GUARANTEES                    │
+├──────────────────────────────────────────────────────────────┤
+│ Layer 1: JWT Token contains tenant_id                       │
+│ Layer 2: Backend middleware enforces tenant_id              │
+│ Layer 3: All queries auto-filter by tenant_id               │
+│ Layer 4: Database RLS policies enforce at DB level          │
+│ Layer 5: No cross-tenant foreign keys possible              │
+│                                                              │
+│ Result: 100% DATA ISOLATION GUARANTEED                      │
+└──────────────────────────────────────────────────────────────┘
+```
+---
+## Technology Stack Details
+### Frontend Stack
+| Technology | Version | Purpose | Documentation |
+|------------|---------|---------|---------------|
+| **React** | 18.x | UI Library | https://react.dev |
+| **TypeScript** | 5.x | Type Safety | https://typescriptlang.org |
+| **React Router** | 6.x | Client-side Routing | https://reactrouter.com |
+| **Tailwind CSS** | 3.x | Styling | https://tailwindcss.com |
+| **Axios** | 1.x | HTTP Client | https://axios-http.com |
+| **React Query** | 4.x | Data Fetching & Caching | https://tanstack.com/query |
+| **Zustand** | 4.x | State Management | https://zustand-demo.pmnd.rs |
+| **React Hook Form** | 7.x | Form Management | https://react-hook-form.com |
+| **Chart.js** | 4.x | Charts & Graphs | https://www.chartjs.org |
+| **date-fns** | 2.x | Date Utilities | https://date-fns.org |
+| **React Hot Toast** | 2.x | Notifications | https://react-hot-toast.com |
+### Backend Stack
+| Technology | Version | Purpose | Documentation |
+|------------|---------|---------|---------------|
+| **Node.js** | 18.x | Runtime | https://nodejs.org |
+| **Express** | 4.x | Web Framework | https://expressjs.com |
+| **TypeScript** | 5.x | Type Safety | https://typescriptlang.org |
+| **Supabase Client** | 2.x | Database Client | https://supabase.com/docs |
+| **bcrypt** | 5.x | Password Hashing | https://www.npmjs.com/package/bcrypt |
+| **jsonwebtoken** | 9.x | JWT Auth | https://jwt.io |
+| **express-validator** | 7.x | Input Validation | https://express-validator.github.io |
+| **express-rate-limit** | 6.x | Rate Limiting | https://www.npmjs.com/package/express-rate-limit |
+| **winston** | 3.x | Logging | https://github.com/winstonjs/winston |
+| **cors** | 2.x | CORS Handling | https://www.npmjs.com/package/cors |
+| **dotenv** | 16.x | Environment Variables | https://www.npmjs.com/package/dotenv |
+| **nodemon** | 3.x | Dev Server | https://nodemon.io |
+### Database
+| Technology | Purpose | Documentation |
+|------------|---------|---------------|
+| **PostgreSQL** | Relational Database | https://postgresql.org |
+| **Supabase** | Database Platform | https://supabase.com/docs |
+### DevOps & Deployment
+| Tool | Purpose | Free Tier | Documentation |
+|------|---------|-----------|---------------|
+| **Vercel** | Frontend Hosting | ✅ Yes | https://vercel.com/docs |
+| **Railway** | Backend Hosting | ✅ $5 credit/mo | https://docs.railway.app |
+| **Supabase** | Database Hosting | ✅ 500MB | https://supabase.com/docs |
+| **GitHub** | Version Control | ✅ Unlimited | https://docs.github.com |
+| **GitHub Actions** | CI/CD | ✅ 2000 min/mo | https://docs.github.com/actions |
+---
+## API Endpoints Documentation
+### Authentication Endpoints
+```
+POST   /api/auth/register           # Register new user
+POST   /api/auth/login              # User login
+POST   /api/auth/logout             # User logout
+POST   /api/auth/refresh            # Refresh JWT token
+POST   /api/auth/forgot-password    # Request password reset
+POST   /api/auth/reset-password     # Reset password
+GET    /api/auth/me                 # Get current user info
+```
+### Tenant Endpoints (Super Admin Only)
+```
+GET    /api/tenants                 # List all tenants
+POST   /api/tenants                 # Create new tenant
+GET    /api/tenants/:id             # Get tenant details
+PUT    /api/tenants/:id             # Update tenant
+DELETE /api/tenants/:id             # Delete tenant
+GET    /api/tenants/:id/stats       # Get tenant statistics
+```
+### User Endpoints
+```
+GET    /api/users                   # List users (filtered by tenant)
+POST   /api/users                   # Create new user
+GET    /api/users/:id               # Get user details
+PUT    /api/users/:id               # Update user
+DELETE /api/users/:id               # Delete user
+PUT    /api/users/:id/activate      # Activate user
+PUT    /api/users/:id/deactivate    # Deactivate user
+```
+### Portfolio Endpoints
+```
+GET    /api/portfolios              # List portfolios (filtered by tenant)
+POST   /api/portfolios              # Create new portfolio
+GET    /api/portfolios/:id          # Get portfolio details
+PUT    /api/portfolios/:id          # Update portfolio
+DELETE /api/portfolios/:id          # Delete portfolio
+PUT    /api/portfolios/:id/status   # Update "all sites checked" status
+POST   /api/portfolios/:id/lock     # Lock portfolio (reserve hour)
+DELETE /api/portfolios/:id/unlock   # Unlock portfolio
+```
+### Issue Endpoints
+```
+GET    /api/issues                  # List issues (filtered by tenant)
+POST   /api/issues                  # Create new issue
+GET    /api/issues/:id              # Get issue details
+PUT    /api/issues/:id              # Update issue
+DELETE /api/issues/:id              # Delete issue
+PUT    /api/issues/:id/resolve      # Mark issue as resolved
+GET    /api/issues/export           # Export issues to Excel/CSV
+```
+### Analytics Endpoints
+```
+GET    /api/analytics/dashboard     # Dashboard statistics
+GET    /api/analytics/coverage      # Hourly coverage data
+GET    /api/analytics/performance   # Performance metrics
+GET    /api/analytics/users         # Issues by user report
+GET    /api/analytics/matrix        # Portfolio monitoring matrix
+GET    /api/analytics/trends        # Trend analysis
+```
+### Admin Endpoints
+```
+GET    /api/admin/logs              # Admin activity logs
+POST   /api/admin/logs              # Add custom log entry
+GET    /api/admin/locks             # Active portfolio locks
+DELETE /api/admin/locks/:id         # Unlock portfolio (admin override)
+GET    /api/admin/personnel         # Monitored personnel list
+POST   /api/admin/personnel         # Add monitored person
+DELETE /api/admin/personnel/:id     # Delete monitored person
+```
+### Super Admin Endpoints
+```
+GET    /api/super-admin/dashboard   # Global analytics
+GET    /api/super-admin/tenants     # All tenants
+GET    /api/super-admin/users       # All users (cross-tenant)
+GET    /api/super-admin/system      # System health metrics
+POST   /api/super-admin/impersonate/:tenantId  # Login as tenant
+```
+---
+## Authentication Flow
+```
+┌──────────────────────────────────────────────────────────────┐
+│                  AUTHENTICATION FLOW                         │
+└──────────────────────────────────────────────────────────────┘
+REGISTRATION:
+─────────────
+User → Frontend: Fill registration form
+Frontend → Backend: POST /api/auth/register
+Backend:
+  1. Validate input
+  2. Check if username/email exists
+  3. Hash password (bcrypt)
+  4. Create user record with tenant_id
+  5. Return success message
+Frontend: Show success, redirect to login
+LOGIN:
+──────
+User → Frontend: Enter username/password
+Frontend → Backend: POST /api/auth/login
+Backend:
+  1. Find user by username
+  2. Verify password (bcrypt.compare)
+  3. Check user is_active = true
+  4. Generate JWT token:
+     {
+       "user_id": "uuid-123",
+       "tenant_id": "tenant-abc",
+       "role": "user",
+       "exp": Date.now() + 8h
+     }
+  5. Update last_login timestamp
+  6. Return JWT token
+Frontend:
+  1. Store token in localStorage/sessionStorage
+  2. Set Authorization header for future requests
+  3. Redirect to dashboard
+AUTHENTICATED REQUEST:
+──────────────────────
+Frontend → Backend: GET /api/portfolios
+Headers: {
+  Authorization: "Bearer <JWT_TOKEN>"
+}
+Backend (auth.middleware.ts):
+  1. Extract token from header
+  2. Verify JWT signature
+  3. Check token not expired
+  4. Decode payload
+  5. Extract user_id & tenant_id
+  6. Attach to request:
+     req.user = { user_id, tenant_id, role }
+  7. Continue to route handler
+Route Handler:
+  1. Access req.user.tenant_id
+  2. Filter data by tenant_id
+  3. Return filtered results
+LOGOUT:
+───────
+User → Frontend: Click logout
+Frontend:
+  1. Call POST /api/auth/logout (optional)
+  2. Remove token from storage
+  3. Clear auth state
+  4. Redirect to login
+```
+---
+## Data Flow Diagrams
+### Dashboard Data Flow
+```
+User opens Dashboard page
+    ↓
+Frontend: Dashboard.tsx
+    ↓
+useEffect() hook triggers
+    ↓
+Calls: fetchDashboardData()
+    ↓
+    ├─► GET /api/analytics/dashboard
+    │     ↓
+    │   Backend: analytics.controller.ts
+    │     ↓
+    │   Queries (all filtered by tenant_id):
+    │     - COUNT(*) FROM issues WHERE tenant_id = X
+    │     - COUNT(DISTINCT portfolio_id) FROM issues WHERE tenant_id = X
+    │     - AVG(issue_hour) FROM issues WHERE tenant_id = X
+    │     ↓
+    │   Returns: { total_issues, portfolios_with_issues, avg_issue_hour }
+    │
+    ├─► GET /api/analytics/coverage
+    │     ↓
+    │   Backend: analytics.controller.ts
+    │     ↓
+    │   Query:
+    │     SELECT issue_hour, COUNT(*) as count
+    │     FROM issues
+    │     WHERE tenant_id = X
+    │       AND DATE(created_at) = CURRENT_DATE
+    │     GROUP BY issue_hour
+    │     ↓
+    │   Returns: { coverage_by_hour: [{hour: 0, count: 5}, ...] }
+    │
+    └─► GET /api/admin/logs?limit=5
+          ↓
+        Backend: admin.controller.ts
+          ↓
+        Query:
+          SELECT * FROM admin_logs
+          WHERE tenant_id = X
+          ORDER BY created_at DESC
+          LIMIT 5
+          ↓
+        Returns: [{ log_id, action_type, description, ... }]
+    ↓
+Frontend receives all data
+    ↓
+Update state (useState):
+  - setStats(statsData)
+  - setCoverage(coverageData)
+  - setLogs(logsData)
+    ↓
+React re-renders Dashboard
+    ↓
+Display:
+  - Stats Cards (with counts)
+  - Heat Maps (with coverage data)
+  - Admin Log Widget (with recent logs)
+    ↓
+Set up auto-refresh timer (every 30 seconds)
+```
+---
+## File Size Estimates
+```
+┌──────────────────────────────────────────────────────────────┐
+│                    PROJECT SIZE ESTIMATES                     │
+├──────────────────────────────────────────────────────────────┤
+│ Frontend (React + TypeScript):                               │
+│   - Source code: ~500 files, ~50,000 lines, ~5 MB           │
+│   - node_modules: ~200 MB                                    │
+│   - Build output: ~2-5 MB (gzipped: ~500 KB)               │
+│                                                              │
+│ Backend (Node.js + TypeScript):                              │
+│   - Source code: ~200 files, ~20,000 lines, ~2 MB           │
+│   - node_modules: ~100 MB                                    │
+│                                                              │
+│ Database:                                                    │
+│   - Schema: ~10 KB                                           │
+│   - Data (10,000 issues): ~50 MB                            │
+│                                                              │
+│ Total Development Size: ~360 MB                              │
+│ Total Production Size: ~7 MB (frontend) + ~102 MB (backend) │
+└──────────────────────────────────────────────────────────────┘
+```
+---
+## Development Timeline
+```
+Week 1-2: Foundation
+├── Setup project structure
+├── Configure Supabase
+├── Create database schema
+├── Setup authentication
+└── Build basic UI components
+Week 3: Tenant Management
+├── Tenant CRUD operations
+├── Tenant isolation middleware
+├── Data filtering by tenant_id
+└── Test tenant isolation
+Week 4-5: Core Features
+├── Port all features from current app
+├── Portfolio management
+├── Issue tracking
+├── Hourly coverage
+├── Admin panel
+└── Analytics
+Week 6: Polish & Deploy
+├── Testing (unit, integration, E2E)
+├── Security audit
+├── Performance optimization
+├── Deploy to production (Vercel + Railway)
+└── Documentation
+Total: 6 weeks for MVP
+```
+---
+**Document Version:** 1.0  
+**Last Updated:** December 17, 2025  
+**Status:** Ready for Development
+---
+**End of Document**

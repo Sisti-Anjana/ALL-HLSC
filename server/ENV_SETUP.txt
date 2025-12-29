@@ -1,0 +1,16 @@
+Copy this content into your server/.env file:
+
+PORT=5000
+NODE_ENV=development
+
+# Supabase Configuration
+SUPABASE_URL=https://fylctxvbxyigkrufzxgu.supabase.co
+SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ5bGN0eHZieHlpZ2tydWZ6eGd1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTg3NDAyOSwiZXhwIjoyMDgxNDUwMDI5fQ.H0BVzSN3_tzoLrrD8AxwxAv4dzn1mNo275FsSHeYju8
+
+# JWT Configuration
+JWT_SECRET=XguGQUaiQOVaShXTjueIxCk43yqtjWJH8HO5mjhkmO+DLiaNNjaB/nt2afadtPAgPi5EBnspmjwLAJfuKOjrrQ==
+JWT_EXPIRES_IN=7d
+
+# Frontend Configuration
+FRONTEND_URL=http://localhost:3000
+

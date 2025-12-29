@@ -1,0 +1,1547 @@
+# Multi-Tenant Application - Detailed Project Timeline & Phases
+## 📋 Executive Summary
+**Project Name:** Multi-Tenant Portfolio Issue Tracking System  
+**Total Duration:** 8-10 Weeks (40-50 Business Days)  
+**Team Size:** 2-3 Developers (1 Full-stack + 1 Frontend + 1 Optional Backend)  
+**Deployment:** Cloud-based (Vercel + Railway + Supabase)  
+**Cost:** FREE Tier (Production-ready)
+---
+## 🎯 Project Phases Overview
+```
+┌────────────────────────────────────────────────────────────────┐
+│                    PROJECT TIMELINE                            │
+├────────────────────────────────────────────────────────────────┤
+│ Phase 1: Project Setup & Planning         │ 1 Week  │  5 days │
+│ Phase 2: Database & Backend Foundation    │ 2 Weeks │ 10 days │
+│ Phase 3: Authentication System            │ 1 Week  │  5 days │
+│ Phase 4: Tenant Management                │ 1 Week  │  5 days │
+│ Phase 5: Core Features - Portfolios       │ 1 Week  │  5 days │
+│ Phase 6: Core Features - Issue Tracking   │ 2 Weeks │ 10 days │
+│ Phase 7: Analytics & Reporting            │ 1 Week  │  5 days │
+│ Phase 8: Admin Panel & Super Admin        │ 1 Week  │  5 days │
+│ Phase 9: Testing & Quality Assurance      │ 1 Week  │  5 days │
+│ Phase 10: Deployment & Go-Live            │ 1 Week  │  5 days │
+├────────────────────────────────────────────────────────────────┤
+│ TOTAL                                      │ 10 Weeks│ 50 days │
+└────────────────────────────────────────────────────────────────┘
+⚠️ Note: Timeline assumes 1 full-stack developer working full-time
+   With 2-3 developers, timeline can be reduced to 6-7 weeks
+```
+---
+## 📅 Detailed Phase Breakdown
+---
+## **Phase 1: Project Setup & Planning (Week 1)**
+**Duration:** 5 Business Days  
+**Team:** Full-stack Developer  
+**Deliverables:** Project structure, development environment, documentation
+### Day 1: Monday - Environment Setup (8 hours)
+**Morning (4 hours):**
+- ☐ Install required software:
+  - Node.js 18.x LTS
+  - Git
+  - VS Code or preferred IDE
+  - PostgreSQL (local, optional)
+- ☐ Create GitHub repository
+- ☐ Initialize Git repository
+- ☐ Setup .gitignore files
+- ☐ Create project README.md
+**Afternoon (4 hours):**
+- ☐ Create root project folder structure
+- ☐ Initialize frontend project (React + TypeScript):
+  ```bash
+  npx create-react-app client --template typescript
+  cd client && npm install
+  ```
+- ☐ Initialize backend project (Node.js + TypeScript):
+  ```bash
+  mkdir server && cd server
+  npm init -y
+  npm install express typescript @types/node @types/express
+  npx tsc --init
+  ```
+- ☐ Configure TypeScript for both projects
+**Deliverables:**
+- ✅ Working development environment
+- ✅ Git repository initialized
+- ✅ Basic project structure created
+---
+### Day 2: Tuesday - Supabase & Database Setup (8 hours)
+**Morning (4 hours):**
+- ☐ Create Supabase account (https://supabase.com)
+- ☐ Create new Supabase project
+- ☐ Note down API keys (URL, anon key, service key)
+- ☐ Create database schema documentation
+- ☐ Design ER diagram (using draw.io or similar)
+**Afternoon (4 hours):**
+- ☐ Create migration files (in `/database/migrations/`):
+  - `001_create_tenants.sql`
+  - `002_create_users.sql`
+  - `003_create_portfolios.sql`
+  - `004_create_issues.sql`
+  - `005_create_hour_reservations.sql`
+  - `006_create_admin_logs.sql`
+  - `007_create_monitored_personnel.sql`
+  - `008_create_subscriptions.sql`
+- ☐ Run migrations in Supabase SQL Editor
+- ☐ Verify all tables created successfully
+- ☐ Test database connection from Node.js
+**Deliverables:**
+- ✅ Supabase project created
+- ✅ Database schema implemented
+- ✅ All tables created with relationships
+---
+### Day 3: Wednesday - Dependencies & Configuration (8 hours)
+**Morning (4 hours):**
+- ☐ Install frontend dependencies:
+  ```bash
+  cd client
+  npm install axios react-router-dom
+  npm install @tanstack/react-query zustand
+  npm install react-hook-form date-fns
+  npm install chart.js react-chartjs-2
+  npm install react-hot-toast
+  npm install -D tailwindcss postcss autoprefixer
+  npx tailwindcss init -p
+  ```
+- ☐ Configure Tailwind CSS
+- ☐ Setup CSS variables and theme
+- ☐ Create global styles
+**Afternoon (4 hours):**
+- ☐ Install backend dependencies:
+  ```bash
+  cd server
+  npm install express cors dotenv
+  npm install @supabase/supabase-js
+  npm install bcrypt jsonwebtoken
+  npm install express-validator express-rate-limit
+  npm install winston
+  npm install -D nodemon ts-node
+  npm install -D @types/cors @types/bcrypt @types/jsonwebtoken
+  ```
+- ☐ Create .env files (frontend & backend)
+- ☐ Setup environment variable templates
+- ☐ Configure nodemon for auto-restart
+- ☐ Test basic Express server
+**Deliverables:**
+- ✅ All dependencies installed
+- ✅ Configuration files created
+- ✅ Environment variables configured
+---
+### Day 4: Thursday - Folder Structure & Boilerplate (8 hours)
+**Morning (4 hours):**
+- ☐ Create complete frontend folder structure:
+  ```
+  client/src/
+  ├── components/
+  ├── hooks/
+  ├── context/
+  ├── services/
+  ├── utils/
+  ├── types/
+  └── styles/
+  ```
+- ☐ Create boilerplate components:
+  - Button.tsx
+  - Input.tsx
+  - Modal.tsx
+  - Spinner.tsx
+  - Toast.tsx
+- ☐ Setup React Router structure
+- ☐ Create layout components (Navbar, Sidebar, Footer)
+**Afternoon (4 hours):**
+- ☐ Create complete backend folder structure:
+  ```
+  server/src/
+  ├── config/
+  ├── routes/
+  ├── controllers/
+  ├── services/
+  ├── middleware/
+  ├── models/
+  ├── utils/
+  └── validators/
+  ```
+- ☐ Create basic middleware:
+  - errorHandler.middleware.ts
+  - logger.middleware.ts
+  - cors.middleware.ts
+- ☐ Setup Winston logger
+- ☐ Create database connection utility
+**Deliverables:**
+- ✅ Complete folder structure
+- ✅ Boilerplate files created
+- ✅ Basic utilities implemented
+---
+### Day 5: Friday - Documentation & Planning Review (8 hours)
+**Morning (4 hours):**
+- ☐ Create API documentation template
+- ☐ Write setup instructions (README.md)
+- ☐ Document environment variables
+- ☐ Create development workflow guide
+- ☐ Setup ESLint and Prettier
+- ☐ Configure pre-commit hooks (optional)
+**Afternoon (4 hours):**
+- ☐ Review entire setup with team
+- ☐ Test development environment
+- ☐ Fix any configuration issues
+- ☐ Create development branch strategy
+- ☐ Setup project management board (Jira/Trello/GitHub Projects)
+- ☐ Plan Sprint 1 tasks
+**Deliverables:**
+- ✅ Complete documentation
+- ✅ Working development environment
+- ✅ Ready to start development
+**Phase 1 Completion Checklist:**
+- ✅ Development environment ready
+- ✅ Database schema created
+- ✅ All dependencies installed
+- ✅ Folder structure complete
+- ✅ Documentation written
+---
+## **Phase 2: Database & Backend Foundation (Weeks 2-3)**
+**Duration:** 10 Business Days  
+**Team:** Backend Developer (or Full-stack)  
+**Deliverables:** Complete backend API foundation, database with RLS
+### Week 2, Day 1-2: Monday-Tuesday - Database Advanced Setup (16 hours)
+**Day 1 Morning (4 hours):**
+- ☐ Create Row Level Security (RLS) policies:
+  ```sql
+  -- Enable RLS on all tables
+  ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+  -- (Continue for all tables)
+  ```
+- ☐ Create tenant isolation policies
+- ☐ Test RLS policies with sample data
+**Day 1 Afternoon (4 hours):**
+- ☐ Create database indexes for performance:
+  ```sql
+  CREATE INDEX idx_users_tenant_id ON users(tenant_id);
+  CREATE INDEX idx_portfolios_tenant_id ON portfolios(tenant_id);
+  CREATE INDEX idx_issues_tenant_id ON issues(tenant_id);
+  -- (Continue for all foreign keys)
+  ```
+- ☐ Create database functions (if needed)
+- ☐ Setup database triggers (updated_at timestamps)
+**Day 2 Morning (4 hours):**
+- ☐ Create seed data for development:
+  - Sample tenant (Test Company)
+  - Sample users (admin, user1, user2)
+  - Sample portfolios (5-10 portfolios)
+  - Sample issues (20-30 issues)
+- ☐ Run seed scripts
+- ☐ Verify data integrity
+**Day 2 Afternoon (4 hours):**
+- ☐ Create database backup/restore scripts
+- ☐ Document database schema
+- ☐ Create ER diagram (if not done in Phase 1)
+- ☐ Test database performance
+---
+### Week 2, Day 3-5: Wednesday-Friday - Core Backend Middleware (24 hours)
+**Day 3 (8 hours):**
+- ☐ **Authentication Middleware** (auth.middleware.ts):
+  - JWT token verification
+  - Token extraction from headers
+  - User lookup from token
+  - Attach user to request object
+  - Handle expired tokens
+  - Handle invalid tokens
+- ☐ Write unit tests for auth middleware
+- ☐ Test with sample tokens
+**Day 4 (8 hours):**
+- ☐ **Tenant Isolation Middleware** (tenantIsolation.middleware.ts):
+  - Extract tenant_id from JWT token
+  - Attach tenant_id to request
+  - Verify user belongs to tenant
+  - Block cross-tenant access attempts
+  - Log isolation violations
+- ☐ Write unit tests for tenant isolation
+- ☐ Test with multiple tenants
+**Day 5 (8 hours):**
+- ☐ **Validation Middleware** (validation.middleware.ts):
+  - Input sanitization
+  - Data type validation
+  - Required fields validation
+  - Email format validation
+  - Password strength validation
+- ☐ **Rate Limiting Middleware** (rateLimiter.middleware.ts):
+  - Rate limits per endpoint
+  - IP-based limiting
+  - User-based limiting
+  - Custom error messages
+- ☐ **Permission Middleware** (permission.middleware.ts):
+  - Role-based access control
+  - Permission checks
+- ☐ Test all middleware
+---
+### Week 3, Day 1-2: Monday-Tuesday - Core Backend Services (16 hours)
+**Day 1 (8 hours):**
+- ☐ Create Supabase client utility (supabase.util.ts)
+- ☐ Create password hashing utilities (password.util.ts):
+  - Hash password (bcrypt)
+  - Compare password
+  - Generate random password
+- ☐ Create JWT utilities (jwt.util.ts):
+  - Generate access token
+  - Generate refresh token
+  - Verify token
+  - Decode token
+- ☐ Create email utilities (email.util.ts):
+  - Send welcome email
+  - Send password reset email
+  - Email templates
+**Day 2 (8 hours):**
+- ☐ Create validation utilities (validation.util.ts):
+  - Email validation
+  - Password validation
+  - UUID validation
+  - Date validation
+- ☐ Create logger utility (logger.util.ts):
+  - Winston logger setup
+  - Log levels (error, warn, info, debug)
+  - Log to file
+  - Log to console
+- ☐ Create date utilities (date.util.ts):
+  - Format dates
+  - Calculate date ranges
+  - Timezone handling
+---
+### Week 3, Day 3-5: Wednesday-Friday - Database Models & Error Handling (24 hours)
+**Day 3 (8 hours):**
+- ☐ Create TypeScript interfaces for all tables:
+  - tenant.model.ts
+  - user.model.ts
+  - portfolio.model.ts
+  - issue.model.ts
+  - reservation.model.ts
+  - adminLog.model.ts
+  - monitoredPersonnel.model.ts
+  - subscription.model.ts
+- ☐ Create request/response types
+- ☐ Create error types
+**Day 4 (8 hours):**
+- ☐ Create custom error classes:
+  - BadRequestError (400)
+  - UnauthorizedError (401)
+  - ForbiddenError (403)
+  - NotFoundError (404)
+  - ConflictError (409)
+  - InternalServerError (500)
+- ☐ Create error handler middleware
+- ☐ Implement global error handling
+- ☐ Test error scenarios
+**Day 5 (8 hours):**
+- ☐ Setup request logging (Winston)
+- ☐ Setup error logging
+- ☐ Configure log rotation
+- ☐ Test entire backend foundation
+- ☐ Fix any bugs found
+- ☐ Code review and refactoring
+**Phase 2 Completion Checklist:**
+- ✅ Database with RLS fully configured
+- ✅ All middleware implemented and tested
+- ✅ Utilities created
+- ✅ Error handling implemented
+- ✅ Logging configured
+---
+## **Phase 3: Authentication System (Week 4)**
+**Duration:** 5 Business Days  
+**Team:** Full-stack Developer  
+**Deliverables:** Complete email-based authentication system
+### Day 1: Monday - Backend Auth Routes & Controllers (8 hours)
+**Morning (4 hours):**
+- ☐ Create auth routes (auth.routes.ts):
+  ```
+  POST /api/auth/register
+  POST /api/auth/login
+  POST /api/auth/logout
+  POST /api/auth/refresh
+  POST /api/auth/forgot-password
+  POST /api/auth/reset-password
+  GET  /api/auth/me
+  ```
+- ☐ Setup route handlers structure
+**Afternoon (4 hours):**
+- ☐ Create auth controller (auth.controller.ts):
+  - Register function
+  - Login function
+  - Logout function
+  - Refresh token function
+  - Get current user function
+- ☐ Link routes to controllers
+- ☐ Test routes with Postman/Insomnia
+---
+### Day 2: Tuesday - Auth Service Layer (8 hours)
+**Morning (4 hours):**
+- ☐ Create auth service (auth.service.ts):
+  - **Register user:**
+    - Validate email format
+    - Check if email already exists
+    - Hash password with bcrypt
+    - Create user record with tenant_id
+    - Send welcome email
+    - Return success message
+  - **Login user:**
+    - Find user by email
+    - Check user is_active = true
+    - Verify password
+    - Update last_login timestamp
+    - Generate JWT token with tenant_id
+    - Return token
+**Afternoon (4 hours):**
+- ☐ Implement:
+  - **Logout user:**
+    - Invalidate token (optional: blacklist)
+    - Clear session
+  - **Refresh token:**
+    - Verify refresh token
+    - Generate new access token
+    - Return new token
+  - **Forgot password:**
+    - Validate email
+    - Generate reset token
+    - Send reset email
+  - **Reset password:**
+    - Verify reset token
+    - Validate new password
+    - Hash and update password
+- ☐ Test all auth functions
+---
+### Day 3: Wednesday - Frontend Auth UI Components (8 hours)
+**Morning (4 hours):**
+- ☐ Create UserLogin.tsx component:
+  - Email input field ✅ (changed from username)
+  - Password input field
+  - "Remember me" checkbox (optional)
+  - "Forgot password?" link
+  - "Login" button
+  - "Switch to Admin Login" button
+  - Form validation
+  - Error handling
+  - Loading state
+**Afternoon (4 hours):**
+- ☐ Create AdminLogin.tsx component:
+  - Email input field ✅ (changed from username)
+  - Password input field
+  - "Login as Admin" button
+  - "Switch to User Login" button
+  - Form validation
+  - Error handling
+- ☐ Create ForgotPassword.tsx component:
+  - Email input
+  - Submit button
+  - Success/error messages
+---
+### Day 4: Thursday - Frontend Auth Context & API Integration (8 hours)
+**Morning (4 hours):**
+- ☐ Create AuthContext (AuthContext.tsx):
+  - Auth state management
+  - User state
+  - Tenant state
+  - Login function
+  - Logout function
+  - Register function
+  - Check authentication status
+  - Auto-refresh token
+- ☐ Create useAuth hook (useAuth.ts)
+- ☐ Wrap App.tsx with AuthContext
+**Afternoon (4 hours):**
+- ☐ Create auth API service (authService.ts):
+  - register(email, password, fullName)
+  - login(email, password)
+  - logout()
+  - refreshToken()
+  - forgotPassword(email)
+  - resetPassword(token, newPassword)
+  - getCurrentUser()
+- ☐ Integrate with Axios
+- ☐ Setup Axios interceptors for token refresh
+- ☐ Test authentication flow end-to-end
+---
+### Day 5: Friday - Session Management & Testing (8 hours)
+**Morning (4 hours):**
+- ☐ Implement session management:
+  - Store JWT token in localStorage/sessionStorage
+  - Auto-logout after 8 hours (users)
+  - Auto-logout after 2 hours (admins)
+  - Session expiry warnings
+  - Prevent false logouts
+  - Multi-tab session sync
+- ☐ Create PrivateRoute component
+- ☐ Protect all routes requiring authentication
+**Afternoon (4 hours):**
+- ☐ Test authentication flows:
+  - User registration (with email)
+  - User login (with email)
+  - Admin login (with email)
+  - Logout
+  - Token refresh
+  - Forgot password
+  - Reset password
+  - Session expiry
+- ☐ Fix bugs
+- ☐ Write unit tests for auth functions
+**Phase 3 Completion Checklist:**
+- ✅ Email-based authentication working ✅
+- ✅ User and Admin login separate
+- ✅ JWT tokens generated with tenant_id
+- ✅ Session management implemented
+- ✅ Password reset flow working
+- ✅ All auth tests passing
+---
+## **Phase 4: Tenant Management (Week 5)**
+**Duration:** 5 Business Days  
+**Team:** Full-stack Developer  
+**Deliverables:** Super Admin portal for managing tenants
+### Day 1: Monday - Backend Tenant API (8 hours)
+**Morning (4 hours):**
+- ☐ Create tenant routes (tenant.routes.ts):
+  ```
+  GET    /api/tenants          (list all - super admin only)
+  POST   /api/tenants          (create tenant)
+  GET    /api/tenants/:id      (get tenant details)
+  PUT    /api/tenants/:id      (update tenant)
+  DELETE /api/tenants/:id      (delete tenant)
+  GET    /api/tenants/:id/stats (tenant statistics)
+  ```
+**Afternoon (4 hours):**
+- ☐ Create tenant controller (tenant.controller.ts)
+- ☐ Create tenant service (tenant.service.ts):
+  - Create tenant (with subdomain generation)
+  - Update tenant
+  - Delete tenant (soft delete)
+  - Get tenant by ID
+  - List all tenants
+  - Get tenant statistics
+- ☐ Add super admin permission check
+---
+### Day 2: Tuesday - Frontend Super Admin Dashboard (8 hours)
+**Morning (4 hours):**
+- ☐ Create SuperAdminDashboard.tsx:
+  - Total tenants (active/inactive)
+  - Total users across all tenants
+  - Total issues logged
+  - System health metrics
+  - Recent activity
+- ☐ Create TenantList.tsx:
+  - Table showing all tenants
+  - Columns: Name, Subdomain, Status, Created, Users, Issues
+  - Search/filter functionality
+  - Sort functionality
+**Afternoon (4 hours):**
+- ☐ Create TenantForm.tsx (Add/Edit tenant):
+  - Company name input
+  - Contact email input
+  - Subdomain input (auto-generate from name)
+  - Logo upload
+  - Subscription plan dropdown
+  - Status dropdown
+  - Custom settings (JSON editor or form)
+  - Validation
+- ☐ Create TenantDetails.tsx:
+  - Full tenant information
+  - List of users in tenant
+  - Statistics
+  - Edit/Delete buttons
+---
+### Day 3: Wednesday - Subdomain Routing & Tenant Detection (8 hours)
+**Morning (4 hours):**
+- ☐ Implement subdomain detection:
+  - Extract subdomain from URL
+  - Look up tenant by subdomain
+  - Set tenant context
+  - Redirect if tenant not found
+- ☐ Configure DNS (if using custom domain)
+- ☐ Test subdomain routing:
+  - client1.yourapp.com
+  - client2.yourapp.com
+  - admin.yourapp.com (super admin)
+**Afternoon (4 hours):**
+- ☐ Create TenantContext (TenantContext.tsx):
+  - Current tenant state
+  - Tenant loading state
+  - Detect tenant from subdomain
+  - Fetch tenant details
+  - Provide tenant to all components
+- ☐ Create useTenant hook (useTenant.ts)
+- ☐ Wrap App with TenantContext
+- ☐ Test tenant detection
+---
+### Day 4: Thursday - Tenant API Integration & Testing (8 hours)
+**Morning (4 hours):**
+- ☐ Create tenant API service (tenantService.ts):
+  - createTenant(data)
+  - updateTenant(id, data)
+  - deleteTenant(id)
+  - getTenant(id)
+  - listTenants(filters)
+  - getTenantStats(id)
+- ☐ Integrate with backend API
+- ☐ Test CRUD operations
+**Afternoon (4 hours):**
+- ☐ Test tenant isolation:
+  - User A (Tenant A) logs in
+  - Verify sees only Tenant A data
+  - User B (Tenant B) logs in
+  - Verify sees only Tenant B data
+  - Verify cross-tenant access blocked
+- ☐ Test super admin access:
+  - Can view all tenants
+  - Can edit any tenant
+  - Can delete tenants
+- ☐ Fix any bugs found
+---
+### Day 5: Friday - Tenant Onboarding & Documentation (8 hours)
+**Morning (4 hours):**
+- ☐ Create tenant onboarding flow:
+  - Super admin creates tenant
+  - System generates subdomain
+  - System creates default admin user for tenant
+  - Send welcome email to tenant with credentials
+  - Tenant admin logs in
+  - Setup wizard (optional)
+- ☐ Test onboarding flow end-to-end
+**Afternoon (4 hours):**
+- ☐ Document tenant management:
+  - How to add new tenant
+  - Subdomain configuration
+  - Tenant settings explanation
+  - Subscription plans
+- ☐ Create admin user guide
+- ☐ Test all tenant features
+- ☐ Code review
+**Phase 4 Completion Checklist:**
+- ✅ Tenant CRUD operations working
+- ✅ Subdomain routing configured
+- ✅ Tenant isolation verified
+- ✅ Super admin portal functional
+- ✅ Onboarding flow tested
+---
+## **Phase 5: Core Features - Portfolios (Week 6)**
+**Duration:** 5 Business Days  
+**Team:** Full-stack Developer  
+**Deliverables:** Complete portfolio management with locking
+### Day 1: Monday - Backend Portfolio API (8 hours)
+**Morning (4 hours):**
+- ☐ Create portfolio routes (portfolio.routes.ts):
+  ```
+  GET    /api/portfolios
+  POST   /api/portfolios
+  GET    /api/portfolios/:id
+  PUT    /api/portfolios/:id
+  DELETE /api/portfolios/:id
+  PUT    /api/portfolios/:id/status
+  POST   /api/portfolios/:id/lock
+  DELETE /api/portfolios/:id/unlock
+  ```
+**Afternoon (4 hours):**
+- ☐ Create portfolio controller & service:
+  - List portfolios (filtered by tenant_id)
+  - Create portfolio (with tenant_id)
+  - Update portfolio
+  - Delete portfolio
+  - Update "all sites checked" status
+  - Lock portfolio (hour-based reservation)
+  - Unlock portfolio
+- ☐ Add validation middleware
+- ☐ Test with Postman
+---
+### Day 2: Tuesday - Frontend Portfolio UI (8 hours)
+**Morning (4 hours):**
+- ☐ Create PortfolioList.tsx:
+  - Grid/list view of portfolios
+  - Search bar
+  - Filter options
+  - Sort options
+- ☐ Create PortfolioCard.tsx:
+  - Portfolio name
+  - Subtitle
+  - Site range
+  - "All Sites Checked" status indicator
+  - Lock indicator
+  - Quick actions (Edit, Delete, Log Issue)
+**Afternoon (4 hours):**
+- ☐ Create PortfolioForm.tsx:
+  - Name input (required)
+  - Subtitle input (optional)
+  - Site range input (optional)
+  - Validation
+  - Submit/Cancel buttons
+- ☐ Create PortfolioDetails.tsx:
+  - Full portfolio information
+  - Issue history for this portfolio
+  - Edit/Delete buttons
+---
+### Day 3: Wednesday - Portfolio Locking System (8 hours)
+**Morning (4 hours):**
+- ☐ Implement backend locking:
+  - Create hour_reservations table entry
+  - Set expiration time (e.g., 30 minutes)
+  - Prevent duplicate locks
+  - Auto-cleanup expired locks
+- ☐ Create lock/unlock API endpoints
+- ☐ Test locking logic
+**Afternoon (4 hours):**
+- ☐ Implement frontend locking:
+  - Lock portfolio when "Log Issue" clicked
+  - Show lock indicator
+  - Disable portfolio for other users
+  - Show who locked and when
+  - Unlock on issue submit
+  - Unlock on cancel
+  - Handle lock expiration
+- ☐ Test locking from multiple users
+---
+### Day 4: Thursday - "All Sites Checked" Feature (8 hours)
+**Morning (4 hours):**
+- ☐ Backend API for status update:
+  - Update all_sites_checked field (Yes/No/Pending)
+  - Update all_sites_checked_hour
+  - Update all_sites_checked_date
+  - Update all_sites_checked_by
+  - Update sites_checked_details (if "No")
+- ☐ Test status updates
+**Afternoon (4 hours):**
+- ☐ Frontend status UI:
+  - Status dropdown (Yes/No/Pending)
+  - Hour selector (0-23)
+  - Date picker
+  - "Checked by" dropdown
+  - "Sites checked details" textarea (shown if "No" selected)
+  - Save button
+  - Visual status indicators (Green/Red/Gray)
+- ☐ Test status updates from UI
+---
+### Day 5: Friday - Portfolio Testing & Polish (8 hours)
+**Morning (4 hours):**
+- ☐ Test all portfolio features:
+  - Create portfolio
+  - Edit portfolio
+  - Delete portfolio
+  - Search portfolios
+  - Filter portfolios
+  - Lock/unlock portfolio
+  - Update status
+- ☐ Test tenant isolation (portfolios)
+- ☐ Fix bugs
+**Afternoon (4 hours):**
+- ☐ Add animations and transitions
+- ☐ Improve UI/UX
+- ☐ Add loading states
+- ☐ Add error handling
+- ☐ Write unit tests
+- ☐ Code review
+**Phase 5 Completion Checklist:**
+- ✅ Portfolio CRUD working
+- ✅ Locking system functional
+- ✅ "All Sites Checked" status working
+- ✅ Tenant isolation verified
+- ✅ UI polished
+---
+## **Phase 6: Core Features - Issue Tracking (Weeks 7-8)**
+**Duration:** 10 Business Days  
+**Team:** Full-stack Developer  
+**Deliverables:** Complete issue tracking system
+### Week 7, Day 1-2: Monday-Tuesday - Backend Issue API (16 hours)
+**Day 1 (8 hours):**
+- ☐ Create issue routes (issue.routes.ts):
+  ```
+  GET    /api/issues
+  POST   /api/issues
+  GET    /api/issues/:id
+  PUT    /api/issues/:id
+  DELETE /api/issues/:id
+  PUT    /api/issues/:id/resolve
+  GET    /api/issues/export
+  ```
+- ☐ Create issue controller
+- ☐ Test routes
+**Day 2 (8 hours):**
+- ☐ Create issue service (issue.service.ts):
+  - **Create issue:**
+    - Validate portfolio_id belongs to tenant
+    - Check for duplicate (same portfolio, same hour, same day)
+    - Create issue record with tenant_id
+    - Auto-add monitored_by to personnel list
+    - Release portfolio lock
+    - Log admin activity
+  - **Update issue:**
+    - Verify issue belongs to tenant
+    - Update fields
+    - Log changes
+  - **Delete issue:**
+    - Soft delete or hard delete
+    - Log deletion
+  - **List issues:**
+    - Filter by tenant_id
+    - Search functionality
+    - Pagination
+- ☐ Test all issue operations
+---
+### Week 7, Day 3-5: Wednesday-Friday - Frontend Issue UI (24 hours)
+**Day 3 (8 hours):**
+- ☐ Create IssueForm.tsx (Log New Issue):
+  - Portfolio dropdown (searchable)
+  - Site input/dropdown
+  - Issue hour selector (0-23, auto-filled with current hour)
+  - Description textarea
+  - Issue type dropdown (optional)
+  - Severity dropdown (Low/Medium/High/Critical)
+  - Monitored by dropdown
+  - Missed by multi-select dropdown
+  - Attachments upload (optional)
+  - Notes textarea
+  - Submit button
+  - Cancel button
+- ☐ Add form validation
+- ☐ Test issue submission
+**Day 4 (8 hours):**
+- ☐ Create IssuesTable.tsx:
+  - Columns: Portfolio, Site, Hour, Description, Status, Monitored By, Missed By, Created At, Actions
+  - Sortable columns (click header to sort)
+  - Search bar (search across all fields)
+  - Filter dropdowns:
+    - Portfolio filter
+    - Status filter
+    - Date range filter
+    - Hour range filter
+    - Monitored by filter
+  - Pagination controls
+  - Export to Excel/CSV button
+  - Action buttons per row (View, Edit, Delete)
+- ☐ Implement sorting, filtering, search
+- ☐ Test table functionality
+**Day 5 (8 hours):**
+- ☐ Create IssueDetailsView.tsx (modal or page):
+  - Full issue information display
+  - Edit button
+  - Delete button
+  - Resolve/Close button
+  - Reopen button
+  - Add comment section
+  - Issue history/timeline
+  - Print button
+- ☐ Create EditIssueModal.tsx:
+  - All fields editable
+  - Save changes button
+  - Cancel button
+  - Validation
+- ☐ Test issue detail views
+---
+### Week 8, Day 1-2: Monday-Tuesday - Issue Advanced Features (16 hours)
+**Day 1 (8 hours):**
+- ☐ Implement issue search:
+  - Search by portfolio name
+  - Search by site name
+  - Search by description
+  - Search by monitored person
+  - Search by date
+  - Highlight search terms
+- ☐ Implement filters:
+  - Date range picker
+  - Portfolio filter (multi-select)
+  - Status filter (multi-select)
+  - Hour range filter
+  - User filter
+- ☐ Test search and filters
+**Day 2 (8 hours):**
+- ☐ Implement issue export:
+  - Export to Excel with formatting
+  - Export to CSV
+  - Export with current filters applied
+  - Include all columns
+  - Generate filename with date
+- ☐ Create export service (exportUtils.ts)
+- ☐ Test export functionality
+---
+### Week 8, Day 3-5: Wednesday-Friday - Issue Testing & Polish (24 hours)
+**Day 3 (8 hours):**
+- ☐ Test all issue features:
+  - Create issue
+  - Edit issue
+  - Delete issue
+  - Search issues
+  - Filter issues
+  - Sort issues
+  - Export issues
+  - Resolve issue
+  - View issue details
+- ☐ Test tenant isolation (issues)
+- ☐ Test duplicate prevention
+**Day 4 (8 hours):**
+- ☐ Add real-time features:
+  - Auto-refresh issue list (every 30 seconds)
+  - Live updates when new issue logged
+  - Notification when issue assigned to you
+- ☐ Add validation:
+  - Prevent logging issue for same portfolio + same hour + same day
+  - Require description
+  - Validate hour (0-23)
+- ☐ Fix bugs
+**Day 5 (8 hours):**
+- ☐ UI improvements:
+  - Loading states
+  - Error messages
+  - Success notifications
+  - Empty states
+  - Animations
+- ☐ Write unit tests
+- ☐ Write integration tests
+- ☐ Code review
+**Phase 6 Completion Checklist:**
+- ✅ Issue CRUD working
+- ✅ Issue search & filters functional
+- ✅ Issue export working
+- ✅ Real-time updates implemented
+- ✅ Tenant isolation verified
+- ✅ All tests passing
+---
+## **Phase 7: Analytics & Reporting (Week 9)**
+**Duration:** 5 Business Days  
+**Team:** Full-stack Developer  
+**Deliverables:** Dashboard analytics, charts, heat maps
+### Day 1: Monday - Backend Analytics API (8 hours)
+**Morning (4 hours):**
+- ☐ Create analytics routes (analytics.routes.ts):
+  ```
+  GET /api/analytics/dashboard
+  GET /api/analytics/coverage
+  GET /api/analytics/performance
+  GET /api/analytics/users
+  GET /api/analytics/matrix
+  GET /api/analytics/trends
+  ```
+**Afternoon (4 hours):**
+- ☐ Create analytics service (analytics.service.ts):
+  - Dashboard stats (total issues, portfolios with issues, avg hour)
+  - Hourly coverage (issues per hour 0-23)
+  - Performance metrics
+  - Issues by user
+  - Portfolio monitoring matrix
+  - Trend analysis
+- ☐ Optimize queries for performance
+- ☐ Test analytics endpoints
+---
+### Day 2: Tuesday - Dashboard Statistics (8 hours)
+**Morning (4 hours):**
+- ☐ Create Dashboard.tsx:
+  - Stats cards (7-column layout on desktop)
+  - Total Issues Count
+  - Portfolios with Issues
+  - Sites with Issues
+  - Average Issue Hour
+  - Real-time auto-refresh (30 seconds)
+  - Last updated timestamp
+- ☐ Create StatsCard.tsx component
+- ☐ Integrate with analytics API
+**Afternoon (4 hours):**
+- ☐ Create QuickActions.tsx:
+  - "Log New Issue" button
+  - "View All Issues" button
+  - "Hourly Coverage" button
+  - Hover effects
+- ☐ Create RecentActivity.tsx:
+  - Recent issues (last 5)
+  - Recent admin actions (last 5)
+- ☐ Test dashboard
+---
+### Day 3: Wednesday - Charts & Heat Maps (8 hours)
+**Morning (4 hours):**
+- ☐ Create HourlyCoverageChart.tsx:
+  - Bar chart showing issues per hour (0-23)
+  - Color-coded bars (green/yellow/red)
+  - Interactive tooltips
+  - Zoom/pan functionality
+- ☐ Create IssuesChart.tsx:
+  - Line chart showing issues over time
+  - Filter by date range
+- ☐ Install and configure Chart.js
+**Afternoon (4 hours):**
+- ☐ Create PortfolioStatusHeatMap.tsx:
+  - Grid showing all portfolios
+  - Color indicators (Green = checked, Red = issues, Gray = pending)
+  - Click to drill down
+  - Hover tooltips
+- ☐ Create PortfolioHeatMap.tsx:
+  - Heat map showing coverage by hour
+  - Darker = more coverage
+  - Interactive
+- ☐ Test all charts and heat maps
+---
+### Day 4: Thursday - Performance Analytics & Reports (8 hours)
+**Morning (4 hours):**
+- ☐ Create PerformanceAnalytics.tsx:
+  - Issues logged today/week/month
+  - Average response time
+  - Most problematic portfolios (top 10)
+  - Most active users
+  - Peak issue hours
+  - Resolution rate
+  - Custom date range selector
+- ☐ Create charts for performance metrics
+**Afternoon (4 hours):**
+- ☐ Create IssuesByUser.tsx:
+  - Table: User | Issues Found | Issues Missed
+  - Performance leaderboard
+  - Filter by date range
+  - Export to Excel
+- ☐ Create PortfolioMonitoringMatrix.tsx:
+  - Grid: Portfolios (rows) × Hours (columns 0-23)
+  - Cell colors: Green (checked), Red (issue), Gray (not checked)
+  - Click cell to view details
+  - Export to Excel
+- ☐ Test all reports
+---
+### Day 5: Friday - Analytics Testing & Optimization (8 hours)
+**Morning (4 hours):**
+- ☐ Test all analytics features:
+  - Dashboard stats
+  - Hourly coverage chart
+  - Heat maps
+  - Performance analytics
+  - Issues by user
+  - Monitoring matrix
+- ☐ Verify tenant isolation (analytics)
+- ☐ Test with large datasets
+**Afternoon (4 hours):**
+- ☐ Optimize performance:
+  - Database query optimization
+  - Add caching where appropriate
+  - Lazy loading for charts
+  - Pagination for large reports
+- ☐ UI polish:
+  - Loading states
+  - Empty states
+  - Error handling
+- ☐ Write tests
+- ☐ Code review
+**Phase 7 Completion Checklist:**
+- ✅ Dashboard with real-time stats
+- ✅ All charts working
+- ✅ Heat maps functional
+- ✅ Performance analytics complete
+- ✅ Reports with export capability
+- ✅ Optimized for performance
+---
+## **Phase 8: Admin Panel & Super Admin (Week 10)**
+**Duration:** 5 Business Days  
+**Team:** Full-stack Developer  
+**Deliverables:** Complete admin panel with all features
+### Day 1: Monday - Admin Panel Structure (8 hours)
+**Morning (4 hours):**
+- ☐ Create AdminPanel.tsx (main component):
+  - Modal/page structure
+  - Tab navigation:
+    - Portfolios
+    - Login Users
+    - Monitored Personnel
+    - Active Locks
+    - Admin Logs
+    - Coverage Matrix
+  - Header with admin name
+  - Logout button
+  - Close button
+**Afternoon (4 hours):**
+- ☐ Create admin routes (admin.routes.ts):
+  ```
+  GET    /api/admin/logs
+  POST   /api/admin/logs
+  GET    /api/admin/locks
+  DELETE /api/admin/locks/:id
+  GET    /api/admin/personnel
+  POST   /api/admin/personnel
+  DELETE /api/admin/personnel/:id
+  ```
+- ☐ Create admin controller & service
+- ☐ Test admin endpoints
+---
+### Day 2: Tuesday - Admin Panel Tabs 1-3 (8 hours)
+**Morning (4 hours):**
+- ☐ **Portfolios Tab:**
+  - Add new portfolio form
+  - Existing portfolios list
+  - Edit portfolio (inline or modal)
+  - Delete portfolio (with confirmation)
+  - Duplicate name prevention
+- ☐ **Login Users Tab:**
+  - Create new login user form (with email) ✅
+  - Existing users list
+  - Show credentials (copyable)
+  - Edit user
+  - Activate/Deactivate user
+  - Delete user
+**Afternoon (4 hours):**
+- ☐ **Monitored Personnel Tab:**
+  - Add new monitored person form
+  - Existing personnel list (grid view)
+  - Delete monitored person
+  - Sync with login users
+  - Auto-add from login users
+- ☐ Test first 3 tabs
+---
+### Day 3: Wednesday - Admin Panel Tabs 4-6 (8 hours)
+**Morning (4 hours):**
+- ☐ **Active Locks Tab:**
+  - Table showing all active locks
+  - Columns: Portfolio, Locked By, Hour, Locked At, Expires At, Actions
+  - "Show expired locks" checkbox
+  - Admin unlock button (with confirmation)
+  - Real-time updates
+- ☐ **Admin Logs Tab:**
+  - Add custom log note form
+  - Activity logs list (last 50)
+  - Color-coded by action type
+  - Filter by action type
+  - Auto-refresh
+**Afternoon (4 hours):**
+- ☐ **Coverage Matrix Tab:**
+  - Reuse PortfolioMonitoringMatrix component
+  - Filter by portfolio
+  - Filter by date
+  - Export to Excel
+- ☐ Test last 3 tabs
+---
+### Day 4: Thursday - Super Admin Portal (8 hours)
+**Morning (4 hours):**
+- ☐ Create SuperAdminDashboard.tsx:
+  - Global statistics (all tenants)
+  - Total tenants, users, issues
+  - Most active tenants
+  - System health
+  - Revenue overview (if billing enabled)
+- ☐ Create GlobalAnalytics.tsx:
+  - Charts showing system-wide metrics
+  - Tenant growth over time
+  - User growth over time
+  - Issues volume trends
+**Afternoon (4 hours):**
+- ☐ Create SystemMonitoring.tsx:
+  - API uptime
+  - Average response time
+  - Database performance
+  - Error rate
+  - Active sessions
+  - Real-time metrics
+- ☐ Create BillingManagement.tsx (optional):
+  - Subscription plans
+  - Billing history
+  - Payment status
+- ☐ Test super admin features
+---
+### Day 5: Friday - Admin Testing & Polish (8 hours)
+**Morning (4 hours):**
+- ☐ Test all admin features:
+  - All admin panel tabs
+  - Super admin dashboard
+  - Permissions (only admin can access)
+  - Tenant isolation (admin sees only their tenant)
+  - Super admin bypass (sees all tenants)
+- ☐ Fix bugs
+**Afternoon (4 hours):**
+- ☐ UI polish:
+  - Loading states
+  - Error handling
+  - Success notifications
+  - Animations
+  - Responsive design (mobile-friendly)
+- ☐ Write tests
+- ☐ Code review
+- ☐ Documentation
+**Phase 8 Completion Checklist:**
+- ✅ Admin panel fully functional
+- ✅ All 6 tabs working
+- ✅ Super admin portal complete
+- ✅ Permissions enforced
+- ✅ Tests passing
+---
+## **Phase 9: Testing & Quality Assurance (Week 11)**
+**Duration:** 5 Business Days  
+**Team:** Full-stack Developer + QA (optional)  
+**Deliverables:** All tests passing, bug-free application
+### Day 1: Monday - Unit Testing (8 hours)
+**Morning (4 hours):**
+- ☐ Write unit tests for backend:
+  - Auth service tests
+  - Tenant service tests
+  - Portfolio service tests
+  - Issue service tests
+  - Middleware tests
+  - Utility function tests
+- ☐ Run tests: `npm test`
+**Afternoon (4 hours):**
+- ☐ Write unit tests for frontend:
+  - Component tests (React Testing Library)
+  - Hook tests
+  - Utility function tests
+  - API service tests (mock API)
+- ☐ Run tests: `npm test`
+- ☐ Aim for 80%+ code coverage
+---
+### Day 2: Tuesday - Integration Testing (8 hours)
+**Morning (4 hours):**
+- ☐ Write integration tests for API:
+  - Auth flow (register, login, logout)
+  - Portfolio CRUD operations
+  - Issue CRUD operations
+  - Tenant isolation verification
+  - Cross-tenant access prevention
+- ☐ Use Supertest or similar
+**Afternoon (4 hours):**
+- ☐ Write integration tests for frontend:
+  - User flows (login → dashboard → log issue → logout)
+  - Form submissions
+  - Navigation
+  - State management
+- ☐ Run all integration tests
+---
+### Day 3: Wednesday - End-to-End (E2E) Testing (8 hours)
+**Morning (4 hours):**
+- ☐ Setup E2E testing framework (Cypress or Playwright)
+- ☐ Write E2E tests:
+  - **User Journey 1: User Login & Log Issue**
+    - User logs in with email ✅
+    - Navigates to dashboard
+    - Clicks "Log Issue"
+    - Fills form
+    - Submits
+    - Sees success message
+    - Issue appears in list
+  - **User Journey 2: Admin Adds Portfolio**
+    - Admin logs in
+    - Opens admin panel
+    - Adds new portfolio
+    - Portfolio appears in list
+**Afternoon (4 hours):**
+- ☐ Write more E2E tests:
+  - **User Journey 3: Tenant Isolation**
+    - User A (Tenant A) logs in
+    - Sees only Tenant A data
+    - Logs out
+    - User B (Tenant B) logs in
+    - Sees only Tenant B data
+  - **User Journey 4: Super Admin**
+    - Super admin logs in
+    - Creates new tenant
+    - Views all tenants
+    - Impersonates tenant admin
+    - Views tenant data
+- ☐ Run all E2E tests
+---
+### Day 4: Thursday - Manual Testing & Bug Fixing (8 hours)
+**Morning (4 hours):**
+- ☐ Manual testing checklist:
+  - ☐ Test on Chrome
+  - ☐ Test on Firefox
+  - ☐ Test on Safari
+  - ☐ Test on Edge
+  - ☐ Test on mobile (responsive design)
+  - ☐ Test on tablet
+- ☐ Test all user flows
+- ☐ Test all admin features
+- ☐ Document bugs found
+**Afternoon (4 hours):**
+- ☐ Fix critical bugs
+- ☐ Fix high-priority bugs
+- ☐ Fix medium-priority bugs
+- ☐ Re-test after fixes
+- ☐ Update test cases
+---
+### Day 5: Friday - Security Audit & Performance Testing (8 hours)
+**Morning (4 hours):**
+- ☐ Security testing:
+  - ☐ SQL injection attempts
+  - ☐ XSS (Cross-Site Scripting) attempts
+  - ☐ CSRF protection verification
+  - ☐ Authentication bypass attempts
+  - ☐ Cross-tenant access attempts
+  - ☐ Rate limiting verification
+  - ☐ Password security (hashing, strength)
+  - ☐ JWT token security
+  - ☐ HTTPS enforcement
+- ☐ Use security scanning tools (OWASP ZAP, etc.)
+- ☐ Fix security issues found
+**Afternoon (4 hours):**
+- ☐ Performance testing:
+  - ☐ Load testing (100+ concurrent users)
+  - ☐ API response time testing
+  - ☐ Database query performance
+  - ☐ Frontend bundle size check
+  - ☐ Image optimization
+  - ☐ Lighthouse score (aim for 90+)
+- ☐ Optimize slow queries
+- ☐ Optimize frontend performance
+- ☐ Final code review
+**Phase 9 Completion Checklist:**
+- ✅ All unit tests passing
+- ✅ All integration tests passing
+- ✅ All E2E tests passing
+- ✅ No critical bugs
+- ✅ Security audit complete
+- ✅ Performance optimized
+- ✅ Ready for deployment
+---
+## **Phase 10: Deployment & Go-Live (Week 12)**
+**Duration:** 5 Business Days  
+**Team:** Full-stack Developer + DevOps (optional)  
+**Deliverables:** Live production application
+### Day 1: Monday - Production Environment Setup (8 hours)
+**Morning (4 hours):**
+- ☐ Create production Supabase project:
+  - Create new project (production)
+  - Run all migrations
+  - Setup Row Level Security
+  - Create indexes
+  - Configure backups (daily)
+  - Note production API keys
+**Afternoon (4 hours):**
+- ☐ Setup production environment variables:
+  - Frontend (.env.production):
+    - REACT_APP_API_URL
+    - REACT_APP_SUPABASE_URL
+    - REACT_APP_SUPABASE_ANON_KEY
+  - Backend (.env.production):
+    - SUPABASE_URL
+    - SUPABASE_SERVICE_KEY
+    - JWT_SECRET (strong random string)
+    - NODE_ENV=production
+- ☐ Configure CORS for production
+- ☐ Setup SSL/HTTPS certificates (automatic on Vercel/Railway)
+---
+### Day 2: Tuesday - Backend Deployment (8 hours)
+**Morning (4 hours):**
+- ☐ **Deploy to Railway:**
+  - Sign up for Railway (https://railway.app)
+  - Connect GitHub repository
+  - Create new project
+  - Deploy from GitHub (backend folder)
+  - Add environment variables
+  - Deploy
+  - Get production URL (e.g., https://your-app.railway.app)
+- ☐ Test backend API (Postman)
+**Afternoon (4 hours):**
+- ☐ Configure production settings:
+  - Enable logging
+  - Setup error monitoring (Sentry, optional)
+  - Configure rate limiting
+  - Setup health check endpoint
+- ☐ Test all API endpoints in production
+- ☐ Verify database connection
+- ☐ Test tenant isolation in production
+---
+### Day 3: Wednesday - Frontend Deployment (8 hours)
+**Morning (4 hours):**
+- ☐ **Deploy to Vercel:**
+  - Sign up for Vercel (https://vercel.com)
+  - Connect GitHub repository
+  - Import project (frontend folder)
+  - Configure build settings:
+    - Build Command: `npm run build`
+    - Output Directory: `build`
+  - Add environment variables
+  - Deploy
+  - Get production URL (e.g., https://your-app.vercel.app)
+**Afternoon (4 hours):**
+- ☐ Configure custom domain (optional):
+  - Purchase domain (e.g., yourapp.com)
+  - Configure DNS:
+    - A record: @ → Vercel IP
+    - CNAME record: www → cname.vercel-dns.com
+    - CNAME record: * → cname.vercel-dns.com (for subdomains)
+  - Add domain in Vercel
+  - Wait for SSL certificate (automatic)
+- ☐ Test frontend in production
+- ☐ Verify API integration
+---
+### Day 4: Thursday - Data Migration & Testing (8 hours)
+**Morning (4 hours):**
+- ☐ Migrate existing data (if any):
+  - Export data from current system
+  - Transform data (add tenant_id)
+  - Import into production database
+  - Verify data integrity
+  - Test queries with real data
+- ☐ Create first production tenant:
+  - Use super admin to create tenant
+  - Create tenant admin user
+  - Test tenant login
+**Afternoon (4 hours):**
+- ☐ End-to-end testing in production:
+  - Test user registration/login (with email) ✅
+  - Test portfolio management
+  - Test issue tracking
+  - Test admin panel
+  - Test super admin features
+  - Test on multiple devices
+  - Test subdomain routing
+- ☐ Fix any production issues
+---
+### Day 5: Friday - Go-Live Preparation & Launch (8 hours)
+**Morning (4 hours):**
+- ☐ Final checks:
+  - ☐ All features working
+  - ☐ No console errors
+  - ☐ No broken links
+  - ☐ All images loading
+  - ☐ SSL certificate valid
+  - ☐ Emails sending correctly
+  - ☐ Backups configured
+  - ☐ Monitoring enabled
+- ☐ Create user documentation:
+  - User guide (how to use the app)
+  - Admin guide (how to manage tenants)
+  - FAQ
+- ☐ Prepare launch announcement
+**Afternoon (4 hours):**
+- ☐ **GO LIVE! 🚀**
+- ☐ Announce to stakeholders
+- ☐ Onboard first clients:
+  - Create their tenants
+  - Send credentials
+  - Provide training (if needed)
+- ☐ Monitor for issues:
+  - Check error logs
+  - Monitor API response times
+  - Watch for user feedback
+- ☐ Celebrate! 🎉
+**Phase 10 Completion Checklist:**
+- ✅ Backend deployed to Railway
+- ✅ Frontend deployed to Vercel
+- ✅ Database migrated to production
+- ✅ Custom domain configured (optional)
+- ✅ All production tests passing
+- ✅ Documentation complete
+- ✅ Application LIVE!
+---
+## 📊 Resources & Team Allocation
+### Recommended Team Structure
+**Option 1: Lean Team (6-7 weeks)**
+```
+Team: 3 Developers
+- 1 Senior Full-stack Developer (Lead)
+- 1 Frontend Developer
+- 1 Backend Developer
+Timeline: 6-7 weeks
+Cost: 3 × $5,000/month × 1.5 months = $22,500
+```
+**Option 2: Solo Developer (10 weeks)**
+```
+Team: 1 Full-stack Developer
+Timeline: 10 weeks
+Cost: 1 × $5,000/month × 2.5 months = $12,500
+```
+**Option 3: Accelerated (4-5 weeks)**
+```
+Team: 5 Developers
+- 1 Tech Lead
+- 2 Frontend Developers
+- 2 Backend Developers
+Timeline: 4-5 weeks
+Cost: 5 × $5,000/month × 1.25 months = $31,250
+```
+---
+## 💰 Cost Breakdown
+### Infrastructure Costs (First Year)
+| Item | Tier | Cost |
+|------|------|------|
+| **Vercel (Frontend)** | FREE | $0/month |
+| **Railway (Backend)** | FREE | $0/month ($5 credit) |
+| **Supabase (Database)** | FREE | $0/month (500MB) |
+| **Domain** | Optional | $10-15/year |
+| **SSL Certificate** | Included | $0/month |
+| **Total Monthly** | | **$0/month** |
+| **Total Year 1** | | **$0-15/year** |
+**When to upgrade (20+ clients):**
+- Supabase Pro: $25/month ($300/year)
+- Railway Pro: $10/month ($120/year)
+- **Total: $420/year**
+### Development Costs
+| Team Option | Duration | Cost Estimate |
+|-------------|----------|---------------|
+| Solo Developer | 10 weeks | $12,500 |
+| Lean Team (3 devs) | 6-7 weeks | $22,500 |
+| Accelerated (5 devs) | 4-5 weeks | $31,250 |
+---
+## 📈 Scaling Plan
+### Phase 1: MVP (0-10 clients)
+- FREE tier sufficient
+- 1 developer for maintenance
+- Monthly cost: $0
+### Phase 2: Growth (10-50 clients)
+- Upgrade to paid tiers
+- 1-2 developers for support
+- Monthly cost: $35 (infrastructure)
+### Phase 3: Scale (50+ clients)
+- Enterprise infrastructure
+- Dedicated support team
+- Monthly cost: $100-500 (depending on scale)
+---
+## ✅ Final Deliverables Checklist
+### Application Features
+- ✅ Email-based authentication (users & admins) ✅
+- ✅ Multi-tenant with complete data isolation
+- ✅ Portfolio management (with subtitle & site range)
+- ✅ Issue tracking (full CRUD)
+- ✅ Portfolio locking system
+- ✅ "All Sites Checked" status tracking
+- ✅ Admin panel (6 tabs)
+- ✅ Super admin portal
+- ✅ Dashboard with real-time stats
+- ✅ Hourly coverage charts
+- ✅ Performance analytics
+- ✅ Heat maps (status & coverage)
+- ✅ Portfolio monitoring matrix
+- ✅ Issues by user report
+- ✅ Export to Excel/CSV
+- ✅ Search & filters
+- ✅ Mobile responsive
+- ✅ Real-time updates (auto-refresh)
+### Documentation
+- ✅ User guide
+- ✅ Admin guide
+- ✅ API documentation
+- ✅ Database schema documentation
+- ✅ Deployment guide
+- ✅ Setup instructions
+### Testing
+- ✅ Unit tests (80%+ coverage)
+- ✅ Integration tests
+- ✅ E2E tests
+- ✅ Security audit
+- ✅ Performance testing
+### Deployment
+- ✅ Production environment (Vercel + Railway + Supabase)
+- ✅ SSL/HTTPS enabled
+- ✅ Custom domain configured (optional)
+- ✅ Monitoring enabled
+- ✅ Backups configured
+---
+## 🎯 Key Changes from Original Requirements
+### ✅ Authentication Change Implemented:
+**OLD:** Username-based login  
+**NEW:** ✅ Email-based login (as requested)
+**Changes Made:**
+1. Database: `users.email` column (instead of just username)
+2. Frontend: Email input fields in login forms
+3. Backend: Login validates by email
+4. JWT token: Includes email
+5. User registration: Requires email
+6. Password reset: Uses email
+---
+## 📞 Communication Plan
+### Weekly Status Updates
+- **Monday:** Week planning & task assignment
+- **Wednesday:** Mid-week progress review
+- **Friday:** Week completion review & demo
+### Deliverables to Manager
+- Week 2: Database schema demo
+- Week 4: Authentication system demo
+- Week 6: Portfolio management demo
+- Week 8: Issue tracking demo
+- Week 10: Analytics demo
+- Week 12: Go-live!
+---
+**Document Version:** 1.0  
+**Last Updated:** December 17, 2025  
+**Status:** Ready for Manager Review
+---
+**End of Document**
