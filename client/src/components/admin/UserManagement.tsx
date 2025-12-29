@@ -128,10 +128,10 @@ const UserManagement: React.FC = () => {
                 const fullName = user.full_name || ''
                 const isInvalidName = !fullName || fullName.trim() === '' || fullName.length > 100 || (!fullName.includes(' ') && fullName.length > 20)
                 const suggestedName = user.email.split('@')[0]
-                const displayName = isInvalidName 
-                  ? `${fullName || '(Invalid)'} ⚠️` 
+                const displayName = isInvalidName
+                  ? `${fullName || '(Invalid)'} ⚠️`
                   : fullName
-                
+
                 return (
                   <tr key={user.id} className={`hover:bg-gray-50 ${isInvalidName ? 'bg-yellow-50' : ''}`}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.email}</td>
@@ -166,8 +166,8 @@ const UserManagement: React.FC = () => {
                         variant={isInvalidName ? "primary" : "secondary"}
                         onClick={() => {
                           setEditingUser(user)
-                          // If name is invalid, suggest a better name
-                          const suggestedFullName = isInvalidName 
+                          // If name is invalid, suggest a better name - preserve casing after first letter
+                          const suggestedFullName = isInvalidName
                             ? suggestedName.charAt(0).toUpperCase() + suggestedName.slice(1)
                             : user.full_name
                           setFormData({
@@ -253,8 +253,8 @@ const UserManagement: React.FC = () => {
               formData.fullName && formData.fullName.length > 100
                 ? 'Name is too long (max 100 characters)'
                 : formData.fullName && !formData.fullName.includes(' ') && formData.fullName.length > 20
-                ? 'Name should include first and last name separated by a space'
-                : undefined
+                  ? 'Name should include first and last name separated by a space'
+                  : undefined
             }
           />
 

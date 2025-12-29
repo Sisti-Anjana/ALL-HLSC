@@ -29,7 +29,7 @@ export const truncate = (text: string, length: number): string => {
 }
 
 export const capitalize = (text: string): string => {
-  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase()
+  return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
 export const debounce = <T extends (...args: any[]) => any>(

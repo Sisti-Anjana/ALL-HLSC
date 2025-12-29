@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { issueService } from '../../services/issueService'
 import { CreateIssueData } from '../../types/issue.types'
@@ -61,11 +61,14 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
   })
 
   // Get the lock info for this portfolio and hour to determine who should be monitored_by
-  const lockForThisPortfolio: PortfolioLock | undefined = isOpen && portfolioId ? locks.find(
-    (lock) => 
-      lock.portfolio_id === portfolioId && 
-      lock.issue_hour === currentHour
-  ) : undefined
+  const lockForThisPortfolio: PortfolioLock | undefined = useMemo(() => {
+    if (!isOpen || !portfolioId) return undefined
+    return (locks || []).find(
+      (lock) =>
+        String(lock.portfolio_id || '').trim().toLowerCase() === String(portfolioId).trim().toLowerCase() &&
+        Number(lock.issue_hour) === currentHour
+    )
+  }, [isOpen, portfolioId, locks, currentHour])
 
   // Lock portfolio when sidebar opens
   const lockMutation = useMutation({
@@ -92,40 +95,40 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
         portfolioId,
         hour,
       })
-      
+
       // Immediately invalidate all related queries
       console.log('🔄 Lock mutation - Invalidating queries...')
       await queryClient.invalidateQueries({ queryKey: ['portfolio-activity'] })
       await queryClient.invalidateQueries({ queryKey: ['portfolio-locks'] })
       await queryClient.invalidateQueries({ queryKey: ['locks'] })
-      
+
       // Force immediate refetch for active queries
       console.log('🔄 Lock mutation - Refetching queries...')
       await Promise.all([
-        queryClient.refetchQueries({ 
+        queryClient.refetchQueries({
           queryKey: ['portfolio-locks'],
         }),
-        queryClient.refetchQueries({ 
+        queryClient.refetchQueries({
           queryKey: ['locks'],
         }),
-        queryClient.refetchQueries({ 
+        queryClient.refetchQueries({
           queryKey: ['portfolio-activity'],
         }),
       ])
-      
+
       // Also manually trigger a refetch after a short delay to ensure UI updates
       setTimeout(async () => {
         console.log('🔄 Lock mutation - Delayed refetch after 500ms...')
         await queryClient.refetchQueries({ queryKey: ['portfolio-locks'] })
         console.log('✅ Lock mutation - Delayed refetch completed')
       }, 500)
-      
+
       console.log('✅ Lock mutation - All queries updated, showing success toast')
       toast.success('Portfolio locked successfully')
     },
     onError: (error: any) => {
       const errorMessage = error.response?.data?.error || error.message || 'Failed to lock portfolio'
-      
+
       console.error('❌ Lock mutation - ERROR', {
         message: errorMessage,
         error: error.message,
@@ -134,7 +137,7 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
         portfolioId,
         hour,
       })
-      
+
       // Check if error is about a stale lock (portfolio not found)
       if (errorMessage.includes('not found in database')) {
         // Stale lock detected - show helpful message and suggest going to Active Locks
@@ -177,7 +180,7 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
       locksCount: locks.length,
       lockMutationPending: lockMutation.isPending,
     })
-    
+
     if (isOpen && portfolioId && user?.email) {
       const currentHour = hour !== undefined && hour !== null ? hour : new Date().getHours()
       console.log('🔒 IssueLoggingSidebar - Conditions met, checking locks...', {
@@ -185,7 +188,7 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
         locksLoading,
         locksCount: locks.length,
       })
-      
+
       // Only check existing locks if they've loaded, but don't wait for them
       if (!locksLoading && locks.length > 0) {
         console.log('🔒 IssueLoggingSidebar - Locks loaded, checking for existing lock...', {
@@ -195,29 +198,29 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
             monitored_by: l.monitored_by,
           })),
         })
-        
+
         // Check if portfolio is already locked by current user for this hour
         const existingLockForThisPortfolio = locks.find(
-          (lock) => 
-            lock.portfolio_id === portfolioId && 
-            lock.issue_hour === currentHour &&
+          (lock) =>
+            String(lock.portfolio_id || '').trim().toLowerCase() === String(portfolioId).trim().toLowerCase() &&
+            Number(lock.issue_hour) === currentHour &&
             lock.monitored_by?.toLowerCase() === user.email.toLowerCase()
         )
-        
+
         if (existingLockForThisPortfolio) {
           console.log('✅ IssueLoggingSidebar - Portfolio already locked by current user, skipping lock')
           // Already locked by current user - no need to lock again
           return
         }
-        
+
         // Check if portfolio is locked by someone else for this hour
         const lockBySomeoneElse = locks.find(
-          (lock) => 
-            lock.portfolio_id === portfolioId && 
-            lock.issue_hour === currentHour &&
+          (lock) =>
+            String(lock.portfolio_id || '').trim().toLowerCase() === String(portfolioId).trim().toLowerCase() &&
+            Number(lock.issue_hour) === currentHour &&
             lock.monitored_by?.toLowerCase() !== user.email.toLowerCase()
         )
-        
+
         if (lockBySomeoneElse) {
           console.log('⚠️ IssueLoggingSidebar - Portfolio locked by someone else:', lockBySomeoneElse.monitored_by)
           // Portfolio is locked by someone else - show error but still try (server will handle it)
@@ -230,7 +233,7 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
           return
         }
       }
-      
+
       // Lock the portfolio with the current hour immediately when sidebar opens
       // Server will handle validation and return proper error if user has another lock
       if (currentHour >= 0 && currentHour <= 23) {
@@ -284,10 +287,10 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
     // Determine monitored_by: use lock's monitored_by if portfolio is locked, otherwise use current user
     // This ensures issues are created with the same monitored_by as the lock (matching the tooltip)
     // Always fallback to current user if lock is not found
-    const monitoredByEmail = (lockForThisPortfolio?.monitored_by && lockForThisPortfolio.monitored_by.trim()) 
-      ? lockForThisPortfolio.monitored_by 
+    const monitoredByEmail = (lockForThisPortfolio?.monitored_by && lockForThisPortfolio.monitored_by.trim())
+      ? lockForThisPortfolio.monitored_by
       : (user?.email || '')
-    
+
     if (!monitoredByEmail) {
       toast.error('Unable to determine who is monitoring this portfolio. Please refresh and try again.')
       return
@@ -335,10 +338,10 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
   const displayName = portfolio?.site_range
     ? `${portfolio.name} (${portfolio.site_range})`
     : portfolio?.name || 'Loading...'
-  
+
   // Get monitored_by name: use lock's monitored_by if locked, otherwise current user
-  const monitoredByEmail = (lockForThisPortfolio?.monitored_by && lockForThisPortfolio.monitored_by.trim()) 
-    ? lockForThisPortfolio.monitored_by 
+  const monitoredByEmail = (lockForThisPortfolio?.monitored_by && lockForThisPortfolio.monitored_by.trim())
+    ? lockForThisPortfolio.monitored_by
     : (user?.email || '')
   const monitoredByUser = monitoredByEmail ? users.find(u => u.email === monitoredByEmail) : null
   const monitoredByName = monitoredByUser?.full_name || monitoredByUser?.email?.split('@')[0] || (monitoredByEmail ? monitoredByEmail.split('@')[0] : 'Unknown')
@@ -361,6 +364,31 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
           </button>
         </div>
         <p className="text-sm text-gray-600">Monitored by {monitoredByName}</p>
+
+        {/* Lock Status Indicator */}
+        <div className="mt-3 flex items-center gap-2">
+          {lockMutation.isPending ? (
+            <span className="flex items-center gap-1.5 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-bold rounded-full animate-pulse">
+              <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
+              SECURING LOCK...
+            </span>
+          ) : lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() === user?.email?.toLowerCase() ? (
+            <span className="flex items-center gap-1.5 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-full border border-green-200">
+              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+              🔒 LICENSED MONITORING (LOCKED BY YOU)
+            </span>
+          ) : lockForThisPortfolio ? (
+            <span className="flex items-center gap-1.5 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-bold rounded-full border border-purple-200">
+              <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+              🚩 LOCKED BY {monitoredByName.toUpperCase()}
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full border border-yellow-200">
+              <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
+              ⚠️ VIEW ONLY (NOT LOCKED)
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Content */}
@@ -375,7 +403,7 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
         {/* Add Issue Form */}
         <div className="space-y-4">
           <h4 className="font-semibold text-gray-900">Add issue for this hour:</h4>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Issue Present</label>
             <div className="flex gap-2">
@@ -387,11 +415,10 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
                     setIssueDescription('')
                   }
                 }}
-                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  issuePresent === 'yes'
-                    ? 'bg-red-100 text-red-800 border-2 border-red-300'
-                    : 'bg-white text-gray-700 border-2 border-gray-300 hover:bg-gray-50'
-                }`}
+                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${issuePresent === 'yes'
+                  ? 'bg-red-100 text-red-800 border-2 border-red-300'
+                  : 'bg-white text-gray-700 border-2 border-gray-300 hover:bg-gray-50'
+                  }`}
               >
                 Yes
               </button>
@@ -402,11 +429,10 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
                   setIssueDescription('No issue')
                   setMissedAlertsBy('') // Clear missed alerts when No is selected
                 }}
-                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  issuePresent === 'no'
-                    ? 'bg-green-100 text-green-800 border-2 border-green-300'
-                    : 'bg-white text-gray-700 border-2 border-gray-300 hover:bg-gray-50'
-                }`}
+                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${issuePresent === 'no'
+                  ? 'bg-green-100 text-green-800 border-2 border-green-300'
+                  : 'bg-white text-gray-700 border-2 border-gray-300 hover:bg-gray-50'
+                  }`}
               >
                 No
               </button>
@@ -432,9 +458,8 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
               placeholder={issuePresent === '' ? "Select issue present first" : issuePresent === 'no' ? "No issue" : "Describe the problem..."}
               disabled={issuePresent === 'no'}
               rows={4}
-              className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                issuePresent === 'no' ? 'bg-gray-100 cursor-not-allowed' : ''
-              }`}
+              className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${issuePresent === 'no' ? 'bg-gray-100 cursor-not-allowed' : ''
+                }`}
             />
           </div>
 
@@ -444,9 +469,8 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
               value={missedAlertsBy}
               onChange={(e) => setMissedAlertsBy(e.target.value)}
               disabled={issuePresent === 'no' || issuePresent === ''}
-              className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                issuePresent === 'no' || issuePresent === '' ? 'bg-gray-100 cursor-not-allowed' : ''
-              }`}
+              className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${issuePresent === 'no' || issuePresent === '' ? 'bg-gray-100 cursor-not-allowed' : ''
+                }`}
             >
               <option value="">Select</option>
               {users
@@ -464,12 +488,18 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
 
           <Button
             onClick={handleAddIssue}
-            disabled={createMutation.isPending || !issueDescription.trim()}
+            disabled={createMutation.isPending || !issueDescription.trim() || (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase())}
             className="w-full"
-            style={{ backgroundColor: '#76ab3f' }}
+            style={{ backgroundColor: (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase()) ? '#9ca3af' : '#76ab3f' }}
           >
-            {createMutation.isPending ? 'Adding...' : 'Add Issue'}
+            {createMutation.isPending ? 'Adding...' : (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase()) ? 'Locked by another user' : 'Add Issue'}
           </Button>
+
+          {lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase() && (
+            <p className="text-[10px] text-center text-red-600 font-medium">
+              You cannot log issues because this portfolio is locked by {monitoredByName}.
+            </p>
+          )}
         </div>
 
         {/* Existing Issues */}

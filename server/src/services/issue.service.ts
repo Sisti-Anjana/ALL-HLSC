@@ -6,7 +6,7 @@ export const issueService = {
     if (!tenantId || tenantId === 'null' || tenantId.trim() === '') {
       return []
     }
-    
+
     let query = supabase
       .from('issues')
       .select('*, portfolio:portfolios(*)')
@@ -40,7 +40,7 @@ export const issueService = {
     const { data, error } = await query
 
     if (error) throw new Error(`Failed to fetch issues: ${error.message}`)
-    
+
     // Map monitored_by from string to array for frontend compatibility
     return (data || []).map(issue => ({
       ...issue,
@@ -59,7 +59,7 @@ export const issueService = {
       .single()
 
     if (error) throw new Error(`Failed to fetch issue: ${error.message}`)
-    
+
     // Map monitored_by from string to array for frontend compatibility
     if (data) {
       return {
@@ -68,7 +68,7 @@ export const issueService = {
         monitored_by: data.monitored_by ? [data.monitored_by] : [],
       }
     }
-    
+
     return data
   },
 
@@ -91,7 +91,25 @@ export const issueService = {
       } else if (existingLock) {
         // Portfolio is locked - check if it's locked by the current user
         if (existingLock.monitored_by?.toLowerCase() !== userEmail.toLowerCase()) {
-          throw new Error(`This portfolio is locked for hour ${issueData.issue_hour} by ${existingLock.monitored_by}. Only the user who locked it can log issues.`)
+          console.error(`❌ Issue creation BLOCKED - Portfolio ${issueData.portfolio_id} is locked by another user: ${existingLock.monitored_by}`)
+          throw new Error(`This portfolio is locked for hour ${issueData.issue_hour}:00 by ${existingLock.monitored_by}. Only the user who locked it can log issues.`)
+        }
+      } else {
+        // ENFORCEMENT: Check if the user has ANY other lock active on a DIFFERENT portfolio
+        // This prevents creating issues on Portfolio A if the user has Portfolio B locked
+        const { data: userOtherLocks, error: otherLockError } = await supabase
+          .from('hour_reservations')
+          .select('portfolio_id, issue_hour')
+          .eq('tenant_id', tenantId)
+          .eq('monitored_by', userEmail)
+          .gt('expires_at', new Date().toISOString())
+          .neq('portfolio_id', issueData.portfolio_id)
+          .limit(1)
+
+        if (userOtherLocks && userOtherLocks.length > 0) {
+          const otherLock = userOtherLocks[0]
+          console.error(`❌ Issue creation BLOCKED - User has another portfolio locked: ${otherLock.portfolio_id}`)
+          throw new Error(`You cannot log issues here as you currently have another portfolio locked. Please finish that one first.`)
         }
       }
     }
@@ -100,8 +118,8 @@ export const issueService = {
     const mappedData: any = {
       ...issueData,
       tenant_id: tenantId,
-      monitored_by: Array.isArray(issueData.monitored_by) 
-        ? issueData.monitored_by[0] || '' 
+      monitored_by: Array.isArray(issueData.monitored_by)
+        ? issueData.monitored_by[0] || ''
         : (issueData.monitored_by || ''),
       // Ensure missed_by is an array (empty array if not provided, not null)
       missed_by: Array.isArray(issueData.missed_by) && issueData.missed_by.length > 0
@@ -133,7 +151,7 @@ export const issueService = {
     if (mappedData.site_name === '' || mappedData.site_name === null || mappedData.site_name === undefined) {
       mappedData.site_name = null // Set to null instead of empty string
     }
-    
+
     // Remove null/undefined fields (but keep empty arrays for required fields)
     Object.keys(mappedData).forEach(key => {
       // Don't delete site_name if it's null - let database handle it
@@ -142,12 +160,12 @@ export const issueService = {
         delete mappedData[key]
       }
     })
-    
+
     // Specifically remove severity if it's null or invalid
     if (mappedData.severity === null || mappedData.severity === undefined || mappedData.severity === '') {
       delete mappedData.severity
     }
-    
+
     // Specifically remove status if it's null or invalid
     if (mappedData.status === null || mappedData.status === undefined || mappedData.status === '') {
       delete mappedData.status
@@ -162,7 +180,7 @@ export const issueService = {
     if (!mappedData.monitored_by || mappedData.monitored_by.trim() === '') {
       mappedData.monitored_by = ''
     }
-    
+
     // Clean up notes field - remove if empty or just "Case #: "
     if (mappedData.notes && (mappedData.notes.trim() === '' || mappedData.notes.trim() === 'Case #:')) {
       delete mappedData.notes
@@ -181,13 +199,13 @@ export const issueService = {
       console.error('Error details:', JSON.stringify(error, null, 2))
       throw new Error(`Failed to create issue: ${error.message}`)
     }
-    
+
     // Map monitored_by back to array for frontend compatibility and add id field
     if (data) {
       data.id = data.issue_id || data.id // Map issue_id to id for frontend
       data.monitored_by = data.monitored_by ? [data.monitored_by] : []
     }
-    
+
     return data
   },
 
@@ -195,8 +213,8 @@ export const issueService = {
     // Map monitored_by from array to string if needed
     const mappedData = {
       ...issueData,
-      monitored_by: Array.isArray(issueData.monitored_by) 
-        ? issueData.monitored_by[0] || '' 
+      monitored_by: Array.isArray(issueData.monitored_by)
+        ? issueData.monitored_by[0] || ''
         : (issueData.monitored_by || ''),
       missed_by: Array.isArray(issueData.missed_by) && issueData.missed_by.length > 0
         ? issueData.missed_by
@@ -220,13 +238,13 @@ export const issueService = {
       .single()
 
     if (error) throw new Error(`Failed to update issue: ${error.message}`)
-    
+
     // Map monitored_by back to array for frontend compatibility and add id field
     if (data) {
       data.id = data.issue_id || data.id
       data.monitored_by = data.monitored_by ? [data.monitored_by] : []
     }
-    
+
     return data
   },
 

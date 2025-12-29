@@ -25,9 +25,10 @@ import toast from 'react-hot-toast'
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 interface UserHourData {
-  portfolios: Set<string>
+  completionsCount: number
   issues: Issue[]
   activeIssues: Issue[]
+  portfolios: string[] // List of portfolio names with site ranges
 }
 
 interface UserMatrixData {
@@ -73,7 +74,7 @@ const CoverageMatrix: React.FC = () => {
     staleTime: 30000, // Consider data fresh for 30 seconds (users don't change often)
     refetchInterval: 60000, // Refresh every 60 seconds (reduced from 1s to prevent page freeze)
   })
-  
+
   // Log users when they load
   useEffect(() => {
     if (users.length > 0) {
@@ -104,6 +105,12 @@ const CoverageMatrix: React.FC = () => {
   const { data: allIssues = [] } = useQuery<Issue[]>({
     queryKey: ['issues'],
     queryFn: () => issueService.getAll({}),
+  })
+
+  // Fetch admin logs
+  const { data: adminLogs = [] } = useQuery<any[]>({
+    queryKey: ['admin-logs'],
+    queryFn: adminService.getLogs,
   })
 
   // Filter issues by date range
@@ -143,16 +150,89 @@ const CoverageMatrix: React.FC = () => {
       console.log('⏳ Coverage Matrix - Waiting for users to load...', { usersLoading, usersCount: users.length })
       return []
     }
-    
+
+    // Track completions to avoid double-counting
+    const completionKeys = new Set<string>()
+
     const userMap: { [key: string]: UserMatrixData } = {}
 
     // Normalize date range for comparison
     const normalizedFromDate = fromDate ? fromDate.split('T')[0] : null
     const normalizedToDate = toDate ? toDate.split('T')[0] : null
 
-    // Debug: Log all completed portfolios first
+    // Helper to get or init user
+    const getOrInitUser = (email: string, displayName: string) => {
+      if (!userMap[email]) {
+        userMap[email] = {
+          userName: email,
+          displayName,
+          email,
+          totalPortfolios: 0,
+          hours: {},
+        }
+      }
+      return userMap[email]
+    }
+
+    // Initialize hours for each user to ensure keys exist before increments
+    const initHour = (user: UserMatrixData, hour: number) => {
+      if (!user.hours[hour]) {
+        user.hours[hour] = {
+          completionsCount: 0,
+          issues: [],
+          activeIssues: [],
+          portfolios: [],
+        }
+      }
+      return user.hours[hour]
+    }
+
+    // 1. PROCESS LOGS (Historical / Accurate)
+    const portfolioCheckedLogs = adminLogs.filter(log => {
+      if (log.action_type !== 'PORTFOLIO_CHECKED') return false
+
+      const logDate = new Date(log.created_at).toISOString().split('T')[0]
+      if (normalizedFromDate && logDate < normalizedFromDate) return false
+      if (normalizedToDate && logDate > normalizedToDate) return false
+      return true
+    })
+
+    portfolioCheckedLogs.forEach(log => {
+      const monitoredBy = log.admin_name || 'Unknown'
+      const portfolioId = log.related_portfolio_id
+      const logDate = new Date(log.created_at).toISOString().split('T')[0]
+      const logHour = log.metadata?.hour ?? new Date(log.created_at).getHours()
+
+      if (!portfolioId) return
+
+      // Find user for display name
+      const userStr = String(monitoredBy).toLowerCase()
+      const foundUser = users.find(u => u.email?.toLowerCase() === userStr)
+      let displayName = monitoredBy.split('@')[0]
+      if (foundUser?.full_name) displayName = foundUser.full_name
+
+      const user = getOrInitUser(userStr, displayName)
+      const hourData = initHour(user, logHour)
+
+      // Increment completionsCount for every log entry (cumulative)
+      hourData.completionsCount++
+      user.totalPortfolios++
+
+      // Add portfolio details if available
+      const portfolio = portfolios.find(p => p.id === portfolioId)
+      if (portfolio) {
+        const siteRange = portfolio.site_range ? ` (${portfolio.site_range})` : ''
+        const portfolioDetail = `${portfolio.name}${siteRange}`
+        hourData.portfolios.push(portfolioDetail)
+      }
+
+      const key = `${portfolioId}_${logDate}_${logHour}_${monitoredBy.toLowerCase()}`
+      completionKeys.add(key)
+    })
+
+    // 2. FALLBACK: Process portfolios table for snapshot data
     const completedPortfolios = portfolios.filter(p => p.all_sites_checked === 'Yes' && p.all_sites_checked_date && p.all_sites_checked_by)
-    
+
     // First, process portfolios with "All Sites Checked = Yes" to count completions
     // Count each distinct issue entry session (by hour) as a separate completion
     // This allows the same portfolio to be counted multiple times if completed multiple times
@@ -164,7 +244,7 @@ const CoverageMatrix: React.FC = () => {
       usersCount: users.length,
       usersLoading,
     })
-    
+
     console.log('🔍 Coverage Matrix - All completed portfolios:', completedPortfolios.map(p => ({
       id: p.id,
       name: p.name,
@@ -173,11 +253,11 @@ const CoverageMatrix: React.FC = () => {
       checkedDate: p.all_sites_checked_date,
       checkedHour: p.all_sites_checked_hour,
     })))
-    console.log('🔍 Coverage Matrix - Available users:', users.map(u => ({ 
-      id: u.id, 
+    console.log('🔍 Coverage Matrix - Available users:', users.map(u => ({
+      id: u.id,
       idType: typeof u.id,
-      email: u.email, 
-      full_name: u.full_name 
+      email: u.email,
+      full_name: u.full_name
     })))
     console.log('🔍 Coverage Matrix - Date range:', { fromDate, toDate, normalizedFromDate, normalizedToDate })
 
@@ -190,7 +270,7 @@ const CoverageMatrix: React.FC = () => {
       // Check if completion date is within the selected date range
       const checkedDateStr = portfolio.all_sites_checked_date
       const normalizedCheckedDate = checkedDateStr.split('T')[0] // Remove time if present
-      
+
       // Strict date filtering - portfolio completion must be within the selected date range
       if (normalizedFromDate && normalizedCheckedDate < normalizedFromDate) {
         console.log('⏭️ Coverage Matrix - Skipping portfolio (before date range):', {
@@ -210,12 +290,12 @@ const CoverageMatrix: React.FC = () => {
         })
         return // Skip - after date range
       }
-      
+
       // Get the user who completed it (all_sites_checked_by is a user ID/UUID from JWT token)
       // Try ID match first - this should work if the user exists
       const checkedByValue = portfolio.all_sites_checked_by
       const checkedByValueStr = String(checkedByValue)
-      
+
       let checkedByUser = users.find((u) => {
         const userIdStr = String(u.id)
         const matches = userIdStr === checkedByValueStr || u.id === checkedByValue
@@ -233,7 +313,7 @@ const CoverageMatrix: React.FC = () => {
         }
         return matches
       })
-      
+
       // If ID match fails, try email match (fallback for data inconsistencies)
       if (!checkedByUser) {
         console.warn('⚠️ Coverage Matrix - User ID not found, trying email match:', {
@@ -242,16 +322,16 @@ const CoverageMatrix: React.FC = () => {
           checkedByValue: checkedByValue,
           checkedByValueStr: checkedByValueStr,
           checkedByType: typeof checkedByValue,
-          availableUserIds: users.map(u => ({ 
-            id: u.id, 
+          availableUserIds: users.map(u => ({
+            id: u.id,
             idStr: String(u.id),
-            email: u.email, 
+            email: u.email,
             full_name: u.full_name,
             idMatches: String(u.id) === checkedByValueStr,
             idMatchesStrict: u.id === checkedByValue,
           })),
         })
-        checkedByUser = users.find((u) => 
+        checkedByUser = users.find((u) =>
           u.email && u.email.toLowerCase() === checkedByValueStr.toLowerCase()
         )
         if (checkedByUser) {
@@ -264,7 +344,22 @@ const CoverageMatrix: React.FC = () => {
           })
         }
       }
-      
+
+      if (!checkedByUser) {
+        // If not found in user list, check if it's the current user (e.g. Super Admin)
+        if (currentUser && currentUser.userId === checkedByValueStr) {
+          checkedByUser = {
+            id: currentUser.userId,
+            email: currentUser.email,
+            full_name: currentUser.email.split('@')[0], // Fallback name
+          } as any
+          console.log('✅ Coverage Matrix - Matched current user (Super Admin):', {
+            portfolioId: portfolio.id,
+            userEmail: checkedByUser?.email || currentUser?.email
+          })
+        }
+      }
+
       if (!checkedByUser) {
         // User not found - skip this portfolio (don't count it)
         // This ensures only valid, active users are shown in the matrix
@@ -279,187 +374,53 @@ const CoverageMatrix: React.FC = () => {
         return // Skip this portfolio - don't count it
       }
 
-      const userEmail = checkedByUser.email
+      const userEmail = (checkedByUser as any).email
       // Ensure full_name is valid - if it looks like a password (too long, no spaces, etc), use email instead
-      let displayName = checkedByUser.full_name
+      let displayName = (checkedByUser as any).full_name
       if (!displayName || displayName.trim() === '' || displayName.length > 100 || (!displayName.includes(' ') && displayName.length > 20)) {
         // If full_name is missing, invalid, or suspiciously long (might be a password), use email prefix
         // Format email prefix nicely: "sanjaykumarg" -> "Sanjaykumarg"
         const emailPrefix = userEmail.split('@')[0] || 'Unknown'
-        displayName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1).toLowerCase()
+        displayName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1)
         console.warn('⚠️ Coverage Matrix - Using email prefix as display name:', {
           portfolioId: portfolio.id,
           userEmail,
-          full_name: checkedByUser.full_name,
+          full_name: (checkedByUser as any).full_name,
           displayName,
-          reason: !checkedByUser.full_name ? 'missing' : checkedByUser.full_name.length > 100 ? 'too long' : 'no spaces',
+          reason: !(checkedByUser as any).full_name ? 'missing' : (checkedByUser as any).full_name.length > 100 ? 'too long' : 'no spaces',
         })
       } else {
-        displayName = checkedByUser.full_name.trim()
+        displayName = (checkedByUser as any).full_name.trim()
       }
+
+      const completionHour = portfolio.all_sites_checked_hour ?? 0
 
       console.log('Coverage Matrix Debug - Processing completed portfolio:', {
         portfolioId: portfolio.id,
         portfolioName: portfolio.name,
         checkedBy: userEmail,
         checkedDate: normalizedCheckedDate,
-        completionHour: portfolio.all_sites_checked_hour,
-      })
-
-      // Get all issues for this portfolio by this user within the date range
-      const portfolioIssues = filteredIssues.filter(issue => {
-        if (issue.portfolio_id !== portfolio.id) return false
-        
-        // Check if issue is by this user
-        const issueMonitoredBy = Array.isArray(issue.monitored_by) 
-          ? issue.monitored_by[0] 
-          : issue.monitored_by
-        if (!issueMonitoredBy || issueMonitoredBy.toLowerCase() !== userEmail.toLowerCase()) {
-          return false
-        }
-        
-        // Check if issue date is within range
-        if (issue.created_at) {
-          const issueDateStr = new Date(issue.created_at).toISOString().split('T')[0]
-          if (normalizedFromDate && issueDateStr < normalizedFromDate) return false
-          if (normalizedToDate && issueDateStr > normalizedToDate) return false
-        }
-        
-        return true
-      })
-
-      // Get completion hour from portfolio record
-      const completionHour = portfolio.all_sites_checked_hour ?? 0
-
-      console.log('Coverage Matrix Debug - Portfolio issues found:', {
-        portfolioId: portfolio.id,
-        portfolioName: portfolio.name,
-        userEmail,
-        issuesFound: portfolioIssues.length,
         completionHour,
-        issueHours: portfolioIssues.map(i => i.issue_hour),
-        allIssuesForPortfolio: portfolioIssues.map(i => ({
-          id: i.id,
-          hour: i.issue_hour,
-          monitoredBy: i.monitored_by,
-          created_at: i.created_at,
-        })),
       })
 
-      // Initialize user in map if not exists
-      if (!userMap[userEmail]) {
-        userMap[userEmail] = {
-          userName: userEmail,
-          displayName,
-          email: userEmail,
-          totalPortfolios: 0,
-          hours: {},
-        }
-      }
+      const portfolioId = portfolio.id || (portfolio as any).portfolio_id
+      const key = `${portfolioId}_${normalizedCheckedDate}_${completionHour}_${userEmail.toLowerCase()}`
 
-      // If there are issues, group by hour and count each hour separately
-      // ALWAYS use issue hour when issues exist, not completion hour
-      if (portfolioIssues.length > 0) {
-        // Group issues by hour - each hour represents a distinct work session/completion
-        const issuesByHour: { [hour: number]: typeof portfolioIssues } = {}
-        portfolioIssues.forEach(issue => {
-          const hour = issue.issue_hour ?? 0
-          if (!issuesByHour[hour]) {
-            issuesByHour[hour] = []
-          }
-          issuesByHour[hour].push(issue)
-        })
+      // Use already counted check if available
+      if (completionKeys.has(key)) return
 
-        console.log('✅ Coverage Matrix - Counting portfolio by issue hours:', {
-          portfolioId: portfolio.id,
-          portfolioName: portfolio.name,
-          userEmail,
-          displayName,
-          issuesByHourKeys: Object.keys(issuesByHour),
-          completionHour, // This might be different from issue hours
-          totalIssues: portfolioIssues.length,
-        })
+      const user = getOrInitUser(userEmail.toLowerCase(), displayName)
+      const hourData = initHour(user, completionHour)
 
-        // Count each hour with issues as a separate portfolio completion
-        Object.keys(issuesByHour).forEach(hourStr => {
-          const hour = parseInt(hourStr)
-          
-          // Check hour filter
-          if (hourFilter !== 'all' && hour !== parseInt(hourFilter)) {
-            console.log('⏭️ Coverage Matrix - Skipping hour (filtered out):', { hour, hourFilter })
-            return
-          }
+      hourData.completionsCount++
+      user.totalPortfolios++
 
-          // Initialize hour if not exists
-          if (!userMap[userEmail].hours[hour]) {
-            userMap[userEmail].hours[hour] = {
-              portfolios: new Set(),
-              issues: [],
-              activeIssues: [],
-            }
-          }
+      // Add portfolio details
+      const siteRange = portfolio.site_range ? ` (${portfolio.site_range})` : ''
+      const portfolioDetail = `${portfolio.name}${siteRange}`
+      hourData.portfolios.push(portfolioDetail)
 
-          // Add portfolio completion - use unique key: portfolioId_date_hour
-          // This allows the same portfolio to be counted multiple times if completed at different hours
-          // IMPORTANT: Use issue hour, not completion hour, because that's when the work was actually done
-          const portfolioKey = `${portfolio.id}_${normalizedCheckedDate}_${hour}`
-          const wasAdded = userMap[userEmail].hours[hour].portfolios.has(portfolioKey)
-          userMap[userEmail].hours[hour].portfolios.add(portfolioKey)
-          
-          console.log('✅ Coverage Matrix - Added portfolio to hour:', {
-            portfolioId: portfolio.id,
-            portfolioName: portfolio.name,
-            userEmail,
-            displayName,
-            hour,
-            portfolioKey,
-            wasAlreadyAdded: wasAdded,
-            totalPortfoliosInThisHour: userMap[userEmail].hours[hour].portfolios.size,
-          })
-        })
-      } else {
-        // No issues found, but portfolio is completed - count using completion hour
-        // This is a fallback for portfolios completed without issues logged
-        console.log('⚠️ Coverage Matrix - No issues found, using completion hour:', {
-          portfolioId: portfolio.id,
-          portfolioName: portfolio.name,
-          userEmail,
-          displayName,
-          completionHour,
-          checkedDate: normalizedCheckedDate,
-        })
-        
-        // Check hour filter
-        if (hourFilter !== 'all' && completionHour !== parseInt(hourFilter)) {
-          console.log('⏭️ Coverage Matrix - Skipping completion hour (filtered out):', { completionHour, hourFilter })
-          return
-        }
-
-        // Initialize hour if not exists
-        if (!userMap[userEmail].hours[completionHour]) {
-          userMap[userEmail].hours[completionHour] = {
-            portfolios: new Set(),
-            issues: [],
-            activeIssues: [],
-          }
-        }
-
-        // Add portfolio completion - use unique key: portfolioId_date_hour
-        const portfolioKey = `${portfolio.id}_${normalizedCheckedDate}_${completionHour}`
-        const wasAdded = userMap[userEmail].hours[completionHour].portfolios.has(portfolioKey)
-        userMap[userEmail].hours[completionHour].portfolios.add(portfolioKey)
-        
-        console.log('✅ Coverage Matrix - Added portfolio (no issues, using completion hour):', {
-          portfolioId: portfolio.id,
-          portfolioName: portfolio.name,
-          userEmail,
-          displayName,
-          completionHour,
-          portfolioKey,
-          wasAlreadyAdded: wasAdded,
-          totalPortfoliosInThisHour: userMap[userEmail].hours[completionHour].portfolios.size,
-        })
-      }
+      completionKeys.add(key)
     })
 
     // Now process issues to count issues (not portfolios) per user per hour
@@ -499,14 +460,14 @@ const CoverageMatrix: React.FC = () => {
       monitoredByEmails.forEach((monitoredByEmail) => {
         // Normalize email: trim whitespace and convert to lowercase
         const normalizedMonitoredEmail = String(monitoredByEmail).trim().toLowerCase()
-        
+
         // Find user by email (case-insensitive match with trimmed whitespace)
         const user = users.find((u) => {
           if (!u.email) return false
           const normalizedUserEmail = String(u.email).trim().toLowerCase()
           return normalizedUserEmail === normalizedMonitoredEmail
         })
-        
+
         if (!user) {
           // User not found by email - skip this issue (don't count it)
           // This ensures only valid, active users are shown in the matrix
@@ -531,7 +492,7 @@ const CoverageMatrix: React.FC = () => {
             // If full_name is missing, invalid, or suspiciously long (might be a password), use email prefix
             // Format email prefix nicely: "sanjaykumarg" -> "Sanjaykumarg"
             const emailPrefix = userEmail.split('@')[0] || 'Unknown'
-            displayName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1).toLowerCase()
+            displayName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1)
             console.warn('⚠️ Coverage Matrix - Using email prefix as display name for issue:', {
               issueId: issue.id,
               userEmail,
@@ -543,31 +504,14 @@ const CoverageMatrix: React.FC = () => {
             displayName = user.full_name.trim()
           }
 
-        // Initialize user in map if not exists
-        if (!userMap[userEmail]) {
-          userMap[userEmail] = {
-            userName: userEmail,
-            displayName,
-            email: userEmail,
-            totalPortfolios: 0,
-            hours: {},
-          }
-        }
-
-        // Initialize hour if not exists
-        if (!userMap[userEmail].hours[hour]) {
-          userMap[userEmail].hours[hour] = {
-            portfolios: new Set(),
-            issues: [],
-            activeIssues: [],
-          }
-        }
+          const userInMap = getOrInitUser(normalizedMonitoredEmail, displayName)
+          initHour(userInMap, hour)
 
           // Add issues to track issue count (includes both Yes and No issues)
           // DO NOT count portfolios here - portfolios are only counted from "All Sites Checked = Yes" completions above
-        userMap[userEmail].hours[hour].issues.push(issue)
-        if (issue.description && issue.description.toLowerCase() !== 'no issue') {
-          userMap[userEmail].hours[hour].activeIssues.push(issue)
+          userMap[normalizedMonitoredEmail].hours[hour].issues.push(issue)
+          if (issue.description && issue.description.toLowerCase() !== 'no issue') {
+            userMap[normalizedMonitoredEmail].hours[hour].activeIssues.push(issue)
           }
         }
       })
@@ -577,11 +521,11 @@ const CoverageMatrix: React.FC = () => {
 
     // Calculate total portfolios per user
     Object.values(userMap).forEach((user) => {
-      const allPortfolios = new Set<string>()
+      let total = 0
       Object.values(user.hours).forEach((hourData) => {
-        hourData.portfolios.forEach((pid) => allPortfolios.add(pid))
+        total += hourData.completionsCount
       })
-      user.totalPortfolios = allPortfolios.size
+      user.totalPortfolios = total
     })
 
     // Filter by user search
@@ -595,8 +539,8 @@ const CoverageMatrix: React.FC = () => {
       const hourDetails: { [hour: string]: { portfolioKeys: string[], portfolioCount: number } } = {}
       Object.entries(userData.hours).forEach(([hour, hourData]) => {
         hourDetails[hour] = {
-          portfolioKeys: Array.from(hourData.portfolios),
-          portfolioCount: hourData.portfolios.size,
+          portfolioKeys: [], // No longer tracking unique keys here
+          portfolioCount: hourData.completionsCount,
         }
       })
       return {
@@ -610,13 +554,13 @@ const CoverageMatrix: React.FC = () => {
     // Final summary log
     console.log('📊 Coverage Matrix - FINAL RESULTS:', {
       totalUsers: filteredUsers.length,
-      usersWithData: filteredUsers.map(u => ({ 
-        name: u.displayName, 
-        portfolios: u.totalPortfolios, 
+      usersWithData: filteredUsers.map(u => ({
+        name: u.displayName,
+        portfolios: u.totalPortfolios,
         email: u.email,
         hoursWithData: Object.keys(u.hours).map(h => ({
           hour: parseInt(h),
-          portfolioCount: u.hours[parseInt(h)].portfolios.size,
+          portfolioCount: u.hours[parseInt(h)].completionsCount,
         })),
       })),
       userMapDetails, // Detailed breakdown of what portfolios are counted for each user
@@ -626,8 +570,8 @@ const CoverageMatrix: React.FC = () => {
         totalPortfolios: userMap[email].totalPortfolios,
         hours: Object.keys(userMap[email].hours).map(h => ({
           hour: h,
-          portfolioCount: userMap[email].hours[parseInt(h)].portfolios.size,
-          portfolioKeys: Array.from(userMap[email].hours[parseInt(h)].portfolios),
+          portfolioCount: userMap[email].hours[parseInt(h)].completionsCount,
+          portfolioKeys: [],
         })),
       })),
       summary: {
@@ -657,7 +601,7 @@ const CoverageMatrix: React.FC = () => {
     let max = 0
     matrixData.forEach((user) => {
       Object.values(user.hours).forEach((hourData) => {
-        max = Math.max(max, hourData.portfolios.size)
+        max = Math.max(max, hourData.completionsCount)
       })
     })
     return max
@@ -683,24 +627,14 @@ const CoverageMatrix: React.FC = () => {
     if (!user) return null
 
     const hourData = user.hours[hour]
-    if (!hourData || hourData.portfolios.size === 0) return null
-
-    // Extract portfolio IDs from keys (format: portfolioId_date_hour)
-    const portfolioNames = Array.from(hourData.portfolios)
-      .map((portfolioKey) => {
-        // Extract portfolio ID from key (format: portfolioId_date_hour)
-        const portfolioId = portfolioKey.split('_')[0]
-        const portfolio = portfolios.find((p) => p.id === portfolioId)
-        return portfolio?.name || 'Unknown'
-      })
-      .filter((name) => name !== 'Unknown')
+    if (!hourData || hourData.completionsCount === 0) return null
 
     return {
       userName: user.displayName,
       hour,
       totalCount: hourData.issues.length,
-      portfolios: portfolioNames,
-      portfolioCount: hourData.portfolios.size,
+      portfolios: hourData.portfolios,
+      portfolioCount: hourData.completionsCount,
     }
   }
 
@@ -765,7 +699,7 @@ const CoverageMatrix: React.FC = () => {
         const row = [`${user.displayName} (${user.totalPortfolios} portfolios summary)`]
         let total = 0
         for (let hour = 0; hour < 24; hour++) {
-          const count = user.hours[hour]?.portfolios.size || 0
+          const count = user.hours[hour]?.completionsCount || 0
           row.push(count.toString())
           total += count
         }
@@ -776,13 +710,13 @@ const CoverageMatrix: React.FC = () => {
         'Hour Totals',
         ...Array.from({ length: 24 }, (_, hour) => {
           const count = matrixData.reduce(
-            (sum, user) => sum + (user.hours[hour]?.portfolios.size || 0),
+            (sum, user) => sum + (user.hours[hour]?.completionsCount || 0),
             0
           )
           return count.toString()
         }),
         matrixData.reduce((sum, user) => {
-          return sum + Object.values(user.hours).reduce((s, h) => s + h.portfolios.size, 0)
+          return sum + Object.values(user.hours).reduce((s, h) => s + h.completionsCount, 0)
         }, 0).toString(),
       ],
     ]
@@ -892,7 +826,12 @@ const CoverageMatrix: React.FC = () => {
         },
         title: {
           display: true,
-          text: 'Total Portfolios Mon',
+          text: 'Total Portfolios',
+          font: {
+            size: 14,
+            weight: 'bold' as const,
+          },
+          color: '#1f2937',
         },
       },
       x: {
@@ -908,14 +847,14 @@ const CoverageMatrix: React.FC = () => {
 
   // Calculate totals for summary
   const totalCoverage = useMemo(() => {
-    const allPortfolios = new Set<string>()
+    let totalCompletions = 0
     matrixData.forEach((user) => {
       Object.values(user.hours).forEach((hourData) => {
-        hourData.portfolios.forEach((pid) => allPortfolios.add(pid))
+        totalCompletions += hourData.completionsCount
       })
     })
     return {
-      portfolios: allPortfolios.size,
+      portfolios: totalCompletions,
       users: matrixData.length,
       hours: 24,
     }
@@ -923,7 +862,8 @@ const CoverageMatrix: React.FC = () => {
 
   // Get user performance details
   const getUserPerformanceDetails = (user: UserMatrixData) => {
-    const allPortfolios = new Set<string>()
+    let totalCompletionsCount = 0
+    const portfolioNames: string[] = [] // Tracking names is disabled for simplicity in cumulative mode
     const allIssues = new Set<string>()
     const activeIssues: Issue[] = []
     const missedAlerts: Issue[] = []
@@ -931,7 +871,8 @@ const CoverageMatrix: React.FC = () => {
 
     Object.entries(user.hours).forEach(([hourStr, hourData]) => {
       const hour = parseInt(hourStr)
-      hourData.portfolios.forEach((pid) => allPortfolios.add(pid))
+      // Cumulative completions count instead of unique portfolios
+      totalCompletionsCount += hourData.completionsCount
       hourData.issues.forEach((issue) => allIssues.add(issue.id))
       activeIssues.push(...hourData.activeIssues)
       hourData.issues.forEach((issue) => {
@@ -940,40 +881,38 @@ const CoverageMatrix: React.FC = () => {
         }
       })
 
+      // Collect portfolio names
+      portfolioNames.push(...hourData.portfolios)
+
       hourlyBreakdown.push({
         hour,
-        portfolios: hourData.portfolios.size,
+        portfolios: hourData.completionsCount,
         issues: hourData.issues.length,
         activeIssues: hourData.activeIssues.length,
       })
     })
 
     hourlyBreakdown.sort((a, b) => a.hour - b.hour)
-
-    const portfolioNames = Array.from(allPortfolios)
-      .map((portfolioKey) => {
-        // Extract portfolio ID from key (format: portfolioId_date_hour)
-        const portfolioId = portfolioKey.split('_')[0]
-        const portfolio = portfolios.find((p) => p.id === portfolioId)
-        if (!portfolio) return null
-        // Format: "Portfolio Name (Site Range)" if site_range exists
-        if (portfolio.site_range) {
-          return `${portfolio.name} (${portfolio.site_range})`
-        }
-        return portfolio.name
-      })
-      .filter((name) => name) as string[]
-
     const healthySites = allIssues.size - activeIssues.length
+
+    // Deduplicate portfolio names for the list display if needed, or keep for cumulative
+    const uniquePortfolioNamesWithCounts = portfolioNames.reduce((acc, name) => {
+      acc[name] = (acc[name] || 0) + 1
+      return acc
+    }, {} as { [key: string]: number })
+
+    const formattedPortfolioNames = Object.entries(uniquePortfolioNamesWithCounts).map(
+      ([name, count]) => (count > 1 ? `${name} (x${count})` : name)
+    )
 
     return {
       totalCount: allIssues.size,
       activeIssues: activeIssues.length,
       healthySites,
       missedAlerts: missedAlerts.length,
-      totalPortfoliosMonitored: allPortfolios.size,
+      totalPortfoliosMonitored: totalCompletionsCount,
       monitoringActiveHours: Object.keys(user.hours).length,
-      portfolios: portfolioNames,
+      portfolios: formattedPortfolioNames,
       hourlyBreakdown,
     }
   }
@@ -1084,11 +1023,10 @@ const CoverageMatrix: React.FC = () => {
               <span className="text-sm font-medium text-gray-700">Quick Range:</span>
               <button
                 onClick={() => handleQuickRange('today')}
-                className={`px-3 py-1.5 text-sm rounded-md transition-all ${
-                  fromDate === toDate && fromDate === new Date().toISOString().split('T')[0]
-                    ? 'bg-green-600 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                className={`px-3 py-1.5 text-sm rounded-md transition-all ${fromDate === toDate && fromDate === new Date().toISOString().split('T')[0]
+                  ? 'bg-green-600 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
               >
                 Today
               </button>
@@ -1207,7 +1145,7 @@ const CoverageMatrix: React.FC = () => {
       <div>
         {/* Green Banner */}
         <div className="bg-green-600 text-white py-6 px-6 rounded-t-lg shadow-md">
-          <h2 className="text-3xl font-bold mb-1">Coverage Matrix</h2>
+          <h2 className="text-3xl font-bold mb-1">Coverage Overview</h2>
           <p className="text-green-100 text-sm">
             Track how many portfolios each user covered in each hour. Hover over cells to see portfolio details and issues with 'Yes'.
           </p>
@@ -1291,7 +1229,7 @@ const CoverageMatrix: React.FC = () => {
                             {row.displayName} ({row.totalPortfolios} portfolios summary)
                           </td>
                           {Array.from({ length: 24 }, (_, hour) => {
-                            const count = row.hours[hour]?.portfolios.size || 0
+                            const count = row.hours[hour]?.completionsCount || 0
                             return (
                               <td
                                 key={hour}
@@ -1318,7 +1256,7 @@ const CoverageMatrix: React.FC = () => {
                       </td>
                       {Array.from({ length: 24 }, (_, hour) => {
                         const count = matrixData.reduce(
-                          (sum, user) => sum + (user.hours[hour]?.portfolios.size || 0),
+                          (sum, user) => sum + (user.hours[hour]?.completionsCount || 0),
                           0
                         )
                         return (
@@ -1354,20 +1292,25 @@ const CoverageMatrix: React.FC = () => {
             {cellInfo.userName} - Hour {cellInfo.hour}:00
           </div>
           <div className="mb-2">
-            <div className="font-semibold text-blue-300">
+            <div className="font-bold text-blue-300">
               Total Count (All Issues): {cellInfo.totalCount}
             </div>
           </div>
           <div>
-            <div className="font-semibold text-green-300 mb-1">
+            <div className="font-bold text-green-300 mb-1">
               Total Portfolios Monitored ({cellInfo.portfolioCount}):
             </div>
-            <div className="space-y-1 max-h-32 overflow-y-auto">
-              {cellInfo.portfolios.map((portfolio, idx) => (
-                <div key={idx} className="text-blue-100 pl-2">
-                  • {portfolio}
-                </div>
-              ))}
+            <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1 select-none custom-scrollbar">
+              {cellInfo.portfolios.length > 0 ? (
+                cellInfo.portfolios.map((portfolio, idx) => (
+                  <div key={idx} className="text-white pl-2 py-1 text-sm font-bold transition-all hover:bg-white/5 rounded">
+                    <span className="text-green-400 mr-2 font-black">•</span>
+                    {portfolio}
+                  </div>
+                ))
+              ) : (
+                <div className="text-blue-200 italic pl-2 text-xs">No portfolio details available</div>
+              )}
             </div>
           </div>
           <div
@@ -1509,8 +1452,7 @@ const UserPerformanceModal: React.FC<UserPerformanceModalProps> = ({
       y: {
         beginAtZero: true,
         ticks: {
-          stepSize: 0.5,
-          max: 2,
+          stepSize: 1,
           font: {
             size: 11,
             weight: 'bold' as const,
@@ -1623,14 +1565,15 @@ const UserPerformanceModal: React.FC<UserPerformanceModalProps> = ({
                       const portfolioMatch = portfolio.match(/^(.+?)\s*\((.+)\)$/)
                       const portfolioName = portfolioMatch ? portfolioMatch[1] : portfolio
                       const siteRange = portfolioMatch ? portfolioMatch[2] : null
-                      
+
                       return (
                         <span
                           key={idx}
-                          className="px-4 py-2.5 bg-green-100 text-green-800 rounded-lg text-sm font-semibold border border-green-300 shadow-sm hover:shadow-md transition-shadow"
+                          className="px-3.5 py-2 bg-[#ecfdf3] text-[#027a48] rounded-full text-sm font-bold border border-[#abefc6] shadow-sm flex items-center gap-2 hover:shadow-md hover:bg-[#d1fadf] transition-all"
                         >
-                          {portfolioName}
-                          {siteRange && <span className="text-green-700 font-normal ml-1">({siteRange})</span>}
+                          <span className="w-2 h-2 bg-[#12b76a] rounded-full shadow-[0_0_4px_rgba(18,183,106,0.5)]"></span>
+                          <span className="leading-none">{portfolioName}</span>
+                          {siteRange && <span className="text-[#067647] font-semibold opacity-90 ml-1">({siteRange})</span>}
                         </span>
                       )
                     })}
@@ -1649,9 +1592,9 @@ const UserPerformanceModal: React.FC<UserPerformanceModalProps> = ({
               )}
 
               <div className="flex justify-end pt-6 border-t border-gray-200">
-                <Button 
-                  variant="primary" 
-                  onClick={onClose} 
+                <Button
+                  variant="primary"
+                  onClick={onClose}
                   style={{ backgroundColor: '#76ab3f' }}
                   className="px-6 py-2.5 font-semibold text-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
                 >

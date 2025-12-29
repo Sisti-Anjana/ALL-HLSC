@@ -6,7 +6,7 @@ export const portfolioService = {
     if (!tenantId || tenantId === 'null' || tenantId.trim() === '') {
       return []
     }
-    
+
     const { data, error } = await supabase
       .from('portfolios')
       .select('*')
@@ -63,7 +63,7 @@ export const portfolioService = {
 
   update: async (tenantId: string, portfolioId: string, portfolioData: any) => {
     console.log('Updating portfolio:', { tenantId, portfolioId, portfolioData })
-    
+
     const { data, error } = await supabase
       .from('portfolios')
       .update(portfolioData)
@@ -80,7 +80,7 @@ export const portfolioService = {
         .select('portfolio_id, tenant_id')
         .eq('portfolio_id', portfolioId)
         .single()
-      
+
       if (!checkData) {
         throw new Error(`Portfolio with ID ${portfolioId} not found`)
       } else if (checkData.tenant_id !== tenantId) {
@@ -88,7 +88,7 @@ export const portfolioService = {
       }
       throw new Error(`Failed to update portfolio: ${error.message}`)
     }
-    
+
     // Map portfolio_id to id for frontend compatibility
     if (data) {
       return {
@@ -127,13 +127,12 @@ export const portfolioService = {
       // Don't throw - continue with lock check
     }
 
-    // Enforce: one active lock per user per hour across all portfolios
+    // Enforce: one active lock per user across ALL portfolios and hours
     const { data: existingLocks, error: existingLockError } = await supabase
       .from('hour_reservations')
-      .select('id, portfolio_id')
+      .select('id, portfolio_id, issue_hour')
       .eq('tenant_id', tenantId)
       .eq('monitored_by', userEmail)
-      .eq('issue_hour', issueHour)
       .gt('expires_at', new Date().toISOString())
       .limit(1)
 
@@ -150,38 +149,38 @@ export const portfolioService = {
       let portfolioName = 'Unknown Portfolio'
       let portfolioDisplay = `Portfolio ID: ${existingLock.portfolio_id || 'N/A'}`
       let isStaleLock = false
-      
+
       if (existingLock.portfolio_id) {
         // Try with tenant_id first
         const { data: portfolio, error: portfolioError } = await supabase
           .from('portfolios')
           .select('name')
-          .eq('id', existingLock.portfolio_id)
+          .eq('portfolio_id', existingLock.portfolio_id)
           .eq('tenant_id', tenantId)
           .single()
-        
+
         if (portfolioError) {
           console.error('Error fetching portfolio name (with tenant):', portfolioError)
           // Try without tenant_id check in case of data inconsistency
           const { data: portfolioAlt, error: portfolioAltError } = await supabase
             .from('portfolios')
             .select('name')
-            .eq('id', existingLock.portfolio_id)
+            .eq('portfolio_id', existingLock.portfolio_id)
             .single()
-          
+
           if (portfolioAltError) {
             console.error('Error fetching portfolio name (without tenant):', portfolioAltError)
             // Portfolio doesn't exist - this is a stale lock
             isStaleLock = true
             portfolioDisplay = `Portfolio ID: ${existingLock.portfolio_id} (not found in database)`
-            
+
             // Automatically clean up stale lock
             console.log(`Auto-cleaning stale lock for non-existent portfolio: ${existingLock.portfolio_id}`)
             const { error: deleteError } = await supabase
               .from('hour_reservations')
               .delete()
               .eq('id', existingLock.id)
-            
+
             if (deleteError) {
               console.error('Error deleting stale lock:', deleteError)
             } else {
@@ -201,14 +200,14 @@ export const portfolioService = {
         console.error('Existing lock has no portfolio_id:', existingLock)
         portfolioDisplay = 'Portfolio ID: NULL (invalid lock)'
         isStaleLock = true
-        
+
         // Automatically clean up invalid lock
         console.log(`Auto-cleaning invalid lock (no portfolio_id): ${existingLock.id}`)
         const { error: deleteError } = await supabase
           .from('hour_reservations')
           .delete()
           .eq('id', existingLock.id)
-        
+
         if (deleteError) {
           console.error('Error deleting invalid lock:', deleteError)
         } else {
@@ -217,11 +216,11 @@ export const portfolioService = {
           // Don't throw error - continue to create new lock
         }
       }
-      
+
       // Only throw error if it's NOT a stale lock (stale locks are auto-cleaned)
       if (!isStaleLock) {
-        console.log(`User ${userEmail} already has lock on portfolio ${existingLock.portfolio_id} (${portfolioDisplay}) for hour ${issueHour}`)
-        throw new Error(`You already have "${portfolioDisplay}" locked for hour ${issueHour}. Please finish or unlock it first in the Active Locks section.`)
+        console.log(`User ${userEmail} already has lock on portfolio ${existingLock.portfolio_id} (${portfolioDisplay}) for hour ${existingLock.issue_hour}`)
+        throw new Error(`You already have "${portfolioDisplay}" locked for hour ${existingLock.issue_hour}:00. Please finish or unlock it first in the Active Locks section.`)
       } else {
         // Stale lock was cleaned up - log and continue
         console.log(`Stale lock cleaned up for user ${userEmail}, hour ${issueHour}. Proceeding with new lock.`)
@@ -276,11 +275,6 @@ export const portfolioService = {
     // Only the user who locked it can unlock it
     if (existingLock.monitored_by?.toLowerCase() !== userEmail.toLowerCase()) {
       throw new Error(`Only the user who locked this portfolio (${existingLock.monitored_by}) can unlock it`)
-    }
-
-    // Only the user who locked it can unlock it
-    if (existingLock.monitored_by?.toLowerCase() !== userEmail.toLowerCase()) {
-      throw new Error('Only the user who locked this portfolio can unlock it')
     }
     const { error } = await supabase
       .from('hour_reservations')

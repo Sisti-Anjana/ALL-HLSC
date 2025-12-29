@@ -5,10 +5,10 @@ import Modal from '../common/Modal'
 import Button from '../common/Button'
 import { portfolioService } from '../../services/portfolioService'
 import { adminService, PortfolioLock } from '../../services/adminService'
+import { useAuth } from '../../context/AuthContext'
 import { issueService } from '../../services/issueService'
 import { Portfolio } from '../../types/portfolio.types'
 import { Issue } from '../../types/issue.types'
-import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
 
 interface PortfolioDetailModalProps {
@@ -48,19 +48,36 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
   })
 
   const currentHour = new Date().getHours()
-  
+
   // Get any active lock for this portfolio (to get the hour they were working on)
-  const activeLockForPortfolio = isOpen && portfolioId ? locks.find(
-    (lock) => lock.portfolio_id === portfolioId
-  ) : null
+  const activeLockForPortfolio = useMemo(() => {
+    if (!isOpen || !portfolioId || !locks.length) return null
+    return locks.find(
+      (lock) => String(lock.portfolio_id || '').trim().toLowerCase() === String(portfolioId).trim().toLowerCase()
+    ) || null
+  }, [isOpen, portfolioId, locks])
 
   // Check if portfolio is locked by current user (for the locked hour, not just current hour)
-  const isLockedByMe = isOpen && portfolioId && activeLockForPortfolio && 
-    activeLockForPortfolio.monitored_by?.toLowerCase() === user?.email?.toLowerCase()
-  
+  const isLockedByMe = useMemo(() => {
+    if (!activeLockForPortfolio || !user?.email) return false
+    return activeLockForPortfolio.monitored_by?.toLowerCase() === user.email.toLowerCase()
+  }, [activeLockForPortfolio, user?.email])
+
   // Check if portfolio is locked by anyone
   const isLockedByAnyone = isOpen && portfolioId && !!activeLockForPortfolio
-  
+
+  // CRITICAL: Check if current user has ANY other active lock on a DIFFERENT portfolio
+  const userOtherLock = useMemo(() => {
+    if (!isOpen || !user?.email || !locks.length) return null
+    return locks.find(
+      (lock) =>
+        lock.monitored_by?.toLowerCase() === user.email.toLowerCase() &&
+        String(lock.portfolio_id || '').trim().toLowerCase() !== String(portfolioId).trim().toLowerCase()
+    ) || null
+  }, [isOpen, user?.email, locks, portfolioId])
+
+  const hasOtherLock = !!userOtherLock
+
   // Get the lock info to show who locked it
   const lockInfo = activeLockForPortfolio
 
@@ -102,7 +119,7 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
     if (isLockedByMe && activeLockForPortfolio) {
       const lockedHour = activeLockForPortfolio.issue_hour
       const lockReservedAt = activeLockForPortfolio.reserved_at ? new Date(activeLockForPortfolio.reserved_at).getTime() : 0
-      
+
       // Filter issues by current user, the locked hour, AND created after lock was created
       const issuesAtLockedHour = portfolioIssues.filter(issue => {
         let issueMonitoredBy: string | undefined
@@ -111,19 +128,19 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
         } else {
           issueMonitoredBy = issue.monitored_by as string | undefined
         }
-        
+
         if (!issueMonitoredBy || typeof issueMonitoredBy !== 'string') return false
-        
+
         const isByCurrentUser = issueMonitoredBy.toLowerCase() === user.email.toLowerCase()
         const isAtLockedHour = issue.issue_hour === lockedHour
-        
+
         // Check if issue was created after lock was created (to ensure it's from this lock session)
         let isAfterLock = true
         if (lockReservedAt > 0 && issue.created_at) {
           const issueCreatedAt = new Date(issue.created_at).getTime()
           isAfterLock = issueCreatedAt >= lockReservedAt
         }
-        
+
         return isByCurrentUser && isAtLockedHour && isAfterLock
       })
 
@@ -134,11 +151,11 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
         lockReservedAt: activeLockForPortfolio.reserved_at,
         issuesAtLockedHour: issuesAtLockedHour.length,
         totalIssues: portfolioIssues.length,
-        issuesAtLockedHourDetails: issuesAtLockedHour.map(i => ({ 
-          id: i.id, 
-          hour: i.issue_hour, 
+        issuesAtLockedHourDetails: issuesAtLockedHour.map(i => ({
+          id: i.id,
+          hour: i.issue_hour,
           created_at: i.created_at,
-          monitoredBy: Array.isArray(i.monitored_by) ? i.monitored_by[0] : i.monitored_by 
+          monitoredBy: Array.isArray(i.monitored_by) ? i.monitored_by[0] : i.monitored_by
         })),
         allIssuesAtHour: portfolioIssues.filter(i => {
           const monitoredBy = Array.isArray(i.monitored_by) ? i.monitored_by[0] : i.monitored_by
@@ -171,9 +188,9 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
       } else {
         issueMonitoredBy = issue.monitored_by as string | undefined
       }
-      
+
       if (!issueMonitoredBy || typeof issueMonitoredBy !== 'string') return false
-      
+
       return issueMonitoredBy.toLowerCase() === user.email.toLowerCase()
     })
 
@@ -215,9 +232,9 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
       const hourToSave = activeLockForPortfolio?.issue_hour !== undefined && activeLockForPortfolio?.issue_hour !== null
         ? activeLockForPortfolio.issue_hour
         : now.getHours()
-      
+
       console.log('Saving all_sites_checked with hour:', hourToSave, 'from activeLock:', activeLockForPortfolio?.issue_hour, 'current hour:', now.getHours())
-      
+
       return portfolioService.updateAllSitesChecked(portfolioId, {
         allSitesChecked: data.allSitesChecked,
         hour: hourToSave, // Use lock hour or current hour
@@ -227,56 +244,28 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
       })
     },
     onSuccess: async (_, variables) => {
-      // If "All sites checked = Yes", unlock the portfolio automatically
-      // BUT only if the current user is the one who locked it
-      // Check for lock on the actual hour being worked on (not just current hour)
-      const hourToCheck = activeLockForPortfolio?.issue_hour !== undefined && activeLockForPortfolio?.issue_hour !== null
-        ? activeLockForPortfolio.issue_hour
-        : currentHour
-      
-      const isLockedByMeForHour = isOpen && portfolioId && locks.some(
-        (lock) => 
-          lock.portfolio_id === portfolioId && 
-          lock.issue_hour === hourToCheck &&
-          lock.monitored_by?.toLowerCase() === user?.email?.toLowerCase()
-      )
-      
-      if (variables.allSitesChecked === 'Yes' && isLockedByMeForHour) {
-        try {
-          // Only unlock if the current user locked it for the hour being worked on
-          await portfolioService.unlock(portfolioId, 'All sites checked - automatically unlocked')
-          toast.success('Portfolio status updated and unlocked successfully')
-        } catch (err: any) {
-          console.error('Error unlocking portfolio:', err)
-          const errorMessage = err.response?.data?.error || err.message || 'Unknown error'
-          
-          // If portfolio is already unlocked or not locked, that's fine - just show success
-          if (errorMessage.includes('not currently locked') || errorMessage.includes('not locked')) {
-            toast.success('Portfolio status updated successfully')
-          } else {
-            // For other errors, show a warning but still consider the status update successful
-            toast.success('Portfolio status updated successfully')
-            console.warn('Portfolio unlock failed but status was updated:', errorMessage)
-          }
-        }
+      if (variables.allSitesChecked === 'Yes') {
+        toast.success('Portfolio status updated and unlocked successfully')
       } else {
         toast.success('Portfolio status updated successfully')
       }
-      
+
       // Invalidate and refetch all related queries to update UI
       queryClient.invalidateQueries({ queryKey: ['portfolio-locks'] })
       queryClient.invalidateQueries({ queryKey: ['locks'] })
       queryClient.invalidateQueries({ queryKey: ['portfolio-activity'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-logs'] })
       queryClient.invalidateQueries({ queryKey: ['portfolio', portfolioId] })
       queryClient.invalidateQueries({ queryKey: ['portfolios'] })
-      
+
       // Force refetch to immediately update the UI
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ['portfolio-locks'] }),
         queryClient.refetchQueries({ queryKey: ['locks'] }),
         queryClient.refetchQueries({ queryKey: ['portfolio-activity'] }),
+        queryClient.refetchQueries({ queryKey: ['admin-logs'] }),
       ])
-      
+
       setAllSitesChecked(null)
       setSitesCheckedDetails('')
     },
@@ -301,14 +290,16 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
       queryClient.invalidateQueries({ queryKey: ['portfolio-activity'] })
       queryClient.invalidateQueries({ queryKey: ['portfolio-locks'] })
       queryClient.invalidateQueries({ queryKey: ['locks'] })
-      
+      queryClient.invalidateQueries({ queryKey: ['admin-logs'] }) // Invalidate admin logs on success
+
       // Force immediate refetch to update UI without waiting for next interval
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ['portfolio-locks'] }),
         queryClient.refetchQueries({ queryKey: ['locks'] }),
         queryClient.refetchQueries({ queryKey: ['portfolio-activity'] }),
+        queryClient.refetchQueries({ queryKey: ['admin-logs'] }), // Refetch admin logs
       ])
-      
+
       toast.success('Portfolio unlocked')
       setUnlockReason('')
       setShowUnlockSection(false)
@@ -316,7 +307,7 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
     },
     onError: (error: any) => {
       const errorMessage = error.response?.data?.error || error.message || 'Failed to unlock portfolio'
-      
+
       // If portfolio is already unlocked, show a more user-friendly message
       if (errorMessage.includes('not currently locked') || errorMessage.includes('not locked')) {
         toast.error('Portfolio is already unlocked')
@@ -325,7 +316,7 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
       } else {
         toast.error(errorMessage)
       }
-      
+
       console.error('Error unlocking portfolio:', error)
     }
   })
@@ -334,10 +325,10 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
   useEffect(() => {
     if (isOpen && portfolio) {
       // Convert 'Pending' to null, only allow 'Yes' or 'No'
-      const checkedStatus = portfolio.all_sites_checked === 'Pending' 
-        ? null 
-        : (portfolio.all_sites_checked === 'Yes' || portfolio.all_sites_checked === 'No' 
-          ? portfolio.all_sites_checked 
+      const checkedStatus = portfolio.all_sites_checked === 'Pending'
+        ? null
+        : (portfolio.all_sites_checked === 'Yes' || portfolio.all_sites_checked === 'No'
+          ? portfolio.all_sites_checked
           : null)
       setAllSitesChecked(checkedStatus)
       setSitesCheckedDetails(portfolio.sites_checked_details || '')
@@ -362,14 +353,14 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
       toast.error('Please log at least one issue before marking sites as checked.')
       return
     }
-    
+
     // Additional safety check - verify user email exists
     if (!user?.email) {
       console.error('PortfolioDetailModal - No user email found')
       toast.error('User not authenticated. Please refresh the page.')
       return
     }
-    
+
     setAllSitesChecked(value)
     // Auto-save when "Yes" is selected
     if (value === 'Yes') {
@@ -397,11 +388,12 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
 
   const handleLogNewIssue = () => {
     // Only allow logging if locked by current user or not locked at all
-    if (isLockedByAnyone && !isLockedByMe) {
-      toast.error(`This portfolio is locked by ${lockInfo?.monitored_by?.split('@')[0] || 'another user'}. Only they can log issues.`)
+    // Use the robustly detected activeLockForPortfolio
+    if (activeLockForPortfolio && activeLockForPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase()) {
+      toast.error(`This portfolio is locked by ${activeLockForPortfolio.monitored_by?.split('@')[0] || 'another user'}. Only they can log issues.`)
       return
     }
-    
+
     if (onLogIssue) {
       const currentHour = new Date().getHours()
       onLogIssue(portfolioId, currentHour)
@@ -429,8 +421,8 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
     : portfolio.name
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={displayName} size="md">
-      <div className="space-y-6 py-2">
+    <Modal isOpen={isOpen} onClose={onClose} title={displayName} size="sm">
+      <div className="space-y-4">
         {/* All Sites Checked Question */}
         <div>
           <div className="flex items-center gap-2 mb-2">
@@ -466,13 +458,12 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
                 handleAllSitesChecked('Yes')
               }}
               disabled={!hasIssuesByCurrentUser}
-              className={`flex-1 px-5 py-3 rounded-lg font-medium transition-colors border-2 ${
-                !hasIssuesByCurrentUser
-                  ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed pointer-events-none'
-                  : allSitesChecked === 'Yes'
+              className={`flex-1 px-5 py-3 rounded-lg font-medium transition-colors border-2 ${!hasIssuesByCurrentUser
+                ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed pointer-events-none'
+                : allSitesChecked === 'Yes'
                   ? 'bg-white border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-              }`}
+                }`}
               aria-disabled={!hasIssuesByCurrentUser}
             >
               Yes
@@ -488,13 +479,12 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
                 handleAllSitesChecked('No')
               }}
               disabled={!hasIssuesByCurrentUser}
-              className={`flex-1 px-5 py-3 rounded-lg font-medium transition-colors border-2 ${
-                !hasIssuesByCurrentUser
-                  ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed pointer-events-none'
-                  : allSitesChecked === 'No'
+              className={`flex-1 px-5 py-3 rounded-lg font-medium transition-colors border-2 ${!hasIssuesByCurrentUser
+                ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed pointer-events-none'
+                : allSitesChecked === 'No'
                   ? 'bg-yellow-400 border-yellow-500 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-              }`}
+                }`}
               aria-disabled={!hasIssuesByCurrentUser}
             >
               No
@@ -536,7 +526,7 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
           {/* View Issues Button */}
           <button
             onClick={handleViewIssues}
-            className="w-full flex items-center justify-between px-5 py-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors shadow-sm"
+            className="w-full flex items-center justify-between px-5 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors shadow-sm"
           >
             <div className="flex items-center gap-3">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -556,38 +546,41 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
           {/* Log New Issue Button */}
           <button
             onClick={handleLogNewIssue}
-            disabled={!!(isLockedByAnyone && !isLockedByMe)}
-            className={`w-full flex items-center justify-between px-5 py-4 rounded-lg transition-colors shadow-sm ${
-              isLockedByAnyone && !isLockedByMe 
-                ? 'bg-gray-400 cursor-not-allowed opacity-60' 
-                : ''
-            }`}
-            style={isLockedByAnyone && !isLockedByMe ? {} : { backgroundColor: '#76ab3f', color: 'white' }}
+            disabled={!!(isLockedByAnyone && !isLockedByMe) || hasOtherLock}
+            className={`w-full flex items-center justify-between px-5 py-3 rounded-lg transition-colors shadow-sm ${(isLockedByAnyone && !isLockedByMe) || hasOtherLock
+              ? 'bg-gray-400 cursor-not-allowed opacity-60'
+              : ''
+              }`}
+            style={(isLockedByAnyone && !isLockedByMe) || hasOtherLock ? {} : { backgroundColor: '#76ab3f', color: 'white' }}
             onMouseEnter={(e) => {
-              if (!(isLockedByAnyone && !isLockedByMe)) {
+              if (!((isLockedByAnyone && !isLockedByMe) || hasOtherLock)) {
                 e.currentTarget.style.opacity = '0.9'
               }
             }}
             onMouseLeave={(e) => {
-              if (!(isLockedByAnyone && !isLockedByMe)) {
+              if (!((isLockedByAnyone && !isLockedByMe) || hasOtherLock)) {
                 e.currentTarget.style.opacity = '1'
               }
             }}
           >
-            <div className="flex items-center gap-3">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center gap-3 text-left">
+              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              <div className="text-left">
-                <div className="font-semibold text-base">
-                  {isLockedByAnyone && !isLockedByMe 
-                    ? `Locked by ${lockInfo?.monitored_by?.split('@')[0] || 'another user'}` 
-                    : 'Log New Issue'}
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-base truncate">
+                  {hasOtherLock
+                    ? `Finish "${userOtherLock?.portfolio?.name || 'other lock'}" first`
+                    : isLockedByAnyone && !isLockedByMe
+                      ? `Locked by ${lockInfo?.monitored_by?.split('@')[0] || 'another user'}`
+                      : 'Log New Issue'}
                 </div>
-                <div className="text-sm mt-0.5" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
-                  {isLockedByAnyone && !isLockedByMe 
-                    ? 'Only the user who locked it can log issues' 
-                    : 'Report a new issue for this portfolio'}
+                <div className="text-sm truncate" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+                  {hasOtherLock
+                    ? `You can only work on one portfolio at a time.`
+                    : isLockedByAnyone && !isLockedByMe
+                      ? 'Only the user who locked it can log issues'
+                      : 'Report a new issue for this portfolio'}
                 </div>
               </div>
             </div>

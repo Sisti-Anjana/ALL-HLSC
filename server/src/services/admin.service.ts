@@ -7,7 +7,7 @@ export const adminService = {
     if (!tenantId || tenantId === 'null' || tenantId.trim() === '') {
       return []
     }
-    
+
     const { data, error } = await supabase
       .from('users')
       .select('user_id, email, full_name, role, is_active, created_at, last_login')
@@ -211,37 +211,37 @@ export const adminService = {
           let portfolioName = null
           let isStaleLock = false
           console.log(`Fetching portfolio for lock: portfolio_id=${lock.portfolio_id}, tenant_id=${tenantId}`)
-          
+
           if (lock.portfolio_id) {
             // Try with tenant_id first
             const { data: portfolio, error: portfolioError } = await supabase
               .from('portfolios')
               .select('name')
-              .eq('id', lock.portfolio_id)
+              .eq('portfolio_id', lock.portfolio_id)
               .eq('tenant_id', tenantId)
               .single()
-            
+
             if (portfolioError) {
               console.error(`Error fetching portfolio ${lock.portfolio_id} with tenant ${tenantId}:`, portfolioError)
               // Try without tenant_id check
               const { data: portfolioAlt, error: portfolioAltError } = await supabase
                 .from('portfolios')
                 .select('name')
-                .eq('id', lock.portfolio_id)
+                .eq('portfolio_id', lock.portfolio_id)
                 .single()
-              
+
               if (portfolioAltError) {
                 console.error(`Error fetching portfolio ${lock.portfolio_id} without tenant:`, portfolioAltError)
                 // Portfolio doesn't exist - this is a stale lock
                 isStaleLock = true
                 console.log(`Detected stale lock for non-existent portfolio: ${lock.portfolio_id}`)
-                
+
                 // Automatically clean up stale lock
                 const { error: deleteError } = await supabase
                   .from('hour_reservations')
                   .delete()
                   .eq('id', lock.id)
-                
+
                 if (deleteError) {
                   console.error('Error deleting stale lock:', deleteError)
                 } else {
@@ -258,25 +258,25 @@ export const adminService = {
           } else {
             console.error(`Lock ${lock.id} has no portfolio_id - invalid lock`)
             isStaleLock = true
-            
+
             // Automatically clean up invalid lock
             const { error: deleteError } = await supabase
               .from('hour_reservations')
               .delete()
               .eq('id', lock.id)
-            
+
             if (deleteError) {
               console.error('Error deleting invalid lock:', deleteError)
             } else {
               console.log('Invalid lock cleaned up successfully')
             }
           }
-          
+
           // Return null for stale locks so they're filtered out
           if (isStaleLock) {
             return null
           }
-          
+
           // Always return portfolio object, even if name is null (show ID as fallback)
           return {
             ...lock,
@@ -287,10 +287,10 @@ export const adminService = {
           }
         })
       )
-      
+
       // Filter out null values (stale locks that were cleaned up)
       const validLocks = locksWithPortfolios.filter(lock => lock !== null)
-      
+
       console.log('Locks fetched successfully:', validLocks?.length || 0, `(cleaned up ${(locksWithPortfolios?.length || 0) - (validLocks?.length || 0)} stale locks)`)
       return validLocks || []
     } catch (error: any) {

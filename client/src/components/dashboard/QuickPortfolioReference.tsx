@@ -66,7 +66,7 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
     refetchOnMount: true, // Always refetch when component mounts
     refetchOnWindowFocus: true, // Refetch when window regains focus
   })
-  
+
   // Debug: Log when locks change
   useEffect(() => {
     console.log('🔒 QuickPortfolioReference - Locks state changed:', {
@@ -131,8 +131,8 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
   useEffect(() => {
     if (error) {
       console.error('Failed to fetch portfolio activity:', error)
-      const errorMessage = error instanceof Error 
-        ? error.message 
+      const errorMessage = error instanceof Error
+        ? error.message
         : (error as any)?.response?.data?.error || 'Failed to load portfolio activity'
       toast.error(errorMessage)
     }
@@ -176,11 +176,11 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
     if (!date) return 'N/A'
     const dateObj = date instanceof Date ? date : new Date(date)
     if (isNaN(dateObj.getTime())) return 'Invalid Date'
-    return dateObj.toLocaleTimeString('en-US', { 
-      hour12: false, 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      second: '2-digit' 
+    return dateObj.toLocaleTimeString('en-US', {
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
     })
   }
 
@@ -208,7 +208,7 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
     const email = mostRecentIssue.monitored_by[0]
     const user = users.find(u => u.email === email)
     const displayName = user?.full_name || email.split('@')[0] || 'Unknown'
-    
+
     return {
       email,
       displayName,
@@ -268,7 +268,7 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
             />
             <span className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">🔍</span>
           </div>
-          <Button 
+          <Button
             onClick={() => navigate('/issues?action=log')}
             className="w-full sm:w-auto"
           >
@@ -288,33 +288,26 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
           filteredPortfolios.map((portfolio) => {
             // Normalize portfolio ID to string for comparison
             const portfolioIdString = String(portfolio.id || '').trim()
-            const isLocked = lockedPortfolioIds.has(portfolioIdString)
-            
-            // Debug logging for lock status check
-            if (portfolio.name === 'BESS & AES Trimark' || portfolio.name.includes('BESS')) {
-              console.log('🔍 QuickPortfolioReference - Checking lock status for portfolio:', {
-                portfolioId: portfolio.id,
-                portfolioIdString,
-                portfolioName: portfolio.name,
-                isLocked,
-                lockedPortfolioIds: Array.from(lockedPortfolioIds),
-                matchingLocks: locks.filter(l => String(l.portfolio_id) === portfolioIdString),
-              })
-            }
-            
+            // Direct check for lock for this portfolio and current hour
+            const currentHour = new Date().getHours()
+            const activeLock = (locks || []).find(l =>
+              String(l.portfolio_id || '').trim().toLowerCase() === portfolioIdString.toLowerCase() &&
+              Number(l.issue_hour) === currentHour
+            )
+            const isLocked = !!activeLock
+
             const statusColors = getStatusColor(portfolio.status)
             const colors = statusColors.split(' ')
             const bgColor = colors[0]
             const borderColor = colors[1] || colors[0]
-            
+
             return (
               <div
                 key={portfolio.id}
-                className={`${bgColor} rounded-lg p-2.5 cursor-pointer transition-all duration-300 ease-in-out relative shadow-md ${
-                  isLocked 
-                    ? 'border-[6px] border-purple-600' 
-                    : `border-2 ${borderColor}`
-                } hover:shadow-2xl hover:scale-110 hover:-translate-y-1 hover:z-10`}
+                className={`${bgColor} rounded-lg p-2.5 cursor-pointer transition-all duration-300 ease-in-out relative shadow-md ${isLocked
+                  ? 'border-[6px] border-purple-600'
+                  : `border-2 ${borderColor}`
+                  } hover:shadow-2xl hover:scale-110 hover:-translate-y-1 hover:z-10`}
                 style={{
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 }}
@@ -327,10 +320,10 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
                   const viewportHeight = window.innerHeight
                   const spaceAbove = rect.top
                   const spaceBelow = viewportHeight - rect.bottom
-                  
+
                   // Show tooltip above if there's more space above, otherwise below
                   const showAbove = spaceAbove > spaceBelow
-                  
+
                   setHoveredPortfolio(portfolio.id)
                   setTooltipPosition({
                     top: showAbove ? rect.top - 10 : rect.bottom + 10,
@@ -362,7 +355,7 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
                     )}
                   </h3>
                 </div>
-                
+
                 {/* Subtitle */}
                 {portfolio.subtitle && (
                   <p className="text-xs text-gray-700 font-medium mt-1">{portfolio.subtitle}</p>
@@ -377,15 +370,15 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
       {hoveredPortfolio && tooltipPosition && (() => {
         const portfolio = portfolios.find(p => p.id === hoveredPortfolio)
         if (!portfolio) return null
-        const currentHour = new Date().getHours()
+        const currentHourForTooltip = new Date().getHours()
         // Only find lock for CURRENT HOUR - don't show locks from other hours
-        const lockInfo = locks.find(l => 
-          l.portfolio_id === portfolio.id && 
-          l.issue_hour === currentHour
+        const lockInfo = (locks || []).find(l =>
+          String(l.portfolio_id || '').trim().toLowerCase() === String(portfolio.id).trim().toLowerCase() &&
+          Number(l.issue_hour) === currentHourForTooltip
         )
         // Only show as locked if there's actually a lock for the current hour
         const isLockedTooltip = !!lockInfo
-        
+
         return (
           <div
             className="fixed z-[9999] bg-gray-900 text-white text-xs rounded-lg shadow-2xl p-4 pointer-events-none border border-gray-700"
@@ -410,13 +403,13 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
               <div className="text-gray-200">
                 <span className="text-gray-400">Y/H Value:</span> {portfolio.yValue}
               </div>
-              
+
               {/* Show "Logged by" - current lock owner if locked, or last worker if not locked */}
               {(() => {
                 if (isLockedTooltip && lockInfo && lockInfo.monitored_by) {
                   // Portfolio is locked for current hour - show current lock owner
                   // Use case-insensitive email matching
-                  const lockUser = users.find(u => 
+                  const lockUser = users.find(u =>
                     u.email?.toLowerCase() === lockInfo.monitored_by?.toLowerCase()
                   )
                   const lockOwnerName = lockUser?.full_name || lockInfo.monitored_by?.split('@')[0] || 'Unknown'
@@ -442,7 +435,7 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
                 }
                 return null
               })()}
-              
+
               {/* Separate box for "Last Activity" */}
               {portfolio.lastUpdated && (
                 <div className="bg-gray-800 rounded px-2 py-1.5 border border-gray-700">
@@ -451,7 +444,7 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
                   </div>
                 </div>
               )}
-              
+
               {/* Separate box for lock info if locked */}
               {isLockedTooltip && lockInfo && (
                 <div className="bg-purple-900/30 rounded px-2 py-1.5 border border-purple-500/30">
@@ -460,7 +453,7 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
                   </div>
                 </div>
               )}
-              
+
               {/* "Click for options" in blue, separate box */}
               <div className="bg-blue-900/30 rounded px-2 py-1.5 border border-blue-500/30">
                 <div className="text-blue-400 text-xs font-semibold text-center">
@@ -470,11 +463,10 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
             </div>
             {/* Arrow pointing to card */}
             <div
-              className={`absolute left-1/2 transform -translate-x-1/2 border-4 border-transparent ${
-                tooltipPosition.showAbove
-                  ? 'top-full -mt-1 border-t-gray-900'
-                  : 'bottom-full mb-1 border-b-gray-900'
-              }`}
+              className={`absolute left-1/2 transform -translate-x-1/2 border-4 border-transparent ${tooltipPosition.showAbove
+                ? 'top-full -mt-1 border-t-gray-900'
+                : 'bottom-full mb-1 border-b-gray-900'
+                }`}
             ></div>
           </div>
         )

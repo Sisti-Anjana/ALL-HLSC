@@ -113,8 +113,11 @@ const IssuesByUser: React.FC = () => {
 
     filteredIssuesByPeriod.forEach((issue) => {
       const monitoredBy = issue.monitored_by?.[0] || 'Unknown'
+
+      // Find the user in our users list for consistent display name (Full Name)
+      const foundUser = users.find(u => u.email?.toLowerCase() === monitoredBy.toLowerCase())
       const username = monitoredBy.split('@')[0]
-      const displayName = username || 'Unknown'
+      const displayName = foundUser?.full_name || username || 'Unknown'
 
       if (!analyticsMap[monitoredBy]) {
         analyticsMap[monitoredBy] = {
@@ -132,12 +135,12 @@ const IssuesByUser: React.FC = () => {
 
       const userAnalytics = analyticsMap[monitoredBy]
       userAnalytics.issues++
-      
+
       if (issue.description && issue.description.toLowerCase() !== 'no issue') {
         userAnalytics.issuesYes++
         userAnalytics.hourlyBreakdown[issue.issue_hour].foundIssues++
       }
-      
+
       userAnalytics.hourlyBreakdown[issue.issue_hour].count++
       userAnalytics.portfoliosChecked.add(issue.portfolio_id)
       userAnalytics.hoursCount.add(issue.issue_hour)
@@ -331,7 +334,7 @@ const IssuesByUser: React.FC = () => {
       return filteredUsers[0]
     }
     if (userSearch.trim()) {
-      return filteredUsers.find((u) => 
+      return filteredUsers.find((u) =>
         u.displayName.toLowerCase() === userSearch.toLowerCase() ||
         u.user.toLowerCase() === userSearch.toLowerCase()
       ) || null
@@ -353,7 +356,7 @@ const IssuesByUser: React.FC = () => {
           <h2 className="text-lg font-bold text-gray-900">User Performance Analytics</h2>
           <p className="text-sm text-gray-600 mt-1">Individual hourly monitoring performance and statistics</p>
         </div>
-        
+
         <div className="px-6 pb-6 space-y-4">
           {/* Period Filter */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -534,8 +537,8 @@ const IssuesByUser: React.FC = () => {
                   <p className="text-xl font-bold text-gray-900">
                     {selectedUserForDisplay.issues > 0
                       ? Math.round(
-                          ((selectedUserForDisplay.issues - selectedUserForDisplay.missedAlerts) / selectedUserForDisplay.issues) * 100
-                        )
+                        ((selectedUserForDisplay.issues - selectedUserForDisplay.missedAlerts) / selectedUserForDisplay.issues) * 100
+                      )
                       : 100}
                     %
                   </p>
@@ -559,20 +562,18 @@ const IssuesByUser: React.FC = () => {
                   {selectedUserForDisplay.hourlyBreakdown.map((hourData) => (
                     <div key={hourData.hour} className="text-center">
                       <div
-                        className={`h-12 rounded-md transition-all cursor-pointer hover:opacity-80 ${
-                          hourData.count === 0
+                        className={`h-12 rounded-md transition-all cursor-pointer hover:opacity-80 ${hourData.count === 0
                             ? 'bg-gray-100'
                             : hourData.count >= 5
-                            ? 'bg-green-500'
-                            : hourData.count >= 3
-                            ? 'bg-green-400'
-                            : hourData.count >= 1
-                            ? 'bg-green-300'
-                            : 'bg-gray-100'
-                        }`}
-                        title={`Hour ${hourData.hour}: ${hourData.count} checks${
-                          hourData.foundIssues > 0 ? `, ${hourData.foundIssues} issues found` : ''
-                        }`}
+                              ? 'bg-green-500'
+                              : hourData.count >= 3
+                                ? 'bg-green-400'
+                                : hourData.count >= 1
+                                  ? 'bg-green-300'
+                                  : 'bg-gray-100'
+                          }`}
+                        title={`Hour ${hourData.hour}: ${hourData.count} checks${hourData.foundIssues > 0 ? `, ${hourData.foundIssues} issues found` : ''
+                          }`}
                       >
                         {hourData.count > 0 && (
                           <div className="flex flex-col items-center justify-center h-full text-white text-xs font-bold">
@@ -687,21 +688,19 @@ const IssuesByUser: React.FC = () => {
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => handleQuickRange('today')}
-              className={`px-3 py-1.5 text-sm rounded-md transition-all ${
-                fromDate === new Date().toISOString().split('T')[0] && toDate === new Date().toISOString().split('T')[0]
+              className={`px-3 py-1.5 text-sm rounded-md transition-all ${fromDate === new Date().toISOString().split('T')[0] && toDate === new Date().toISOString().split('T')[0]
                   ? 'bg-blue-600 text-white shadow-md'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+                }`}
             >
               Today
             </button>
             <button
               onClick={() => handleQuickRange('yesterday')}
-              className={`px-3 py-1.5 text-sm rounded-md transition-all ${
-                fromDate && toDate && fromDate === toDate && fromDate !== new Date().toISOString().split('T')[0]
+              className={`px-3 py-1.5 text-sm rounded-md transition-all ${fromDate && toDate && fromDate === toDate && fromDate !== new Date().toISOString().split('T')[0]
                   ? 'bg-purple-100 text-purple-700'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+                }`}
             >
               Yesterday
             </button>
