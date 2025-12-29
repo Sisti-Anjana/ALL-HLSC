@@ -87,6 +87,31 @@ export const portfolioController = {
         req.user.email,
         issueHour
       )
+
+      // HISTORICAL LOGGING: Create a log entry for this lock
+      // This allows us to count monitored hours cumulatively
+      try {
+        const { data: portfolioInfo } = await supabase
+          .from('portfolios')
+          .select('name')
+          .eq('portfolio_id', req.params.id)
+          .single()
+
+        await adminService.createLog(req.tenantId, {
+          adminName: (req.user?.email || 'Unknown User').toLowerCase(),
+          actionType: 'PORTFOLIO_LOCKED',
+          actionDescription: `Portfolio "${portfolioInfo?.name || req.params.id}" locked for monitoring (Hour ${issueHour}:00)`,
+          relatedPortfolioId: req.params.id,
+          relatedUserId: req.user?.userId,
+          metadata: {
+            hour: issueHour,
+            lockId: lock.id
+          }
+        })
+      } catch (logError) {
+        console.error('Failed to create historical log for portfolio lock:', logError)
+      }
+
       res.json({ success: true, data: lock })
     } catch (error: any) {
       console.error('Error in lock controller:', error)

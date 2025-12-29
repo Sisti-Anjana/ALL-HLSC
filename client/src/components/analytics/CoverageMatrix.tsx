@@ -188,8 +188,8 @@ const CoverageMatrix: React.FC = () => {
     }
 
     // 1. PROCESS LOGS (Historical / Accurate)
-    const portfolioCheckedLogs = adminLogs.filter(log => {
-      if (log.action_type !== 'PORTFOLIO_CHECKED') return false
+    const portfolioActivityLogs = adminLogs.filter(log => {
+      if (log.action_type !== 'PORTFOLIO_CHECKED' && log.action_type !== 'PORTFOLIO_LOCKED') return false
 
       const logDate = new Date(log.created_at).toISOString().split('T')[0]
       if (normalizedFromDate && logDate < normalizedFromDate) return false
@@ -197,7 +197,7 @@ const CoverageMatrix: React.FC = () => {
       return true
     })
 
-    portfolioCheckedLogs.forEach(log => {
+    portfolioActivityLogs.forEach(log => {
       const monitoredBy = log.admin_name || 'Unknown'
       const portfolioId = log.related_portfolio_id
       const logDate = new Date(log.created_at).toISOString().split('T')[0]

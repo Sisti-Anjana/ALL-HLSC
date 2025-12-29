@@ -327,7 +327,7 @@ export const adminService = {
       .select('*')
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
-      .limit(100)
+      .limit(1000)
 
     if (error) throw new Error(`Failed to fetch logs: ${error.message}`)
     return data || []

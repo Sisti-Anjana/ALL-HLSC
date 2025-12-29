@@ -250,10 +250,10 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
       }
     })
 
-    // COUNT PORTFOLIOS MONITORED FROM LOGS (Accurate/Historical)
-    // Filter logs for completion events within range
-    const portfolioCheckedLogs = adminLogs.filter(log => {
-      if (log.action_type !== 'PORTFOLIO_CHECKED') return false
+    // COUNT PORTFOLIO MONITORED FROM LOGS (Accurate/Historical)
+    // Filter logs for completion/monitored events within range
+    const portfolioActivityLogs = adminLogs.filter(log => {
+      if (log.action_type !== 'PORTFOLIO_CHECKED' && log.action_type !== 'PORTFOLIO_LOCKED') return false
 
       const logDate = new Date(log.created_at)
       if (selectedRange === 'today') {
@@ -286,7 +286,7 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
     const uniquePortfoliosCheckedSet = new Set<string>()
 
     // Record each log event to the appropriate user
-    portfolioCheckedLogs.forEach(log => {
+    portfolioActivityLogs.forEach(log => {
       const monitoredBy = (log.admin_name || 'Unknown').toLowerCase()
       const portfolioId = log.related_portfolio_id
       const logDate = new Date(log.created_at).toISOString().split('T')[0]
