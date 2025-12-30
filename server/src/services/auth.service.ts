@@ -6,7 +6,7 @@ export const authService = {
   login: async (credentials: { email: string; password: string }) => {
     try {
       console.log('🔍 Looking up user:', credentials.email)
-      
+
       // Use case-insensitive email search (ilike) instead of converting to lowercase
       // This handles emails with mixed case like ShreeY@amgsol.com
       const { data: users, error: fetchError } = await supabase
@@ -49,7 +49,7 @@ export const authService = {
       console.log('   Input password length:', credentials.password.length)
       console.log('   Stored hash length:', user.password_hash.length)
       console.log('   Hash starts with:', user.password_hash.substring(0, 7))
-      
+
       const isValidPassword = await comparePassword(credentials.password, user.password_hash)
       console.log('🔐 Password match result:', isValidPassword)
 
@@ -67,7 +67,7 @@ export const authService = {
       if (!user.tenant_id && user.role !== 'super_admin') {
         throw new Error('User tenant not found')
       }
-      
+
       // If tenant relationship didn't load and user has a tenant_id, fetch it separately
       if (user.tenant_id && !user.tenant) {
         const { data: tenantData } = await supabase
@@ -75,12 +75,18 @@ export const authService = {
           .select('name, status')
           .eq('tenant_id', user.tenant_id)
           .single()
-        
+
         if (!tenantData) {
           throw new Error('User tenant not found')
         }
-        
-        user.tenant = tenantData
+
+        user.tenant = tenantData as any
+      }
+
+      // Prevent login only if tenant is soft-deleted
+      if (user.tenant && (user.tenant as any).status === 'deleted' && user.role !== 'super_admin') {
+        console.log('❌ Tenant is deleted:', (user.tenant as any).name)
+        throw new Error('This account belongs to a deactivated tenant.')
       }
 
       const token = generateToken({
@@ -109,7 +115,7 @@ export const authService = {
 
   adminLogin: async (credentials: { email: string; password: string }) => {
     const result = await authService.login(credentials)
-    
+
     if (result.user.role !== 'tenant_admin' && result.user.role !== 'super_admin') {
       throw new Error('Admin access required')
     }

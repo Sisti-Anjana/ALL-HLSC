@@ -357,6 +357,7 @@ export const adminService = {
     const { data, error } = await supabase
       .from('tenants')
       .select('tenant_id, name, subdomain, contact_email, status, subscription_plan, created_at, updated_at')
+      .neq('status', 'deleted')
       .order('created_at', { ascending: false })
 
     if (error) throw new Error(`Failed to fetch tenants: ${error.message}`)
@@ -495,11 +496,13 @@ export const adminService = {
   },
 
   deleteTenant: async (tenantId: string) => {
-    // Database has cascade delete configured, so deleting the tenant will automatically
-    // delete all related data (users, portfolios, issues, etc.)
+    // Soft delete: Update status to 'deleted' instead of removing from DB
     const { error } = await supabase
       .from('tenants')
-      .delete()
+      .update({
+        status: 'deleted',
+        updated_at: new Date().toISOString()
+      })
       .eq('tenant_id', tenantId)
 
     if (error) {

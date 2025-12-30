@@ -1,5 +1,6 @@
 import { Response, NextFunction } from 'express'
 import { AuthRequest } from './auth.middleware'
+import { supabase } from '../config/database.config'
 
 /**
  * ⭐ CRITICAL MIDDLEWARE: Tenant Isolation
@@ -46,6 +47,35 @@ export const tenantIsolation = async (
         })
       }
       req.tenantId = req.user.tenantId
+    }
+
+    // Verify tenant status (allow read‑only GET for inactive/suspended tenants)
+    // SKIP this check for super_admin so they can reactivate/manage suspended tenants
+    if (req.tenantId && req.user.role !== 'super_admin') {
+      const { data: tenant, error } = await supabase
+        .from('tenants')
+        .select('status')
+        .eq('tenant_id', req.tenantId)
+        .single()
+
+      if (error || !tenant) {
+        return res.status(401).json({
+          success: false,
+          error: 'Tenant not found or deactivated.',
+        })
+      }
+
+      if (tenant.status !== 'active') {
+        // Allow safe read‑only operations (GET) for inactive tenants
+        if (req.method === 'GET') {
+          // Continue to next middleware/handler – data can be read
+        } else {
+          return res.status(403).json({
+            success: false,
+            error: `Access denied. This tenant is currently ${tenant.status}.`,
+          })
+        }
+      }
     }
 
     // Continue to next middleware/route handler
