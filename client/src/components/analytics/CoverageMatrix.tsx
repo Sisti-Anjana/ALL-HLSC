@@ -899,10 +899,16 @@ const CoverageMatrix: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Date Filters Section - At Top (No Banner, Just Filters) */}
+      {/* Date Filters Section */}
       <div>
+        {/* Green Banner */}
+        <div className="text-white py-4 px-6 rounded-t-lg shadow-md" style={{ backgroundColor: '#76ab3f' }}>
+          <h2 className="text-3xl font-bold mb-1">Portfolio Coverage Matrix</h2>
+          <p className="text-green-100 text-sm">Track how many portfolios each user covered in each hour. Hover over cells to see portfolio details and issues with "Yes".</p>
+        </div>
+
         {/* Filter Card */}
-        <Card>
+        <Card className="rounded-t-none">
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div className="relative">
@@ -1004,9 +1010,10 @@ const CoverageMatrix: React.FC = () => {
               <button
                 onClick={() => handleQuickRange('today')}
                 className={`px-3 py-1.5 text-sm rounded-md transition-all ${fromDate === toDate && fromDate === new Date().toISOString().split('T')[0]
-                  ? 'bg-green-600 text-white shadow-md'
+                  ? 'text-white shadow-md'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
+                style={fromDate === toDate && fromDate === new Date().toISOString().split('T')[0] ? { backgroundColor: '#76ab3f' } : {}}
               >
                 Today
               </button>
@@ -1036,94 +1043,118 @@ const CoverageMatrix: React.FC = () => {
         </Card>
       </div>
 
-      {/* User Coverage Performance Section - Below Filters */}
-      <div>
-        {/* Green Banner */}
-        <div className="bg-green-600 text-white py-4 px-6 rounded-t-lg shadow-md">
-          <h2 className="text-3xl font-bold mb-1">User Coverage Performance</h2>
-        </div>
 
-        {/* Chart Card */}
-        <Card className="rounded-t-none">
-          <div className="flex items-center justify-between mb-4">
-            <div className="relative flex-1 max-w-md">
-              <svg
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search user by name..."
-                value={userSearch}
-                onChange={(e) => setUserSearch(e.target.value)}
-                className="w-full pl-10 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleExportChartData}
-              style={{ backgroundColor: '#76ab3f' }}
-              disabled={userCoverageData.length === 0}
-            >
-              Export Chart Data
-            </Button>
+      {/* Control Row */}
+      <div className="flex justify-end gap-3">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setShowCharts(!showCharts)}
+          className="bg-white border hover:bg-gray-50 text-gray-700"
+        >
+          {showCharts ? 'Hide Charts' : 'Show Charts'}
+        </Button>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => toast.success('Exporting Matrix Data...')}
+          className="hover:opacity-90 text-white border-none"
+          style={{ backgroundColor: '#76ab3f' }}
+        >
+          Export Matrix
+        </Button>
+      </div>
+
+      {/* User Coverage Performance Section - Below Filters */}
+      {showCharts && (
+        <div>
+          {/* Green Banner */}
+          <div className="text-white py-4 px-6 rounded-t-lg shadow-md" style={{ backgroundColor: '#76ab3f' }}>
+            <h2 className="text-3xl font-bold mb-1">User Coverage Performance</h2>
           </div>
 
-          {userCoverageData.length > 0 ? (
-            <>
-              <div style={{ height: '250px', position: 'relative', cursor: 'pointer' }}>
-                <Bar data={chartData} options={chartOptions} />
+          {/* Chart Card */}
+          <Card className="rounded-t-none">
+            <div className="flex items-center justify-between mb-4">
+              <div className="relative flex-1 max-w-md">
+                <svg
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search user by name..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="w-full pl-10 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
-              <p className="text-xs text-gray-500 text-center mt-2">
-                Click on any bar to view detailed performance metrics
-              </p>
-              <div className="flex items-center justify-center gap-4 mt-4 text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-600 rounded-full"></div>
-                  <span className="text-gray-600">Top 3 Performers</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-300 rounded-full"></div>
-                  <span className="text-gray-600">Other Users</span>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-12">
-              <div className="text-gray-500 mb-2 font-medium">No data available for chart</div>
-              <div className="text-sm text-gray-400 mt-2">
-                <p className="mb-1">The chart requires:</p>
-                <ul className="list-disc list-inside space-y-1 text-left max-w-md mx-auto">
-                  <li>Issues logged within the selected date range ({fromDate} to {toDate})</li>
-                  <li>Issues with "Monitored By" field populated</li>
-                  <li>At least one user who has monitored portfolios</li>
-                </ul>
-                <p className="mt-3 text-xs">
-                  Try adjusting your date range or check if issues have the "Monitored By" field filled in.
-                </p>
-                <p className="mt-2 text-xs text-gray-500">
-                  Total issues: {allIssues.length} | Filtered issues: {filteredIssues.length}
-                </p>
-              </div>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleExportChartData}
+                style={{ backgroundColor: '#76ab3f' }}
+                disabled={userCoverageData.length === 0}
+              >
+                Export Chart Data
+              </Button>
             </div>
-          )}
-        </Card>
-      </div>
+
+            {userCoverageData.length > 0 ? (
+              <>
+                <div style={{ height: '250px', position: 'relative', cursor: 'pointer' }}>
+                  <Bar data={chartData} options={chartOptions} />
+                </div>
+                <p className="text-xs text-gray-500 text-center mt-2">
+                  Click on any bar to view detailed performance metrics
+                </p>
+                <div className="flex items-center justify-center gap-4 mt-4 text-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-green-600 rounded-full"></div>
+                    <span className="text-gray-600">Top 3 Performers</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-green-300 rounded-full"></div>
+                    <span className="text-gray-600">Other Users</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-gray-500 mb-2 font-medium">No data available for chart</div>
+                <div className="text-sm text-gray-400 mt-2">
+                  <p className="mb-1">The chart requires:</p>
+                  <ul className="list-disc list-inside space-y-1 text-left max-w-md mx-auto">
+                    <li>Issues logged within the selected date range ({fromDate} to {toDate})</li>
+                    <li>Issues with "Monitored By" field populated</li>
+                    <li>At least one user who has monitored portfolios</li>
+                  </ul>
+                  <p className="mt-3 text-xs">
+                    Try adjusting your date range or check if issues have the "Monitored By" field filled in.
+                  </p>
+                  <p className="mt-2 text-xs text-gray-500">
+                    Total issues: {allIssues.length} | Filtered issues: {filteredIssues.length}
+                  </p>
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
 
       {/* Coverage Matrix Table - Below User Coverage Performance Chart */}
       <div>
         {/* Green Banner */}
-        <div className="bg-green-600 text-white py-4 px-6 rounded-t-lg shadow-md">
+        <div className="text-white py-4 px-6 rounded-t-lg shadow-md" style={{ backgroundColor: '#76ab3f' }}>
           <h2 className="text-3xl font-bold mb-1">Coverage Overview</h2>
         </div>
 
@@ -1256,47 +1287,49 @@ const CoverageMatrix: React.FC = () => {
       </div>
 
       {/* Hover Tooltip */}
-      {hoveredCell && cellInfo && (
-        <div
-          className="fixed z-[9999] w-80 bg-blue-900 text-white text-xs rounded-lg shadow-xl p-4 pointer-events-none"
-          style={{
-            top: `${hoveredCell.position.top}px`,
-            left: `${hoveredCell.position.left}px`,
-            transform: 'translate(-50%, -100%)',
-            marginTop: '-10px',
-          }}
-        >
-          <div className="font-bold text-sm mb-2 pb-2 border-b border-blue-700">
-            {cellInfo.userName} - Hour {cellInfo.hour}:00
-          </div>
-          <div className="mb-2">
-            <div className="font-bold text-blue-300">
-              Issues Entered (This Hour): {cellInfo.totalCount}
-            </div>
-          </div>
-          <div>
-            <div className="font-bold text-green-300 mb-1">
-              Total Portfolios Monitored ({cellInfo.portfolioCount}):
-            </div>
-            <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1 select-none custom-scrollbar">
-              {cellInfo.portfolios.length > 0 ? (
-                cellInfo.portfolios.map((portfolio, idx) => (
-                  <div key={idx} className="text-white pl-2 py-1 text-sm font-bold transition-all hover:bg-white/5 rounded">
-                    <span className="text-green-400 mr-2 font-black">•</span>
-                    {portfolio}
-                  </div>
-                ))
-              ) : (
-                <div className="text-blue-200 italic pl-2 text-xs">No portfolio details available</div>
-              )}
-            </div>
-          </div>
+      {
+        hoveredCell && cellInfo && (
           <div
-            className="absolute left-1/2 transform -translate-x-1/2 top-full border-4 border-transparent border-t-blue-900"
-            style={{ marginTop: '-1px' }}
-          ></div>
-        </div>
-      )}
+            className="fixed z-[9999] w-80 bg-blue-900 text-white text-xs rounded-lg shadow-xl p-4 pointer-events-none"
+            style={{
+              top: `${hoveredCell.position.top}px`,
+              left: `${hoveredCell.position.left}px`,
+              transform: 'translate(-50%, -100%)',
+              marginTop: '-10px',
+            }}
+          >
+            <div className="font-bold text-sm mb-2 pb-2 border-b border-blue-700">
+              {cellInfo.userName} - Hour {cellInfo.hour}:00
+            </div>
+            <div className="mb-2">
+              <div className="font-bold text-blue-300">
+                Issues Entered (This Hour): {cellInfo.totalCount}
+              </div>
+            </div>
+            <div>
+              <div className="font-bold text-green-300 mb-1">
+                Total Portfolios Monitored ({cellInfo.portfolioCount}):
+              </div>
+              <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1 select-none custom-scrollbar">
+                {cellInfo.portfolios.length > 0 ? (
+                  cellInfo.portfolios.map((portfolio, idx) => (
+                    <div key={idx} className="text-white pl-2 py-1 text-sm font-bold transition-all hover:bg-white/5 rounded">
+                      <span className="text-green-400 mr-2 font-black">•</span>
+                      {portfolio}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-blue-200 italic pl-2 text-xs">No portfolio details available</div>
+                )}
+              </div>
+            </div>
+            <div
+              className="absolute left-1/2 transform -translate-x-1/2 top-full border-4 border-transparent border-t-blue-900"
+              style={{ marginTop: '-1px' }}
+            ></div>
+          </div>
+        )
+      }
 
       {/* Action Buttons */}
       <div className="flex items-center justify-end gap-2">
@@ -1311,70 +1344,74 @@ const CoverageMatrix: React.FC = () => {
         </Button>
       </div>
 
-      {showDebug && (
-        <Modal
-          isOpen={showDebug}
-          onClose={() => setShowDebug(false)}
-          title="Analysis Logs (Debug Info)"
-        >
-          <div className="space-y-4 max-h-[70vh] overflow-y-auto p-4 text-xs">
-            <div className="grid grid-cols-3 gap-2 mb-4">
-              <div className="p-2 bg-blue-50 rounded border border-blue-100">
-                <div className="text-blue-600 font-bold">Total Logs</div>
-                <div className="text-xl font-black">{adminLogs.length}</div>
+      {
+        showDebug && (
+          <Modal
+            isOpen={showDebug}
+            onClose={() => setShowDebug(false)}
+            title="Analysis Logs (Debug Info)"
+          >
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto p-4 text-xs">
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                <div className="p-2 bg-blue-50 rounded border border-blue-100">
+                  <div className="text-blue-600 font-bold">Total Logs</div>
+                  <div className="text-xl font-black">{adminLogs.length}</div>
+                </div>
+                <div className="p-2 bg-green-50 rounded border border-green-100">
+                  <div className="text-green-600 font-bold">Completions</div>
+                  <div className="text-xl font-black">{adminLogs.filter((l: any) => l.action_type === 'PORTFOLIO_CHECKED').length}</div>
+                </div>
+                <div className="p-2 bg-purple-50 rounded border border-purple-100">
+                  <div className="text-purple-600 font-bold">Locks</div>
+                  <div className="text-xl font-black">{adminLogs.filter((l: any) => l.action_type === 'PORTFOLIO_LOCKED').length}</div>
+                </div>
               </div>
-              <div className="p-2 bg-green-50 rounded border border-green-100">
-                <div className="text-green-600 font-bold">Completions</div>
-                <div className="text-xl font-black">{adminLogs.filter((l: any) => l.action_type === 'PORTFOLIO_CHECKED').length}</div>
+              <div className="bg-gray-50 p-2 rounded border text-[10px] font-mono whitespace-pre">
+                {`HOUR FILTER: ${hourFilter}\nDATE RANGE: ${fromDate} to ${toDate}\n`}
               </div>
-              <div className="p-2 bg-purple-50 rounded border border-purple-100">
-                <div className="text-purple-600 font-bold">Locks</div>
-                <div className="text-xl font-black">{adminLogs.filter((l: any) => l.action_type === 'PORTFOLIO_LOCKED').length}</div>
-              </div>
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="p-1">Time</th>
+                    <th className="p-1">User</th>
+                    <th className="p-1">Action</th>
+                    <th className="p-1">Hr</th>
+                    <th className="p-1">Portfolio</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {adminLogs.slice(0, 30).map((log: any, i: number) => {
+                    let m = log.metadata;
+                    if (typeof m === 'string') try { m = JSON.parse(m) } catch (e) { }
+                    return (
+                      <tr key={i} className="border-t hover:bg-gray-50">
+                        <td className="p-1 whitespace-nowrap">{new Date(log.created_at).toLocaleTimeString()}</td>
+                        <td className="p-1 truncate max-w-[80px]">{log.admin_name?.split('@')[0]}</td>
+                        <td className="p-1">{log.action_type === 'PORTFOLIO_CHECKED' ? 'CHECK' : 'LOCK'}</td>
+                        <td className="p-1 font-bold text-blue-600">{m?.hour}</td>
+                        <td className="p-1 truncate max-w-[100px]">{m?.portfolio_name || log.related_portfolio_id?.substring(0, 8)}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
-            <div className="bg-gray-50 p-2 rounded border text-[10px] font-mono whitespace-pre">
-              {`HOUR FILTER: ${hourFilter}\nDATE RANGE: ${fromDate} to ${toDate}\n`}
-            </div>
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="p-1">Time</th>
-                  <th className="p-1">User</th>
-                  <th className="p-1">Action</th>
-                  <th className="p-1">Hr</th>
-                  <th className="p-1">Portfolio</th>
-                </tr>
-              </thead>
-              <tbody>
-                {adminLogs.slice(0, 30).map((log: any, i: number) => {
-                  let m = log.metadata;
-                  if (typeof m === 'string') try { m = JSON.parse(m) } catch (e) { }
-                  return (
-                    <tr key={i} className="border-t hover:bg-gray-50">
-                      <td className="p-1 whitespace-nowrap">{new Date(log.created_at).toLocaleTimeString()}</td>
-                      <td className="p-1 truncate max-w-[80px]">{log.admin_name?.split('@')[0]}</td>
-                      <td className="p-1">{log.action_type === 'PORTFOLIO_CHECKED' ? 'CHECK' : 'LOCK'}</td>
-                      <td className="p-1 font-bold text-blue-600">{m?.hour}</td>
-                      <td className="p-1 truncate max-w-[100px]">{m?.portfolio_name || log.related_portfolio_id?.substring(0, 8)}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </Modal>
-      )}
+          </Modal>
+        )
+      }
 
       {/* User Performance Details Modal */}
-      {selectedUser && (
-        <UserPerformanceModal
-          user={selectedUser}
-          onClose={() => setSelectedUser(null)}
-          getUserPerformanceDetails={getUserPerformanceDetails}
-          hourFilter={hourFilter}
-        />
-      )}
-    </div>
+      {
+        selectedUser && (
+          <UserPerformanceModal
+            user={selectedUser}
+            onClose={() => setSelectedUser(null)}
+            getUserPerformanceDetails={getUserPerformanceDetails}
+            hourFilter={hourFilter}
+          />
+        )
+      }
+    </div >
   )
 }
 
