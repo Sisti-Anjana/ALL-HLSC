@@ -18,12 +18,12 @@ const IssueDetailsTable: React.FC = () => {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
-  
+
   // Get portfolio and hour from URL query parameters
   const portfolioParam = searchParams.get('portfolio')
   const hourParam = searchParams.get('hour')
   const currentHour = new Date().getHours().toString()
-  
+
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('')
   const debouncedSearchQuery = useDebounce(searchQuery, 300) // Debounce search by 300ms
@@ -41,7 +41,7 @@ const IssueDetailsTable: React.FC = () => {
   const [startDate, setStartDate] = useState(todayStr)
   const [endDate, setEndDate] = useState(todayStr)
   const [quickRange, setQuickRange] = useState<string>('today')
-  
+
   // Initialize dates on mount
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0]
@@ -50,11 +50,11 @@ const IssueDetailsTable: React.FC = () => {
     handleQuickRange('today')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-  
+
   // Export states
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
-  
+
   // New issue form states
   const [newIssue, setNewIssue] = useState<Partial<CreateIssueData>>({
     portfolio_id: '',
@@ -240,7 +240,7 @@ const IssueDetailsTable: React.FC = () => {
           l.portfolio_id === newIssue.portfolio_id &&
           l.issue_hour === currentHour
       )
-      
+
       if (lockForThisPortfolio) {
         const isLockedByMe = lockForThisPortfolio.monitored_by?.toLowerCase() === user?.email?.toLowerCase()
         if (!isLockedByMe) {
@@ -352,7 +352,7 @@ const IssueDetailsTable: React.FC = () => {
       if (type === 'active') {
         filters.status = 'open'
       }
-      
+
       const data = await issueService.export(filters)
       // Handle export download
       toast.success('Export initiated')
@@ -387,13 +387,13 @@ const IssueDetailsTable: React.FC = () => {
   return (
     <div className="space-y-6 w-full">
       {/* Search and Filters Section */}
-      <div className="bg-white rounded-lg shadow-md p-4">
-        <div className="space-y-3">
-          {/* Search Bar and Quick Range in Single Line */}
-          <div className="flex items-center gap-3 flex-wrap">
-            {/* Search Bar - Smaller */}
-            <div className="relative w-auto max-w-[250px]">
-              <svg className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="space-y-6">
+          {/* Main Filters Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+            {/* Search Bar */}
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
@@ -401,149 +401,102 @@ const IssueDetailsTable: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search issues..."
-                className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            {/* Quick Range Buttons - Inline */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-medium text-gray-700 whitespace-nowrap hidden sm:inline">Quick Range:</span>
-              <button
-                onClick={() => {
-                  setQuickRange('today')
-                  handleQuickRange('today')
-                }}
-                className={`px-2.5 py-1.5 rounded text-xs font-medium transition-all duration-200 whitespace-nowrap ${
-                  quickRange === 'today'
-                    ? 'bg-green-500 text-white shadow-md'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:shadow-md'
-                }`}
-              >
-                Today
-              </button>
-              <button
-                onClick={() => {
-                  setQuickRange('yesterday')
-                  handleQuickRange('yesterday')
-                }}
-                className={`px-2.5 py-1.5 rounded text-xs font-medium transition-all duration-200 whitespace-nowrap ${
-                  quickRange === 'yesterday'
-                    ? 'bg-green-500 text-white shadow-md'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:shadow-md'
-                }`}
-              >
-                Yesterday
-              </button>
-              <button
-                onClick={() => {
-                  setQuickRange('week')
-                  handleQuickRange('week')
-                }}
-                className={`px-2.5 py-1.5 rounded text-xs font-medium transition-all duration-200 whitespace-nowrap ${
-                  quickRange === 'week'
-                    ? 'bg-green-500 text-white shadow-md'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:shadow-md'
-                }`}
-              >
-                This Week
-              </button>
-              <button
-                onClick={() => {
-                  setQuickRange('month')
-                  handleQuickRange('month')
-                }}
-                className={`px-2.5 py-1.5 rounded text-xs font-medium transition-all duration-200 whitespace-nowrap ${
-                  quickRange === 'month'
-                    ? 'bg-green-500 text-white shadow-md'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:shadow-md'
-                }`}
-              >
-                This Month
-              </button>
-              <button
-                onClick={() => {
-                  setQuickRange('all')
-                  handleQuickRange('all')
-                }}
-                className={`px-2.5 py-1.5 rounded text-xs font-medium transition-all duration-200 whitespace-nowrap ${
-                  quickRange === 'all'
-                    ? 'bg-green-500 text-white shadow-md'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:shadow-md'
-                }`}
-              >
-                All
-              </button>
-            </div>
-          </div>
-          {/* Filters Row - Compact */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Select Portfolio</label>
-              <select
-                value={selectedPortfolio}
-                onChange={(e) => setSelectedPortfolio(e.target.value)}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">All Portfolios</option>
-                {portfolios.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Issue Filter</label>
-              <select
-                value={issueFilter}
-                onChange={(e) => setIssueFilter(e.target.value)}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="active">Active Issues (Default)</option>
-                <option value="all">All Issues</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Hour Filter</label>
-              <select
-                value={hourFilter}
-                onChange={(e) => setHourFilter(e.target.value)}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">All Hours</option>
-                {Array.from({ length: 24 }, (_, i) => (
-                  <option key={i} value={i.toString()}>
-                    {i}:00
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          {/* Date Range - Compact */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-gray-700 whitespace-nowrap">Start Date:</label>
+
+            {/* Portfolio Selector */}
+            <select
+              value={selectedPortfolio}
+              onChange={(e) => setSelectedPortfolio(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium bg-white"
+            >
+              <option value="all">All Portfolios</option>
+              {portfolios.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+
+            {/* Status Filter */}
+            <select
+              value={issueFilter}
+              onChange={(e) => setIssueFilter(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium bg-white"
+            >
+              <option value="active">Active Issues (Default)</option>
+              <option value="all">All Issues</option>
+            </select>
+
+            {/* Hour Filter */}
+            <select
+              value={hourFilter}
+              onChange={(e) => setHourFilter(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium bg-white"
+            >
+              <option value="all">All Hours</option>
+              {Array.from({ length: 24 }, (_, i) => (
+                <option key={i} value={i.toString()}>{i}:00</option>
+              ))}
+            </select>
+
+            {/* Start Date */}
+            <div className="relative">
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-gray-700 whitespace-nowrap">End Date:</label>
+
+            {/* End Date */}
+            <div className="relative">
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
-        </div>
 
-        {/* Export Section - Same Frame */}
-        <div className="pt-3 border-t border-gray-200">
-          <IssueExportButtons filters={buildFilters} startDate={startDate} endDate={endDate} />
+          {/* Unified Action Row - Single line, equal distance */}
+          <div className="flex flex-wrap items-center justify-center gap-6 pt-4 border-t border-gray-100">
+            {/* Button Actions - Equal distance */}
+            <span className="text-sm font-semibold text-gray-700">Quick Range:</span>
+            <div className="flex items-center gap-2">
+              {[
+                { id: 'today', label: 'Today' },
+                { id: 'yesterday', label: 'Yesterday' },
+                { id: 'week', label: 'Week' },
+                { id: 'month', label: 'Month' },
+                { id: 'all', label: 'All' }
+              ].map((range) => (
+                <button
+                  key={range.id}
+                  onClick={() => {
+                    setQuickRange(range.id)
+                    handleQuickRange(range.id as any)
+                  }}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 ${quickRange === range.id
+                    ? 'bg-green-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                    }`}
+                >
+                  {range.label}
+                </button>
+              ))}
+            </div>
+            <div className="h-6 w-px bg-gray-200 mx-2 hidden sm:block"></div>
+            <Button variant="secondary" size="sm" onClick={handleClearFilters}>
+              Reset
+            </Button>
+
+            <div className="h-6 w-px bg-gray-200 hidden sm:block"></div>
+
+            <IssueExportButtons filters={buildFilters} startDate={startDate} endDate={endDate} />
+          </div>
+
         </div>
       </div>
 
@@ -581,7 +534,7 @@ const IssueDetailsTable: React.FC = () => {
                     <div className="space-y-2">
                       <p className="font-medium">No issues found</p>
                       <p className="text-sm text-gray-400">
-                        {issueFilter === 'active' 
+                        {issueFilter === 'active'
                           ? "No issues with 'Issue Present = Yes' found. Select 'All Issues' to see all issues, or try selecting a different portfolio or adjusting the date range."
                           : "No issues found. Try selecting a different portfolio or adjusting the date range."}
                       </p>
@@ -590,8 +543,8 @@ const IssueDetailsTable: React.FC = () => {
                 </tr>
               ) : (
                 issues.map((issue) => (
-                  <tr 
-                    key={issue.id} 
+                  <tr
+                    key={issue.id}
                     className="hover:bg-blue-50 hover:shadow-sm transition-all duration-200 cursor-pointer border-l-4 border-l-transparent hover:border-l-blue-500"
                   >
                     <td className="px-4 py-3 text-sm text-gray-900">

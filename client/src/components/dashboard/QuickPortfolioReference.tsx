@@ -14,10 +14,12 @@ import toast from 'react-hot-toast'
 
 interface QuickPortfolioReferenceProps {
   onPortfolioSelected?: (portfolioId: string, hour: number) => void
+  selectedHour?: number
 }
 
 const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
   onPortfolioSelected,
+  selectedHour,
 }) => {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -257,8 +259,8 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
         </div>
 
         {/* Search and Log Issue */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mb-4">
-          <div className="flex-1 relative">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 sm:gap-4 mb-4">
+          <div className="relative w-full sm:w-64">
             <input
               type="text"
               placeholder="Search..."
@@ -478,6 +480,7 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
           isOpen={!!selectedPortfolioId}
           onClose={() => setSelectedPortfolioId(null)}
           portfolioId={selectedPortfolioId}
+          selectedHour={selectedHour}
           onLogIssue={(portfolioId, hour) => {
             setSelectedPortfolioId(null) // Close modal
             if (onPortfolioSelected) {

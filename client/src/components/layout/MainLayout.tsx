@@ -3,6 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useTenant } from '../../context/TenantContext'
 import toast from 'react-hot-toast'
+import ScrollToTop from '../common/ScrollToTop'
 
 const MainLayout: React.FC = () => {
   const { user, logout } = useAuth()
@@ -62,16 +63,16 @@ const MainLayout: React.FC = () => {
           <div className="flex items-center justify-between flex-wrap gap-2">
             {/* Logo */}
             <div className="flex items-center flex-shrink-0">
-              <img 
-                src="/navbar.png" 
-                alt="American Green Solutions" 
+              <img
+                src="/navbar.png"
+                alt="American Green Solutions"
                 className="h-8 sm:h-10 md:h-12 w-auto"
               />
             </div>
 
-            {/* Center Title - Absolutely positioned in exact center */}
-            <div className="hidden md:block absolute left-1/2 transform -translate-x-1/2 text-center">
-              <div>
+            {/* Center Title - Flexbox alignment to prevent merging */}
+            <div className="hidden md:flex flex-1 items-center justify-center px-4">
+              <div className="text-center">
                 <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight whitespace-nowrap">
                   {isSuperAdmin ? (selectedTenant?.name || 'Select Client') : (user?.tenantName || 'Standard Solar')}
                 </h1>
@@ -119,7 +120,7 @@ const MainLayout: React.FC = () => {
                   </select>
                 </div>
               )}
-              
+
               {/* User Info - Simplified on mobile */}
               <div className="hidden sm:flex items-center gap-1.5 sm:gap-2.5">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 flex-shrink-0" style={{ backgroundColor: '#f0f9f0', borderColor: '#76ab3f' }}>
@@ -146,7 +147,7 @@ const MainLayout: React.FC = () => {
                   <span className="md:hidden">Admin</span>
                 </Link>
               )}
-              
+
               {/* Logout Button */}
               <button
                 onClick={handleLogout}
@@ -155,7 +156,7 @@ const MainLayout: React.FC = () => {
                 <span className="hidden sm:inline">Logout</span>
                 <span className="sm:hidden">Out</span>
               </button>
-              
+
               {/* Current Hour - Hidden on small screens */}
               <div className="hidden md:block px-2 sm:px-3 py-1.5 sm:py-2 text-white rounded-lg font-semibold whitespace-nowrap text-xs sm:text-sm" style={{ backgroundColor: '#76ab3f' }}>
                 Hour {getCurrentHourEST()}
@@ -183,14 +184,14 @@ const MainLayout: React.FC = () => {
         <nav className="hidden md:block px-6" style={{ backgroundColor: '#76ab3f' }}>
           <div className="flex items-center gap-1 overflow-x-auto">
             {navItems.map((item) => {
-              const isActive = location.pathname === item.path || 
+              const isActive = location.pathname === item.path ||
                 (item.path === '/' && location.pathname === '/')
               return (
                 <Link
                   key={item.path}
                   to={item.path}
                   className="px-4 lg:px-6 py-3 text-white font-medium transition-colors relative hover:opacity-80 whitespace-nowrap text-sm lg:text-base"
-                  style={{ 
+                  style={{
                     backgroundColor: isActive ? '#5f8a32' : 'transparent'
                   }}
                 >
@@ -209,7 +210,7 @@ const MainLayout: React.FC = () => {
           <nav className="md:hidden px-4 py-2" style={{ backgroundColor: '#76ab3f' }}>
             <div className="flex flex-col gap-1">
               {navItems.map((item) => {
-                const isActive = location.pathname === item.path || 
+                const isActive = location.pathname === item.path ||
                   (item.path === '/' && location.pathname === '/')
                 return (
                   <Link
@@ -217,7 +218,7 @@ const MainLayout: React.FC = () => {
                     to={item.path}
                     onClick={() => setMobileMenuOpen(false)}
                     className="px-4 py-2.5 text-white font-medium transition-colors rounded-lg"
-                    style={{ 
+                    style={{
                       backgroundColor: isActive ? '#5f8a32' : 'transparent'
                     }}
                   >
@@ -265,6 +266,7 @@ const MainLayout: React.FC = () => {
       <main className="px-3 sm:px-4 md:px-6 py-4 sm:py-5 md:py-6">
         <Outlet />
       </main>
+      <ScrollToTop />
     </div>
   )
 }

@@ -165,7 +165,6 @@ export const portfolioController = {
         updateData.all_sites_checked_notes = req.body.notes
 
         // HISTORICAL LOGGING: Create a log entry for this completion
-        // This allows us to count multiple completions of the same portfolio
         try {
           const { data: portfolioInfo } = await supabase
             .from('portfolios')
@@ -182,13 +181,15 @@ export const portfolioController = {
             metadata: {
               hour: checkedHour,
               date: checkedDate,
+              portfolio_name: portfolioInfo?.name,
               notes: req.body.notes
             }
           })
-        } catch (logError) {
-          console.error('Failed to create historical log for portfolio completion:', logError)
-          // Don't fail the primary update if logging fails
+          console.log(`✅ successfully created historical log for portfolio ${req.params.id}`)
+        } catch (logError: any) {
+          console.error('❌ Failed to create historical log for portfolio completion:', logError.message || logError)
         }
+        // Don't fail the primary update if logging fails
       } else {
         // If "No", clear the date and hour
         updateData.all_sites_checked_date = null

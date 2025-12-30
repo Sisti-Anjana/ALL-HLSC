@@ -20,23 +20,34 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 w-full">
-      <QuickPortfolioReference 
-        onPortfolioSelected={handlePortfolioSelected}
-      />
-      <HourlyCoverageAnalysis />
-      <IssueDetailsTable />
-      
+    <div className="flex w-full relative transition-all duration-300 gap-4">
+      <div className="flex-1 min-w-0 space-y-6">
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-2xl font-bold text-gray-900">Portfolio Monitoring</h1>
+        </div>
+
+        <QuickPortfolioReference
+          onPortfolioSelected={handlePortfolioSelected}
+          selectedHour={selectedHour}
+        />
+        <HourlyCoverageAnalysis />
+        <IssueDetailsTable />
+      </div>
+
       {/* Issue Logging Sidebar */}
-      <IssueLoggingSidebar
-        isOpen={sidebarOpen}
-        onClose={() => {
-          setSidebarOpen(false)
-          setSelectedPortfolioId(null)
-        }}
-        portfolioId={selectedPortfolioId}
-        hour={selectedHour}
-      />
+      {sidebarOpen && (
+        <div className="w-96 flex-shrink-0 transition-all duration-300">
+          <IssueLoggingSidebar
+            isOpen={sidebarOpen}
+            onClose={() => {
+              setSidebarOpen(false)
+              setSelectedPortfolioId(null)
+            }}
+            portfolioId={selectedPortfolioId}
+            hour={selectedHour}
+          />
+        </div>
+      )}
     </div>
   )
 }

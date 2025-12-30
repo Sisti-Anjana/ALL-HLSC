@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Bar } from 'react-chartjs-2'
 import {
@@ -39,11 +39,18 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
   endDate,
 }) => {
   const { user: currentUser } = useAuth()
-  const [selectedRange, setSelectedRange] = useState<'today' | 'yesterday' | 'week' | 'custom'>(
-    dateRange
-  )
-  const [customStartDate, setCustomStartDate] = useState(startDate || '')
-  const [customEndDate, setCustomEndDate] = useState(endDate || '')
+  const [selectedRange, setSelectedRange] = useState<'today' | 'yesterday' | 'week' | 'custom'>(() => {
+    const savedFrom = localStorage.getItem('hlsc_filter_fromDate')
+    const savedTo = localStorage.getItem('hlsc_filter_toDate')
+    if (savedFrom && savedTo) return 'custom'
+    return dateRange
+  })
+  const [customStartDate, setCustomStartDate] = useState(() => {
+    return localStorage.getItem('hlsc_filter_fromDate') || startDate || ''
+  })
+  const [customEndDate, setCustomEndDate] = useState(() => {
+    return localStorage.getItem('hlsc_filter_toDate') || endDate || ''
+  })
   const [selectedPerformer, setSelectedPerformer] = useState<{
     user: any
     rank: number
@@ -51,6 +58,14 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
     metric: string
     value: number
   } | null>(null)
+
+  // Save filters to localStorage when they change
+  useEffect(() => {
+    if (selectedRange === 'custom') {
+      localStorage.setItem('hlsc_filter_fromDate', customStartDate)
+      localStorage.setItem('hlsc_filter_toDate', customEndDate)
+    }
+  }, [customStartDate, customEndDate, selectedRange])
 
   // Fetch portfolios
   const { data: portfolios = [] } = useQuery<Portfolio[]>({
@@ -253,7 +268,7 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
     // COUNT PORTFOLIO MONITORED FROM LOGS (Accurate/Historical)
     // Filter logs for completion/monitored events within range
     const portfolioActivityLogs = adminLogs.filter(log => {
-      if (log.action_type !== 'PORTFOLIO_CHECKED' && log.action_type !== 'PORTFOLIO_LOCKED') return false
+      if (log.action_type !== 'PORTFOLIO_CHECKED') return false
 
       const logDate = new Date(log.created_at)
       if (selectedRange === 'today') {
@@ -290,56 +305,61 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
       const monitoredBy = (log.admin_name || 'Unknown').toLowerCase()
       const portfolioId = log.related_portfolio_id
       const logDate = new Date(log.created_at).toISOString().split('T')[0]
-      const logHour = log.metadata?.hour ?? new Date(log.created_at).getHours()
+      let meta = log.metadata
+      if (typeof meta === 'string') {
+        try { meta = JSON.parse(meta) } catch (e) { console.warn('Failed to parse metadata', e) }
+      }
+      const logHour = meta?.hour ?? new Date(log.created_at).getHours()
 
       if (portfolioId) {
         totalPortfoliosCheckedCount++
-        // Create unique key to prevent double-counting with portfolios table fallback
-        completionKeys.add(`${portfolioId}_${logDate}_${logHour}_${monitoredBy}`)
-      }
 
-      if (!userStatsMap[monitoredBy]) {
-        // Initialize user if they haven't logged any issues but have completions
-        const foundUser = users.find(u => u.email?.toLowerCase() === monitoredBy)
-        let displayName = monitoredBy.split('@')[0]
-        if (foundUser?.full_name) displayName = foundUser.full_name
+        if (!userStatsMap[monitoredBy]) {
+          // Initialize user if they haven't logged any issues but have completions
+          const foundUser = users.find(u => u.email?.toLowerCase() === monitoredBy)
+          let displayName = monitoredBy.split('@')[0]
+          if (foundUser?.full_name) displayName = foundUser.full_name
 
-        userStatsMap[monitoredBy] = {
-          user: monitoredBy,
-          displayName,
-          issues: 0,
-          issuesYes: 0,
-          portfoliosCount: 0,
-          hoursCount: 0,
-          missedAlerts: 0,
-          portfolios: [],
-          hourlyBreakdown: {},
+          userStatsMap[monitoredBy] = {
+            user: monitoredBy,
+            displayName,
+            issues: 0,
+            issuesYes: 0,
+            portfoliosCount: 0,
+            hoursCount: 0,
+            missedAlerts: 0,
+            portfolios: [],
+            hourlyBreakdown: {},
+          }
         }
+
+        const userEmailVal = userStatsMap[monitoredBy].user
+        if (!userStatsMap[userEmailVal].hourlyBreakdown[logHour]) {
+          userStatsMap[userEmailVal].hourlyBreakdown[logHour] = { portfolios: 0, issues: 0, issuesYes: 0, portfolioNames: [] }
+        }
+        userStatsMap[userEmailVal].hourlyBreakdown[logHour].portfolios++
+
+        // Add portfolio name to hourly breakdown for chart tooltips
+        const portfolioData = portfolios.find(p => p.id === portfolioId)
+        if (portfolioData) {
+          const siteRangeStr = portfolioData.site_range ? ` (${portfolioData.site_range})` : ''
+          const fullName = `${portfolioData.name}${siteRangeStr}`
+
+          userStatsMap[userEmailVal].hourlyBreakdown[logHour].portfolioNames.push(fullName)
+          userStatsMap[monitoredBy].portfolios.push(fullName)
+        }
+
+        // Increment portfoliosCount for every log entry (cumulative)
+        userStatsMap[monitoredBy].portfoliosCount++
+
+        // Also ensure hours count includes log hours
+        if (!userHoursMap[monitoredBy]) userHoursMap[monitoredBy] = new Set()
+        userHoursMap[monitoredBy].add(logHour)
+
+        // Track key to prevent double-counting with portfolios table fallback
+        const key = `${portfolioId}_${logDate}_${logHour}_${monitoredBy}`
+        completionKeys.add(key)
       }
-
-      const userEmailVal = userStatsMap[monitoredBy].user
-      if (!userStatsMap[userEmailVal].hourlyBreakdown[logHour]) {
-        userStatsMap[userEmailVal].hourlyBreakdown[logHour] = { portfolios: 0, issues: 0, issuesYes: 0, portfolioNames: [] }
-      }
-      userStatsMap[userEmailVal].hourlyBreakdown[logHour].portfolios++
-
-      // Add portfolio name to hourly breakdown for chart tooltips
-      const portfolioData = portfolios.find(p => p.id === portfolioId)
-      if (portfolioData) {
-        const siteRangeStr = portfolioData.site_range ? ` (${portfolioData.site_range})` : ''
-        const fullName = `${portfolioData.name}${siteRangeStr}`
-
-        userStatsMap[userEmailVal].hourlyBreakdown[logHour].portfolioNames.push(fullName)
-        userStatsMap[monitoredBy].portfolios.push(fullName)
-      }
-
-      // Increment portfoliosCount for every log entry (cumulative)
-      userStatsMap[monitoredBy].portfoliosCount++
-
-      // Also ensure hours count includes log hours
-      const userEmail = userStatsMap[monitoredBy].user
-      if (!userHoursMap[userEmail]) userHoursMap[userEmail] = new Set()
-      userHoursMap[userEmail].add(logHour)
     })
 
     // FALLBACK: Process portfolios table for existing/one-off completions not yet in logs
@@ -439,9 +459,20 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
       const userStr = String(issueMonitoredBy).trim().toLowerCase()
       const user = users.find((u) => u.email?.toLowerCase() === userStr)
 
-      if (!user) return
+      let userEmail = user?.email
 
-      const userEmail = user.email
+      // Fallback: If user not found in list (e.g. Super Admin), use the email text directly
+      if (!user) {
+        // Simple validation to ensure it looks like an email or username
+        if (userStr.includes('@') || userStr.length > 3) {
+          userEmail = String(issueMonitoredBy).toLowerCase()
+        } else {
+          return
+        }
+      }
+
+      if (!userEmail) return
+
       if (!userHoursMap[userEmail]) {
         userHoursMap[userEmail] = new Set()
       }

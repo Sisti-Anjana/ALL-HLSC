@@ -323,19 +323,22 @@ export const adminService = {
 
   getLogs: async (tenantId: string) => {
     const { data, error } = await supabase
-      .from('admin_logs')
+      .from('portfolio_completions')
       .select('*')
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
-      .limit(1000)
+      .limit(5000)
 
-    if (error) throw new Error(`Failed to fetch logs: ${error.message}`)
-    return data || []
+    if (error) {
+      console.error('❌ adminService.getLogs DB Error:', error)
+      throw new Error(`Failed to fetch logs: ${error.message}`)
+    }
+    return (data || []).map((log: any) => ({ ...log, log_id: log.id }))
   },
 
   createLog: async (tenantId: string, logData: any) => {
     const { data, error } = await supabase
-      .from('admin_logs')
+      .from('portfolio_completions')
       .insert({
         tenant_id: tenantId,
         admin_name: logData.adminName,
@@ -348,8 +351,13 @@ export const adminService = {
       .select()
       .single()
 
-    if (error) throw new Error(`Failed to create log: ${error.message}`)
-    return data
+    if (error) {
+      console.error(`❌ [ADMIN_SERVICE] Log Insert Error:`, error)
+      throw new Error(`Failed to create log: ${error.message}`)
+    }
+
+    // Map id to log_id for frontend backward compatibility
+    return data ? { ...data, log_id: data.id } : null
   },
 
   // Tenant Management (Super Admin Only)

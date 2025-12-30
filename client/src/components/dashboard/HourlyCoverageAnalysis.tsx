@@ -80,7 +80,7 @@ const HourlyCoverageAnalysis: React.FC = () => {
     }
     return result
   })
-  
+
   // Debug: Log first few hours to verify data
   console.log('Chart data sample (hours 0-6):', hourlyData.slice(0, 7).map(d => ({ hour: d.hour, coverage: d.coverage })))
 
@@ -151,7 +151,7 @@ const HourlyCoverageAnalysis: React.FC = () => {
         max: 60, // Match screenshot - max is 60%
         ticks: {
           stepSize: 15, // Show ticks at 0, 15, 30, 45, 60
-          callback: function(value: any) {
+          callback: function (value: any) {
             return value
           },
         },
@@ -218,67 +218,62 @@ const HourlyCoverageAnalysis: React.FC = () => {
         </p>
       </div>
 
-      {/* Date Controls */}
-      <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 flex-1">
-            <label className="text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">Start Date:</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full sm:w-auto px-2 sm:px-3 py-1.5 sm:py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+      {/* Date Controls - Unified Single Line */}
+      <div className="mb-4 sm:mb-8 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+        <div className="flex flex-wrap items-center justify-center gap-6">
+          {/* Start Date */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-gray-700 whitespace-nowrap">From:</span>
+            <div className="relative w-40">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm transition-all"
+              />
+            </div>
           </div>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 flex-1">
-            <label className="text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">End Date:</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full sm:w-auto px-2 sm:px-3 py-1.5 sm:py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+
+          {/* End Date */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-gray-700 whitespace-nowrap">To:</span>
+            <div className="relative w-40">
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm transition-all"
+              />
+            </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => handleRangeClick('today')}
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
-                selectedRange === 'today'
+
+          <div className="h-6 w-px bg-gray-200 hidden sm:block"></div>
+
+          {/* Quick Range */}
+          <div className="flex items-center gap-2">
+            {[
+              { id: 'today', label: 'Today' },
+              { id: 'week', label: 'Week' },
+              { id: 'month', label: 'Month' }
+            ].map((range) => (
+              <button
+                key={range.id}
+                onClick={() => handleRangeClick(range.id as any)}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 ${selectedRange === range.id
                   ? 'text-white shadow-md'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:shadow-md hover:scale-105'
-              }`}
-              style={selectedRange === 'today' ? { backgroundColor: '#76ab3f' } : {}}
-            >
-              Today
-            </button>
-            <button
-              onClick={() => handleRangeClick('week')}
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
-                selectedRange === 'week'
-                  ? 'text-white shadow-md'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:shadow-md hover:scale-105'
-              }`}
-              style={selectedRange === 'week' ? { backgroundColor: '#76ab3f' } : {}}
-            >
-              Week
-            </button>
-            <button
-              onClick={() => handleRangeClick('month')}
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
-                selectedRange === 'month'
-                  ? 'text-white shadow-md'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:shadow-md hover:scale-105'
-              }`}
-              style={selectedRange === 'month' ? { backgroundColor: '#76ab3f' } : {}}
-            >
-              Month
-            </button>
+                  : 'bg-white text-gray-700 hover:bg-gray-200 border border-gray-300 shadow-sm'
+                  }`}
+                style={selectedRange === range.id ? { backgroundColor: '#76ab3f' } : {}}
+              >
+                {range.label}
+              </button>
+            ))}
           </div>
         </div>
-        <p className="text-xs sm:text-sm text-gray-600">
-          Showing data for: {startDate || new Date().toISOString().split('T')[0]}
-        </p>
       </div>
+      <p className="mt-2 text-xs text-gray-500">
+        Showing data for: <span className="font-semibold text-gray-700">{startDate || new Date().toISOString().split('T')[0]}</span>
+      </p>
 
       {/* Chart Section */}
       <div>
@@ -304,7 +299,7 @@ const HourlyCoverageAnalysis: React.FC = () => {
             <span className="text-gray-600">≥ 50% coverage</span>
           </div>
         </div>
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4 md:p-6 h-[250px] sm:h-[350px] md:h-[450px] min-h-[250px] sm:min-h-[350px] md:min-h-[450px]" style={{ backgroundColor: '#f9fafb', position: 'relative' }}>
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4 h-[200px] sm:h-[250px] md:h-[300px] min-h-[200px] sm:min-h-[250px] md:min-h-[300px]" style={{ backgroundColor: '#f9fafb', position: 'relative' }}>
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
@@ -317,7 +312,7 @@ const HourlyCoverageAnalysis: React.FC = () => {
           )}
         </div>
       </div>
-    </Card>
+    </Card >
   )
 }
 

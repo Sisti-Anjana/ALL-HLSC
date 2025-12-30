@@ -182,6 +182,12 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
     })
 
     if (isOpen && portfolioId && user?.email) {
+      // SKIP AUTO-LOCK FOR SUPER ADMIN
+      if (user.role === 'super_admin') {
+        console.log('🛡️ IssueLoggingSidebar - Super Admin viewing only (auto-lock skipped)')
+        return
+      }
+
       const currentHour = hour !== undefined && hour !== null ? hour : new Date().getHours()
       console.log('🔒 IssueLoggingSidebar - Conditions met, checking locks...', {
         currentHour,
@@ -347,7 +353,7 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
   const monitoredByName = monitoredByUser?.full_name || monitoredByUser?.email?.split('@')[0] || (monitoredByEmail ? monitoredByEmail.split('@')[0] : 'Unknown')
 
   return (
-    <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl z-50 flex flex-col">
+    <div className="sticky top-[120px] h-[calc(100vh-140px)] w-full bg-white shadow-xl flex flex-col border border-gray-200 rounded-lg overflow-hidden">
       {/* Header */}
       <div className="bg-gray-50 border-b border-gray-200 p-4">
         <div className="flex items-center justify-between mb-2">
@@ -367,7 +373,12 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
 
         {/* Lock Status Indicator */}
         <div className="mt-3 flex items-center gap-2">
-          {lockMutation.isPending ? (
+          {user?.role === 'super_admin' ? (
+            <span className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-bold rounded-full border border-blue-200">
+              <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+              👀 SUPER ADMIN VIEW
+            </span>
+          ) : lockMutation.isPending ? (
             <span className="flex items-center gap-1.5 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-bold rounded-full animate-pulse">
               <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
               SECURING LOCK...

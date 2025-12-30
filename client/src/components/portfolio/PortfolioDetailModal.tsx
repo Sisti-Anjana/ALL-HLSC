@@ -16,6 +16,7 @@ interface PortfolioDetailModalProps {
   onClose: () => void
   portfolioId: string
   onLogIssue?: (portfolioId: string, hour: number) => void
+  selectedHour?: number
 }
 
 const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
@@ -23,6 +24,7 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
   onClose,
   portfolioId,
   onLogIssue,
+  selectedHour,
 }) => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -90,10 +92,10 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
     staleTime: 3000, // Consider data fresh for 3 seconds
   })
 
-  // Get the hour the user is working on (from lock if exists, otherwise current hour)
+  // Get the hour the user is working on (from lock if exists, otherwise Dashboard selection, otherwise current hour)
   const workingHour = activeLockForPortfolio?.issue_hour !== undefined && activeLockForPortfolio?.issue_hour !== null
     ? activeLockForPortfolio.issue_hour
-    : currentHour
+    : (selectedHour !== undefined ? selectedHour : currentHour)
 
   // Check if current user has entered at least one issue for this portfolio
   // CRITICAL: If portfolio is locked by current user, MUST check for issues at the locked hour ONLY
@@ -395,8 +397,7 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
     }
 
     if (onLogIssue) {
-      const currentHour = new Date().getHours()
-      onLogIssue(portfolioId, currentHour)
+      onLogIssue(portfolioId, workingHour)
       onClose()
     } else {
       onClose()
