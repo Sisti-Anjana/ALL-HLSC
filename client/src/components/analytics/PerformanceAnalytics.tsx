@@ -190,7 +190,7 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
         hoursCount: number
         missedAlerts: number
         portfolios: string[]
-        hourlyBreakdown: { [hour: number]: { portfolios: number; issues: number; issuesYes: number } }
+        hourlyBreakdown: { [hour: number]: { portfolios: number; issues: number; issuesYes: number; portfolioNames: string[] } }
       }
     } = {}
 
@@ -234,7 +234,7 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
 
       const hour = issue.issue_hour ?? 0
       if (!userStatsMap[monitoredBy].hourlyBreakdown[hour]) {
-        userStatsMap[monitoredBy].hourlyBreakdown[hour] = { portfolios: 0, issues: 0, issuesYes: 0 }
+        userStatsMap[monitoredBy].hourlyBreakdown[hour] = { portfolios: 0, issues: 0, issuesYes: 0, portfolioNames: [] }
       }
       userStatsMap[monitoredBy].hourlyBreakdown[hour].issues++
       if (issue.description && issue.description.toLowerCase() !== 'no issue') {
@@ -319,19 +319,22 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
 
       const userEmailVal = userStatsMap[monitoredBy].user
       if (!userStatsMap[userEmailVal].hourlyBreakdown[logHour]) {
-        userStatsMap[userEmailVal].hourlyBreakdown[logHour] = { portfolios: 0, issues: 0, issuesYes: 0 }
+        userStatsMap[userEmailVal].hourlyBreakdown[logHour] = { portfolios: 0, issues: 0, issuesYes: 0, portfolioNames: [] }
       }
       userStatsMap[userEmailVal].hourlyBreakdown[logHour].portfolios++
 
+      // Add portfolio name to hourly breakdown for chart tooltips
+      const portfolioData = portfolios.find(p => p.id === portfolioId)
+      if (portfolioData) {
+        const siteRangeStr = portfolioData.site_range ? ` (${portfolioData.site_range})` : ''
+        const fullName = `${portfolioData.name}${siteRangeStr}`
+
+        userStatsMap[userEmailVal].hourlyBreakdown[logHour].portfolioNames.push(fullName)
+        userStatsMap[monitoredBy].portfolios.push(fullName)
+      }
+
       // Increment portfoliosCount for every log entry (cumulative)
       userStatsMap[monitoredBy].portfoliosCount++
-
-      // Add portfolio details
-      const portfolio = portfolios.find(p => p.id === portfolioId)
-      if (portfolio) {
-        const siteRange = portfolio.site_range ? ` (${portfolio.site_range})` : ''
-        userStatsMap[monitoredBy].portfolios.push(`${portfolio.name}${siteRange}`)
-      }
 
       // Also ensure hours count includes log hours
       const userEmail = userStatsMap[monitoredBy].user
@@ -404,16 +407,19 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
         }
       }
 
+      const siteRangeValue = portfolio.site_range ? ` (${portfolio.site_range})` : ''
+      const portfolioFullName = `${portfolio.name}${siteRangeValue}`
+
       if (!userStatsMap[userEmailLower].hourlyBreakdown[completionHour]) {
-        userStatsMap[userEmailLower].hourlyBreakdown[completionHour] = { portfolios: 0, issues: 0, issuesYes: 0 }
+        userStatsMap[userEmailLower].hourlyBreakdown[completionHour] = { portfolios: 0, issues: 0, issuesYes: 0, portfolioNames: [] }
       }
       userStatsMap[userEmailLower].hourlyBreakdown[completionHour].portfolios++
+      userStatsMap[userEmailLower].hourlyBreakdown[completionHour].portfolioNames.push(portfolioFullName)
 
       userStatsMap[userEmailLower].portfoliosCount++
 
       // Add portfolio details
-      const siteRange = portfolio.site_range ? ` (${portfolio.site_range})` : ''
-      userStatsMap[userEmailLower].portfolios.push(`${portfolio.name}${siteRange}`)
+      userStatsMap[userEmailLower].portfolios.push(portfolioFullName)
 
       totalPortfoliosCheckedCount++
 
@@ -1003,6 +1009,33 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
                           labels: {
                             boxWidth: 12,
                             font: { size: 11, weight: 'bold' }
+                          }
+                        },
+                        tooltip: {
+                          callbacks: {
+                            label: (context: any) => {
+                              const label = context.dataset.label || ''
+                              const value = context.parsed.y || 0
+                              const hourStr = context.label.split(':')[0]
+                              const hour = parseInt(hourStr)
+
+                              const breakdown = selectedPerformer.user.hourlyBreakdown[hour]
+                              if (label === 'Portfolios' && breakdown?.portfolioNames?.length > 0) {
+                                // Group portfolios by name to show counts if duplicated
+                                const portfolioCounts: { [key: string]: number } = {}
+                                breakdown.portfolioNames.forEach((p: string) => {
+                                  portfolioCounts[p] = (portfolioCounts[p] || 0) + 1
+                                })
+
+                                const portfolioList = Object.entries(portfolioCounts).map(([name, count]) =>
+                                  ` • ${name}${count > 1 ? ` (x${count})` : ''}`
+                                )
+
+                                return [`${label}: ${value}`, ...portfolioList]
+                              }
+
+                              return `${label}: ${value}`
+                            }
                           }
                         }
                       },

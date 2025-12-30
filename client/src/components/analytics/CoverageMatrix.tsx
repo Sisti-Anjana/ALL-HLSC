@@ -752,11 +752,22 @@ const CoverageMatrix: React.FC = () => {
   // Calculate user coverage for chart - Show ALL users
   const userCoverageData = useMemo(() => {
     return matrixData
-      .map((user) => ({
-        userName: user.displayName,
-        totalPortfolios: user.totalPortfolios,
-        userData: user,
-      }))
+      .map((user) => {
+        // Collect all unique portfolios from all hours for this user
+        const allPortfolios: string[] = []
+        Object.values(user.hours).forEach((h: any) => {
+          if (h.portfolios) {
+            allPortfolios.push(...h.portfolios)
+          }
+        })
+
+        return {
+          userName: user.displayName,
+          totalPortfolios: user.totalPortfolios,
+          userData: user,
+          portfolios: allPortfolios
+        }
+      })
       .sort((a, b) => b.totalPortfolios - a.totalPortfolios)
   }, [matrixData])
 
@@ -812,7 +823,21 @@ const CoverageMatrix: React.FC = () => {
         callbacks: {
           label: (context: any) => {
             const user = userCoverageData[context.dataIndex]
-            return `${user.userName}: ${user.totalPortfolios} portfolios`
+            const baseLabel = `${user.userName}: ${user.totalPortfolios} portfolios`
+            if (user.portfolios && user.portfolios.length > 0) {
+              // Group portfolios by name to show counts if duplicated
+              const portfolioCounts: { [key: string]: number } = {}
+              user.portfolios.forEach((p: string) => {
+                portfolioCounts[p] = (portfolioCounts[p] || 0) + 1
+              })
+
+              const portfolioList = Object.entries(portfolioCounts).map(([name, count]) =>
+                ` • ${name}${count > 1 ? ` (x${count})` : ''}`
+              )
+
+              return [baseLabel, ...portfolioList]
+            }
+            return baseLabel
           },
         },
       },
