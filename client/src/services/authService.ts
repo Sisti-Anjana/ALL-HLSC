@@ -2,29 +2,38 @@ import api from './api'
 import { ApiResponse } from '../types/api.types'
 
 export interface AuthResponse {
-  token: string
-  user: {
+  token?: string
+  user?: {
     userId: string
     tenantId: string
     email: string
     fullName: string
     role: string
   }
+  multiple?: boolean
+  accounts?: Array<{
+    userId: string
+    tenantId: string
+    tenantName: string
+    role: string
+  }>
 }
 
 export interface LoginCredentials {
   email: string
   password: string
   rememberMe?: boolean
+  tenantId?: string
 }
 
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    console.log('🔐 Sending login request:', { email: credentials.email, password: '***' })
+    console.log('🔐 Sending login request:', { email: credentials.email, password: '***', tenantId: credentials.tenantId })
     try {
       const response = await api.post<ApiResponse<AuthResponse>>('/auth/login', {
         email: credentials.email,
         password: credentials.password,
+        tenantId: credentials.tenantId,
       })
       console.log('✅ Login response received:', response.data)
       if (!response.data.data) {

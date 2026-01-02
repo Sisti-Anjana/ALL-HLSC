@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 interface AuthContextType {
   user: any | null
   loading: boolean
-  login: (credentials: any) => Promise<void>
+  login: (credentials: any) => Promise<any>
   logout: () => void
   isAuthenticated: boolean
 }
@@ -42,11 +42,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const { authService } = await import('../services/authService')
       console.log('🔐 AuthContext - Calling authService.login...')
       const response = await authService.login(credentials)
+
+      // Handle multi-tenant response (list of accounts)
+      if (response.multiple) {
+        console.log('🏢 AuthContext - Multiple accounts found, returning for selection')
+        return response
+      }
+
+      if (!response.token || !response.user) {
+        throw new Error('Login response missing token or user data')
+      }
+
       console.log('✅ AuthContext - Login successful, saving to localStorage')
       localStorage.setItem('auth_token', response.token)
       localStorage.setItem('user', JSON.stringify(response.user))
       setUser(response.user)
       console.log('✅ AuthContext - User state updated')
+      return response
     } catch (error: any) {
       console.error('❌ AuthContext - Login error:', error)
       console.error('❌ Error type:', error.constructor.name)
@@ -54,10 +66,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.error('❌ Error message:', error.message)
       console.error('❌ Error response:', error.response?.data)
       console.error('❌ Error status:', error.response?.status)
-      
+
       // Determine user-friendly error message
       let errorMessage = 'Login failed'
-      
+
       if (error.message) {
         if (error.message.includes('timeout')) {
           errorMessage = 'Request timeout. The server is taking too long to respond. Please check if the server is running.'
@@ -71,22 +83,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       } else if (error.response?.data?.error) {
         errorMessage = error.response.data.error
       }
-      
+
       // Show user-friendly error message
-      const userMessage = errorMessage.includes('Invalid email or password') 
+      const userMessage = errorMessage.includes('Invalid email or password')
         ? 'Invalid email or password. Please check your credentials.'
         : errorMessage.includes('Database error')
-        ? 'Database connection error. Please check server configuration.'
-        : errorMessage.includes('timeout')
-        ? 'Server timeout. Please check if the server is running.'
-        : errorMessage.includes('Network error') || errorMessage.includes('Cannot connect')
-        ? 'Cannot connect to server. Please check if the server is running.'
-        : errorMessage.includes('email')
-        ? 'Please enter a valid email address.'
-        : errorMessage.includes('password')
-        ? 'Password is required.'
-        : errorMessage
-      
+          ? 'Database connection error. Please check server configuration.'
+          : errorMessage.includes('timeout')
+            ? 'Server timeout. Please check if the server is running.'
+            : errorMessage.includes('Network error') || errorMessage.includes('Cannot connect')
+              ? 'Cannot connect to server. Please check if the server is running.'
+              : errorMessage.includes('email')
+                ? 'Please enter a valid email address.'
+                : errorMessage.includes('password')
+                  ? 'Password is required.'
+                  : errorMessage
+
       // Use toast instead of alert for better UX
       toast.error(userMessage)
       throw error

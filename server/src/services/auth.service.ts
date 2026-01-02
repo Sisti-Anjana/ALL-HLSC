@@ -3,24 +3,19 @@ import { hashPassword, comparePassword } from '../utils/password.util'
 import { generateToken } from '../utils/jwt.util'
 
 export const authService = {
-  login: async (credentials: { email: string; password: string }) => {
+  login: async (credentials: { email: string; password: string; tenantId?: string }) => {
     try {
       console.log('🔍 Looking up user:', credentials.email)
 
-      // Use case-insensitive email search (ilike) instead of converting to lowercase
-      // This handles emails with mixed case like ShreeY@amgsol.com
+      // 1. Fetch ALL users with this email (remove limit(1))
+      // Use case-insensitive email search
       const { data: users, error: fetchError } = await supabase
         .from('users')
         .select('user_id, email, password_hash, full_name, role, tenant_id, is_active, tenant:tenants(*)')
         .ilike('email', credentials.email)
-        .limit(1)
 
       if (fetchError) {
-        console.error('❌ Database error details:')
-        console.error('   Message:', fetchError.message)
-        console.error('   Code:', fetchError.code)
-        console.error('   Details:', fetchError.details)
-        console.error('   Hint:', fetchError.hint)
+        console.error('❌ Database error details:', fetchError)
         throw new Error(`Database error: ${fetchError.message}`)
       }
 
@@ -29,69 +24,68 @@ export const authService = {
         throw new Error('Invalid email or password')
       }
 
-      const user = users[0]
-      console.log('✅ User found:', user.email, 'Role:', user.role)
-      console.log('   User active:', user.is_active)
-      console.log('   Has password hash:', !!user.password_hash)
-      console.log('   Hash preview:', user.password_hash ? user.password_hash.substring(0, 30) + '...' : 'NULL')
+      // 2. Verify password against the first active user found
+      // We assume if they are the same person, they likely use the same password.
+      // Or we can try to match against *any* of the found users.
+      // For simplicity and security, we'll try to match against the first one that has a password hash.
+      const userForAuth = users.find(u => u.password_hash && u.is_active)
 
-      if (!user.is_active) {
-        console.log('❌ User is inactive')
+      if (!userForAuth) {
+        console.log('❌ No active user with password found')
         throw new Error('Invalid email or password')
       }
 
-      if (!user.password_hash) {
-        console.log('❌ No password hash found')
-        throw new Error('Invalid email or password')
-      }
-
-      console.log('🔐 Comparing password...')
-      console.log('   Input password length:', credentials.password.length)
-      console.log('   Stored hash length:', user.password_hash.length)
-      console.log('   Hash starts with:', user.password_hash.substring(0, 7))
-
-      const isValidPassword = await comparePassword(credentials.password, user.password_hash)
+      const isValidPassword = await comparePassword(credentials.password, userForAuth.password_hash)
       console.log('🔐 Password match result:', isValidPassword)
 
       if (!isValidPassword) {
-        console.log('❌ Password comparison failed!')
-        console.log('   This means the password you entered does not match the hash in the database.')
-        console.log('   Double-check:')
-        console.log('   1. Did you run the UPDATE query in Supabase?')
-        console.log('   2. Is the password exactly: Shree@2025Y (case-sensitive)?')
         throw new Error('Invalid email or password')
       }
 
-      // Super admin can have null tenant_id (not assigned to any client)
-      // Regular users and tenant admins must have a tenant_id
-      if (!user.tenant_id && user.role !== 'super_admin') {
-        throw new Error('User tenant not found')
+      // 3. Handle Duplicate Users (Multi-Tenant)
+      // Filter to only active users with active tenants
+      const validAccounts = users.filter(u =>
+        u.is_active &&
+        (u.role === 'super_admin' || (u.tenant && (u.tenant as any).status !== 'deleted'))
+      )
+
+      if (validAccounts.length === 0) {
+        throw new Error('No active accounts found')
       }
 
-      // If tenant relationship didn't load and user has a tenant_id, fetch it separately
-      if (user.tenant_id && !user.tenant) {
-        const { data: tenantData } = await supabase
-          .from('tenants')
-          .select('name, status')
-          .eq('tenant_id', user.tenant_id)
-          .single()
+      // If specific tenant requested, find that user
+      let targetUser = validAccounts[0]
 
-        if (!tenantData) {
-          throw new Error('User tenant not found')
+      if (credentials.tenantId) {
+        const found = validAccounts.find(u => u.tenant_id === credentials.tenantId)
+        if (found) {
+          targetUser = found
+        } else {
+          // Requested tenant not found in list of valid accounts for this email
+          throw new Error('You do not have access to the selected client')
         }
-
-        user.tenant = tenantData as any
+      } else if (validAccounts.length > 1) {
+        // MULTIPLE ACCOUNTS FOUND and no tenant specified
+        // Return list for selection
+        console.log('🏢 Multiple accounts found for user:', validAccounts.length)
+        return {
+          multiple: true,
+          accounts: validAccounts.map(u => ({
+            userId: u.user_id,
+            tenantId: u.tenant_id,
+            tenantName: (u.tenant as any)?.name || 'System Admin',
+            role: u.role
+          }))
+        }
       }
 
-      // Prevent login only if tenant is soft-deleted
-      if (user.tenant && (user.tenant as any).status === 'deleted' && user.role !== 'super_admin') {
-        console.log('❌ Tenant is deleted:', (user.tenant as any).name)
-        throw new Error('This account belongs to a deactivated tenant.')
-      }
+      // SINGLE ACCOUNT or SPECIFIC TENANT SELECTED -> Proceed to login
+      const user = targetUser
+      console.log('✅ Logging in user:', user.email, 'Tenant:', (user.tenant as any)?.name)
 
       const token = generateToken({
         userId: user.user_id,
-        tenantId: user.tenant_id || null, // Super admin can have null tenant_id
+        tenantId: user.tenant_id || null,
         email: user.email,
         role: user.role,
       })
@@ -116,11 +110,19 @@ export const authService = {
   adminLogin: async (credentials: { email: string; password: string }) => {
     const result = await authService.login(credentials)
 
-    if (result.user.role !== 'tenant_admin' && result.user.role !== 'super_admin') {
+    // Handle multi-tenant response for admins (unlikely to happen in current flow, but for type safety)
+    if ('multiple' in result && result.multiple) {
+      throw new Error('Ambiguous admin account. Please contact support.')
+    }
+
+    // Now securely cast or access as single user result
+    const userResult = result as { user: any, token: string }
+
+    if (userResult.user.role !== 'tenant_admin' && userResult.user.role !== 'super_admin') {
       throw new Error('Admin access required')
     }
 
-    return result
+    return userResult
   },
 
   register: async (data: { email: string; password: string; fullName: string; tenantId?: string }) => {

@@ -8,14 +8,23 @@ export const authController = {
       console.log('🔐 Login request received')
       console.log('   Email:', req.body.email)
       console.log('   Password:', req.body.password ? '***' : '(missing)')
+      console.log('   TenantId:', req.body.tenantId || '(not specified)')
       const result = await authService.login(req.body)
-      console.log('✅ Login successful for:', result.user.email)
+
+      // Handle multi-tenant response
+      if ('multiple' in result && result.multiple) {
+        console.log('🏢 Multiple accounts found, returning selection list')
+        res.json({ success: true, data: result })
+        return
+      }
+
+      console.log('✅ Login successful for:', result.user?.email)
       res.json({ success: true, data: result })
     } catch (error: any) {
       console.error('❌ Login failed:', error.message)
       console.error('   Stack:', error.stack)
-      res.status(400).json({ 
-        success: false, 
+      res.status(400).json({
+        success: false,
         error: error.message,
         details: process.env.NODE_ENV === 'development' ? error.stack : undefined
       })
@@ -33,8 +42,8 @@ export const authController = {
     } catch (error: any) {
       console.error('❌ Admin login failed:', error.message)
       console.error('   Stack:', error.stack)
-      res.status(400).json({ 
-        success: false, 
+      res.status(400).json({
+        success: false,
         error: error.message,
         details: process.env.NODE_ENV === 'development' ? error.stack : undefined
       })

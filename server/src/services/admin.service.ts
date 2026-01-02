@@ -67,7 +67,13 @@ export const adminService = {
       console.error('Error creating user:', error)
       // Handle specific database errors
       if (error.code === '23505') {
-        throw new Error('A user with this email already exists')
+        // Double check if the conflict is within the same tenant or global
+        // Since we want to allow same email in DIFFERENT tenants, we rely on the DB constraint.
+        // If the DB constraint is (email, tenant_id), this error means unique in this tenant.
+        // If the DB constraint is (email), we can't do this without DB change.
+        // But our verify_db script proved we CAN insert duplicates. 
+        // So this error usually comes if we violate the detailed unique index.
+        throw new Error('A user with this email already exists in this client')
       }
       throw new Error(`Failed to create user: ${error.message}`)
     }

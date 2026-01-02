@@ -756,10 +756,10 @@ const CoverageMatrix: React.FC = () => {
         label: 'Total Portfolios Monitored',
         data: userCoverageData.map((u) => u.totalPortfolios),
         backgroundColor: userCoverageData.map((_, idx) =>
-          idx < 3 ? 'rgba(34, 197, 94, 0.9)' : 'rgba(34, 197, 94, 0.5)'
+          idx < 7 ? 'rgba(34, 197, 94, 0.9)' : 'rgba(34, 197, 94, 0.5)'
         ),
         borderColor: userCoverageData.map((_, idx) =>
-          idx < 3 ? 'rgba(34, 197, 94, 1)' : 'rgba(34, 197, 94, 0.7)'
+          idx < 7 ? 'rgba(34, 197, 94, 1)' : 'rgba(34, 197, 94, 0.7)'
         ),
         borderWidth: 1,
         barThickness: 30,
@@ -1120,7 +1120,7 @@ const CoverageMatrix: React.FC = () => {
                 <div className="flex items-center justify-center gap-4 mt-4 text-xs">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-green-600 rounded-full"></div>
-                    <span className="text-gray-600">Top 3 Performers</span>
+                    <span className="text-gray-600">Top 7 Performers</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-green-300 rounded-full"></div>
@@ -1408,6 +1408,7 @@ const CoverageMatrix: React.FC = () => {
             onClose={() => setSelectedUser(null)}
             getUserPerformanceDetails={getUserPerformanceDetails}
             hourFilter={hourFilter}
+            rank={userCoverageData.findIndex(u => u.userName === selectedUser.userName) + 1}
           />
         )
       }
@@ -1429,6 +1430,7 @@ interface UserPerformanceModalProps {
     hourlyBreakdown: { hour: number; portfolios: number; issues: number; activeIssues: number }[]
   }
   hourFilter: string
+  rank?: number
 }
 
 const UserPerformanceModal: React.FC<UserPerformanceModalProps> = ({
@@ -1436,136 +1438,11 @@ const UserPerformanceModal: React.FC<UserPerformanceModalProps> = ({
   onClose,
   getUserPerformanceDetails,
   hourFilter,
+  rank,
 }) => {
   const details = getUserPerformanceDetails(user)
 
-  const hourlyChartData = {
-    labels: details.hourlyBreakdown.map((h) => h.hour.toString()),
-    datasets: [
-      {
-        label: 'Portfolios',
-        data: details.hourlyBreakdown.map((h) => h.portfolios),
-        backgroundColor: 'rgba(34, 197, 94, 0.9)',
-        borderColor: 'rgba(34, 197, 94, 1)',
-        borderWidth: 1,
-        barThickness: 25,
-        maxBarThickness: 30,
-      },
-      {
-        label: 'Issues',
-        data: details.hourlyBreakdown.map((h) => h.issues),
-        backgroundColor: 'rgba(59, 130, 246, 0.9)',
-        borderColor: 'rgba(59, 130, 246, 1)',
-        borderWidth: 1,
-        barThickness: 25,
-        maxBarThickness: 30,
-      },
-      {
-        label: 'Active Issues',
-        data: details.hourlyBreakdown.map((h) => h.activeIssues),
-        backgroundColor: 'rgba(239, 68, 68, 0.9)',
-        borderColor: 'rgba(239, 68, 68, 1)',
-        borderWidth: 1,
-        barThickness: 25,
-        maxBarThickness: 30,
-      },
-    ],
-  }
 
-  const hourlyChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    datasets: {
-      bar: {
-        categoryPercentage: 0.6, // Controls the width of the category (group of bars) - smaller = more gap
-        barPercentage: 0.8, // Controls the width of individual bars within the category - smaller = more gap between bars
-      },
-    },
-    plugins: {
-      legend: {
-        display: true,
-        position: 'bottom' as const,
-        labels: {
-          font: {
-            size: 12,
-            weight: 'bold' as const,
-          },
-          padding: 15,
-        },
-      },
-      tooltip: {
-        enabled: true,
-        backgroundColor: 'rgba(0, 0, 0, 0.85)',
-        titleFont: {
-          size: 14,
-          weight: 'bold' as const,
-        },
-        bodyFont: {
-          size: 13,
-          weight: 'normal' as const,
-        },
-        padding: 12,
-        displayColors: true,
-        callbacks: {
-          title: () => {
-            return ''
-          },
-          label: (context: any) => {
-            const label = context.dataset.label || ''
-            const value = context.parsed.y || 0
-            return `${label} : ${value}`
-          },
-          beforeBody: (tooltipItems: any[]) => {
-            // Calculate total count (sum of all values for this hour)
-            const totalCount = tooltipItems.reduce((sum: number, item: any) => sum + (item.parsed.y || 0), 0)
-            return [totalCount.toString()]
-          },
-        },
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: {
-          stepSize: 1,
-          font: {
-            size: 11,
-            weight: 'bold' as const,
-          },
-        },
-        title: {
-          display: true,
-          text: 'Count',
-          font: {
-            size: 12,
-            weight: 'bold' as const,
-          },
-        },
-        grid: {
-          color: 'rgba(0, 0, 0, 0.05)',
-        },
-      },
-      x: {
-        ticks: {
-          font: {
-            size: 11,
-            weight: 'bold' as const,
-          },
-        },
-        title: {
-          display: true,
-          text: 'Hour',
-          font: {
-            size: 12,
-            weight: 'bold' as const,
-          },
-        },
-        grid: {
-          display: false,
-        },
-      },
-    },
-  }
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto" onClick={onClose}>
@@ -1573,107 +1450,104 @@ const UserPerformanceModal: React.FC<UserPerformanceModalProps> = ({
         <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={onClose}></div>
 
         <div
-          className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle max-w-4xl w-full"
+          className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle max-w-3xl w-full"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Green Header */}
-          <div className="bg-green-600 text-white px-6 py-5 rounded-t-lg">
+          <div className="text-white px-6 py-4 rounded-t-lg" style={{ backgroundColor: '#76ab3f' }}>
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-2xl font-bold text-white tracking-tight">User Performance Details</h3>
-                <p className="text-white text-base mt-1.5 font-medium">{user.displayName}</p>
+                <h3 className="text-xl font-bold text-white tracking-tight">Top Performer Details</h3>
+                <p className="text-green-50 text-sm mt-0.5 font-medium">Performance breakdown</p>
               </div>
               <button
                 onClick={onClose}
                 className="text-white hover:text-gray-200 transition-colors p-1"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
           </div>
 
-          <div className="px-8 py-7 bg-white">
+          <div className="px-6 py-6 bg-white">
             <div className="space-y-6">
-              {/* Top Row - 4 Metric Cards */}
-              <div className="grid grid-cols-4 gap-4">
-                <div className="bg-blue-50 rounded-lg p-5 border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="text-3xl font-bold text-blue-600 mb-2 tracking-tight leading-none">{details.totalCount}</div>
-                  <div className="text-xs font-semibold text-gray-700 tracking-wide">
-                    {hourFilter !== 'all' ? `Issues Entered (${hourFilter}:00)` : 'Total Issues Entered'}
-                  </div>
+
+              {/* User Rank Card */}
+              <div className="flex items-center gap-4 bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                <div className="flex items-center justify-center w-12 h-12 bg-amber-400 rounded-lg text-white text-xl font-bold shadow-sm shrink-0">
+                  {rank || 1}
                 </div>
-                <div className="bg-red-50 rounded-lg p-5 border border-red-200 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="text-3xl font-bold text-red-600 mb-2 tracking-tight leading-none">{details.activeIssues}</div>
-                  <div className="text-xs font-semibold text-gray-700 tracking-wide">Active Issues</div>
-                </div>
-                <div className="bg-green-50 rounded-lg p-5 border border-green-200 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="text-3xl font-bold text-green-600 mb-2 tracking-tight leading-none">{details.healthySites}</div>
-                  <div className="text-xs font-semibold text-gray-700 tracking-wide">Healthy Sites</div>
-                </div>
-                <div className="bg-orange-50 rounded-lg p-5 border border-orange-200 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="text-3xl font-bold text-orange-600 mb-2 tracking-tight leading-none">{details.missedAlerts}</div>
-                  <div className="text-xs font-semibold text-gray-700 tracking-wide">Missed Alerts</div>
+                <div>
+                  <h4 className="text-lg font-bold text-gray-900">{user.displayName}</h4>
+                  <p className="text-sm text-gray-500 font-medium">Rank #{rank || 1} in this category</p>
                 </div>
               </div>
 
-              {/* Middle Row - 2 Larger Cards */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-purple-50 rounded-lg p-6 border border-purple-200 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="text-3xl font-bold text-purple-600 mb-2 tracking-tight leading-none">{details.totalPortfoliosMonitored}</div>
-                  <div className="text-xs font-semibold text-gray-700 tracking-wide">Total Portfolios Monitored</div>
+              {/* Category Information */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-1 h-4 bg-[#76ab3f] rounded-full"></div>
+                  <h5 className="font-bold text-gray-700">Category Information</h5>
                 </div>
-                <div className="bg-blue-50 rounded-lg p-6 border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="text-3xl font-bold text-blue-600 mb-2 tracking-tight leading-none">{details.monitoringActiveHours}</div>
-                  <div className="text-xs font-semibold text-gray-700 tracking-wide">Monitoring Active Hours</div>
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                  <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-200 border-dashed">
+                    <span className="text-sm text-gray-500 font-medium">Category</span>
+                    <span className="text-sm font-bold text-gray-800">Most Total Portfolios Monitored</span>
+                  </div>
+                  <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-200 border-dashed">
+                    <span className="text-sm text-gray-500 font-medium">Metric</span>
+                    <span className="text-sm font-bold text-gray-800">Total Portfolios Monitored</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500 font-medium">Achieved Value</span>
+                    <span className="text-lg font-bold text-[#76ab3f]">{details.totalPortfoliosMonitored}</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Total Portfolios Monitored */}
-              {details.portfolios.length > 0 && (
-                <div>
-                  <h4 className="text-xl font-bold text-gray-900 mb-4 tracking-tight">
-                    Total Portfolios Monitored ({details.portfolios.length})
-                  </h4>
-                  <div className="flex flex-wrap gap-3">
-                    {details.portfolios.map((portfolio, idx) => {
-                      // Extract portfolio name and site range if available
-                      const portfolioMatch = portfolio.match(/^(.+?)\s*\((.+)\)$/)
-                      const portfolioName = portfolioMatch ? portfolioMatch[1] : portfolio
-                      const siteRange = portfolioMatch ? portfolioMatch[2] : null
+              {/* Why they're in the top list */}
+              <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
+                <h5 className="text-blue-800 font-bold text-sm mb-1">Why they're in the top list</h5>
+                <p className="text-blue-700 text-xs leading-relaxed">
+                  {user.displayName} achieved <span className="font-bold">{details.totalPortfoliosMonitored} total portfolios monitored</span>, ranking them <span className="font-bold">#{rank || 1}</span> among all team members in the "Most Total Portfolios Monitored" category.
+                </p>
+              </div>
 
-                      return (
-                        <span
-                          key={idx}
-                          className="px-3.5 py-2 bg-[#ecfdf3] text-[#027a48] rounded-full text-sm font-bold border border-[#abefc6] shadow-sm flex items-center gap-2 hover:shadow-md hover:bg-[#d1fadf] transition-all"
-                        >
-                          <span className="w-2 h-2 bg-[#12b76a] rounded-full shadow-[0_0_4px_rgba(18,183,106,0.5)]"></span>
-                          <span className="leading-none">{portfolioName}</span>
-                          {siteRange && <span className="text-[#067647] font-semibold opacity-90 ml-1">({siteRange})</span>}
-                        </span>
-                      )
-                    })}
+              {/* Complete Performance Metrics */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-1 h-4 bg-[#76ab3f] rounded-full"></div>
+                  <h5 className="font-bold text-gray-700">Complete Performance Metrics</h5>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="border border-blue-100 rounded-lg p-3">
+                    <div className="text-xs font-bold text-blue-600 mb-1">Total Count</div>
+                    <div className="text-xl font-bold text-gray-800">{details.totalCount}</div>
+                  </div>
+                  <div className="border border-red-100 rounded-lg p-3">
+                    <div className="text-xs font-bold text-red-600 mb-1">Active Issues</div>
+                    <div className="text-xl font-bold text-gray-800">{details.activeIssues}</div>
+                  </div>
+                  <div className="border border-purple-100 rounded-lg p-3">
+                    <div className="text-xs font-bold text-purple-600 mb-1">Active Hours</div>
+                    <div className="text-xl font-bold text-gray-800">{details.monitoringActiveHours}</div>
+                  </div>
+                  <div className="border border-green-100 rounded-lg p-3">
+                    <div className="text-xs font-bold text-green-600 mb-1">Missed Alerts</div>
+                    <div className="text-xl font-bold text-gray-800">{details.missedAlerts}</div>
                   </div>
                 </div>
-              )}
+              </div>
 
-              {/* Hourly Breakdown Chart */}
-              {details.hourlyBreakdown.length > 0 && (
-                <div>
-                  <h4 className="text-xl font-bold text-gray-900 mb-4 tracking-tight">Hourly Breakdown</h4>
-                  <div style={{ height: '300px' }}>
-                    <Bar data={hourlyChartData} options={hourlyChartOptions} />
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-end pt-6 border-t border-gray-200">
+              <div className="flex justify-end pt-2">
                 <Button
                   variant="primary"
                   onClick={onClose}
                   style={{ backgroundColor: '#76ab3f' }}
-                  className="px-6 py-2.5 font-semibold text-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                  className="px-6 py-2 font-semibold text-white rounded-lg shadow-sm hover:shadow-md transition-shadow text-sm"
                 >
                   Close
                 </Button>
