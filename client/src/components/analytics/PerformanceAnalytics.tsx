@@ -935,170 +935,90 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
         size="lg"
       >
         {selectedPerformer && (
-          <div className="space-y-6" style={{ fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
-            {/* Performer Highlight */}
-            <div className="flex items-center justify-between bg-green-600 text-white -mx-6 -mt-6 px-6 py-4 mb-6 rounded-t-lg">
+          <div className="space-y-3">
+            {/* User Rank Card */}
+            <div className="flex items-center gap-3 bg-white border border-gray-100 rounded-xl p-2 shadow-sm">
+              <div className="flex items-center justify-center w-12 h-12 bg-amber-400 rounded-lg text-white text-xl font-bold shadow-sm shrink-0">
+                {selectedPerformer.rank}
+              </div>
               <div>
-                <h3 className="text-2xl font-bold">User Performance Details</h3>
-                <p className="text-green-50 text-base mt-1 font-medium">{selectedPerformer.user.displayName || selectedPerformer.user.user}</p>
-              </div>
-              <div className="flex-shrink-0 w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
-                <span className="text-2xl font-bold">#{selectedPerformer.rank}</span>
+                <h4 className="text-base font-bold text-gray-900">{selectedPerformer.user.displayName || selectedPerformer.user.user}</h4>
+                <p className="text-sm text-gray-500 font-medium">Rank #{selectedPerformer.rank} in this category</p>
               </div>
             </div>
 
-            {/* Metrics Grid */}
-            <div className="grid grid-cols-4 gap-4 mb-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
-                <p className="text-3xl font-bold text-blue-600 mb-1">{selectedPerformer.user.issues}</p>
-                <p className="text-[11px] font-bold text-gray-600 uppercase tracking-tight">Total Count</p>
+            {/* Category Information */}
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-1 h-4 bg-[#76ab3f] rounded-full"></div>
+                <h5 className="font-bold text-gray-700 text-sm">Category Information</h5>
               </div>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
-                <p className="text-3xl font-bold text-red-600 mb-1">{selectedPerformer.user.issuesYes}</p>
-                <p className="text-[11px] font-bold text-gray-600 uppercase tracking-tight">Active Issues</p>
-              </div>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
-                <p className="text-3xl font-bold text-green-600 mb-1">{selectedPerformer.user.issues - selectedPerformer.user.issuesYes}</p>
-                <p className="text-[11px] font-bold text-gray-600 uppercase tracking-tight">Healthy Sites</p>
-              </div>
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
-                <p className="text-3xl font-bold text-orange-600 mb-1">{selectedPerformer.user.missedAlerts || 0}</p>
-                <p className="text-[11px] font-bold text-gray-600 uppercase tracking-tight">Missed Alerts</p>
-              </div>
-            </div>
-
-            {/* Sub Metrics */}
-            <div className="grid grid-cols-2 gap-4 mb-8">
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
-                <p className="text-3xl font-bold text-purple-600 mb-1">{selectedPerformer.user.portfoliosCount}</p>
-                <p className="text-xs font-bold text-gray-600 uppercase tracking-tight">Total Portfolios Monitored</p>
-              </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
-                <p className="text-3xl font-bold text-blue-600 mb-1">{selectedPerformer.user.hoursCount}</p>
-                <p className="text-xs font-bold text-gray-600 uppercase tracking-tight">Monitoring Active Hours</p>
-              </div>
-            </div>
-
-            {/* Portfolios List */}
-            {selectedPerformer.user.portfolios && selectedPerformer.user.portfolios.length > 0 && (
-              <div className="mb-8">
-                <h4 className="text-lg font-bold text-gray-900 mb-4 px-1">Total Portfolios Monitored ({selectedPerformer.user.portfolios.length})</h4>
-                <div className="flex flex-wrap gap-2 px-1">
-                  {Array.from(new Set(selectedPerformer.user.portfolios)).map((portfolio: any, idx) => {
-                    const count = selectedPerformer.user.portfolios.filter((p: string) => p === portfolio).length
-                    const display = count > 1 ? `${portfolio} (x${count})` : portfolio
-                    return (
-                      <span
-                        key={idx}
-                        className="px-3 py-1.5 bg-[#ecfdf3] text-[#027a48] rounded-full text-xs font-semibold border border-[#abefc6] shadow-sm flex items-center gap-2 transition-all hover:bg-[#d1fadf] hover:shadow-md"
-                      >
-                        <span className="w-1.5 h-1.5 bg-[#12b76a] rounded-full shadow-[0_0_4px_rgba(18,183,106,0.6)]"></span>
-                        <span className="truncate">{display}</span>
-                      </span>
-                    )
-                  })}
+              <div className="bg-gray-50 rounded-lg p-2 border border-gray-100 space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-500 font-medium">Category</span>
+                  <span className="text-sm font-bold text-gray-800">Most Total Portfolios Monitored</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-500 font-medium">Metric</span>
+                  <span className="text-sm font-bold text-gray-800">Total Portfolios Monitored</span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                  <span className="text-sm text-gray-500 font-medium">Achieved Value</span>
+                  <span className="text-2xl font-bold text-[#76ab3f]">{selectedPerformer.user.portfoliosCount}</span>
                 </div>
               </div>
-            )}
+            </div>
 
-            {/* Hourly Breakdown Chart */}
-            {selectedPerformer.user.hourlyBreakdown && Object.keys(selectedPerformer.user.hourlyBreakdown).length > 0 && (
-              <div className="mb-8">
-                <h4 className="text-lg font-bold text-gray-900 mb-4 px-1">Hourly Breakdown</h4>
-                <div style={{ height: '300px' }}>
-                  <Bar
-                    data={{
-                      labels: Object.keys(selectedPerformer.user.hourlyBreakdown).sort((a, b) => parseInt(a) - parseInt(b)).map(h => `${h}:00`),
-                      datasets: [
-                        {
-                          label: 'Portfolios',
-                          data: Object.keys(selectedPerformer.user.hourlyBreakdown).sort((a, b) => parseInt(a) - parseInt(b)).map(h => selectedPerformer.user.hourlyBreakdown[parseInt(h)].portfolios),
-                          backgroundColor: 'rgba(34, 197, 94, 0.8)',
-                          barThickness: 15,
-                        },
-                        {
-                          label: 'Issues',
-                          data: Object.keys(selectedPerformer.user.hourlyBreakdown).sort((a, b) => parseInt(a) - parseInt(b)).map(h => selectedPerformer.user.hourlyBreakdown[parseInt(h)].issues),
-                          backgroundColor: 'rgba(59, 130, 246, 0.8)',
-                          barThickness: 15,
-                        },
-                        {
-                          label: 'Active Issues',
-                          data: Object.keys(selectedPerformer.user.hourlyBreakdown).sort((a, b) => parseInt(a) - parseInt(b)).map(h => selectedPerformer.user.hourlyBreakdown[parseInt(h)].issuesYes),
-                          backgroundColor: 'rgba(239, 68, 68, 0.8)',
-                          barThickness: 15,
-                        }
-                      ]
-                    }}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          display: true,
-                          position: 'top' as const,
-                          labels: {
-                            boxWidth: 12,
-                            font: { size: 11, weight: 'bold' }
-                          }
-                        },
-                        tooltip: {
-                          callbacks: {
-                            label: (context: any) => {
-                              const label = context.dataset.label || ''
-                              const value = context.parsed.y || 0
-                              const hourStr = context.label.split(':')[0]
-                              const hour = parseInt(hourStr)
+            {/* Why they're in the top list */}
+            <div className="bg-blue-50 border border-blue-100 rounded-lg p-2">
+              <h5 className="text-blue-800 font-bold text-sm mb-1">Why they're in the top list</h5>
+              <p className="text-blue-700 text-xs leading-relaxed">
+                {selectedPerformer.user.displayName || selectedPerformer.user.user} achieved <span className="font-bold">{selectedPerformer.user.portfoliosCount} total portfolios monitored</span>, ranking them <span className="font-bold">#{selectedPerformer.rank}</span> among all team members in the "Most Total Portfolios Monitored" category.
+              </p>
+            </div>
 
-                              const breakdown = selectedPerformer.user.hourlyBreakdown[hour]
-                              if (label === 'Portfolios' && breakdown?.portfolioNames?.length > 0) {
-                                // Group portfolios by name to show counts if duplicated
-                                const portfolioCounts: { [key: string]: number } = {}
-                                breakdown.portfolioNames.forEach((p: string) => {
-                                  portfolioCounts[p] = (portfolioCounts[p] || 0) + 1
-                                })
+            {/* Complete Performance Metrics */}
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-1 h-4 bg-[#76ab3f] rounded-full"></div>
+                <h5 className="font-bold text-gray-700 text-sm">Complete Performance Metrics</h5>
+              </div>
 
-                                const portfolioList = Object.entries(portfolioCounts).map(([name, count]) =>
-                                  ` • ${name}${count > 1 ? ` (x${count})` : ''}`
-                                )
-
-                                return [`${label}: ${value}`, ...portfolioList]
-                              }
-
-                              return `${label}: ${value}`
-                            }
-                          }
-                        }
-                      },
-                      scales: {
-                        y: {
-                          beginAtZero: true,
-                          ticks: { stepSize: 1 }
-                        }
-                      }
-                    }}
-                  />
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-white border border-blue-100 rounded-lg p-2 text-center">
+                  <div className="text-xs font-bold text-blue-600 mb-1">Total Count</div>
+                  <div className="text-2xl font-bold text-blue-600">{selectedPerformer.user.issues}</div>
+                </div>
+                <div className="bg-white border border-red-100 rounded-lg p-2 text-center">
+                  <div className="text-xs font-bold text-red-600 mb-1">Active Issues</div>
+                  <div className="text-2xl font-bold text-red-600">{selectedPerformer.user.issuesYes}</div>
+                </div>
+                <div className="bg-white border border-purple-100 rounded-lg p-2 text-center">
+                  <div className="text-xs font-bold text-purple-600 mb-1">Active Hours</div>
+                  <div className="text-2xl font-bold text-purple-600">{selectedPerformer.user.hoursCount}</div>
+                </div>
+                <div className="bg-white border border-green-100 rounded-lg p-2 text-center">
+                  <div className="text-xs font-bold text-green-600 mb-1">Missed Alerts</div>
+                  <div className="text-2xl font-bold text-green-600">{selectedPerformer.user.missedAlerts || 0}</div>
                 </div>
               </div>
-            )}
-
-
+            </div>
 
             {/* Close Button */}
-            <div className="flex justify-end pt-4 border-t border-gray-200">
-              <Button
+            <div className="flex justify-end pt-2">
+              <button
                 onClick={() => setSelectedPerformer(null)}
-                variant="primary"
-                className="shadow-sm hover:shadow-md transition-shadow font-bold text-white px-8 py-2.5 rounded-lg"
+                className="px-6 py-2 font-semibold text-white rounded-lg shadow-sm hover:shadow-md transition-shadow text-sm"
                 style={{ backgroundColor: '#76ab3f' }}
               >
                 Close
-              </Button>
+              </button>
             </div>
           </div>
-        )}
-      </Modal>
-    </div>
+        )
+        }
+      </Modal >
+    </div >
   )
 }
 

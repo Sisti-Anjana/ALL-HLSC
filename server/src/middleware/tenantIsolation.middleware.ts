@@ -32,10 +32,13 @@ export const tenantIsolation = async (
     // They can access all tenants by specifying tenant_id in query params
     if (req.user.role === 'super_admin') {
       if (req.query.tenant_id) {
-        // Super admin can access any tenant by specifying tenant_id in query
+        // Super admin explicitly selecting a tenant via query param
         req.tenantId = req.query.tenant_id as string
+      } else if (req.user.tenantId) {
+        // Super admin logged into a specific tenant context (via token)
+        req.tenantId = req.user.tenantId
       } else {
-        // Super admin without tenant_id - set to null (they can access all tenants)
+        // Global super admin context (can access all tenants in some endpoints, or none in others)
         req.tenantId = null as any
       }
     } else {

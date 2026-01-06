@@ -256,6 +256,11 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
               </div>
             )
           })}
+          {/* Add Lock Legend */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="w-3 h-3 sm:w-4 sm:h-4 rounded border-[3px] border-purple-600 bg-white"></div>
+            <span className="text-xs text-gray-600">Locked</span>
+          </div>
         </div>
 
         {/* Search and Log Issue */}
@@ -290,13 +295,12 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
           filteredPortfolios.map((portfolio) => {
             // Normalize portfolio ID to string for comparison
             const portfolioIdString = String(portfolio.id || '').trim()
-            // Direct check for lock for this portfolio and current hour
-            const currentHour = new Date().getHours()
+            // Check for ANY active lock for this portfolio, regardless of hour
             const activeLock = (locks || []).find(l =>
-              String(l.portfolio_id || '').trim().toLowerCase() === portfolioIdString.toLowerCase() &&
-              Number(l.issue_hour) === currentHour
+              String(l.portfolio_id || '').trim().toLowerCase() === portfolioIdString.toLowerCase()
             )
             const isLocked = !!activeLock
+            const isMyLock = activeLock?.monitored_by?.toLowerCase() === user?.email?.toLowerCase()
 
             const statusColors = getStatusColor(portfolio.status)
             const colors = statusColors.split(' ')
@@ -372,13 +376,12 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
       {hoveredPortfolio && tooltipPosition && (() => {
         const portfolio = portfolios.find(p => p.id === hoveredPortfolio)
         if (!portfolio) return null
-        const currentHourForTooltip = new Date().getHours()
-        // Only find lock for CURRENT HOUR - don't show locks from other hours
+
+        // Find ANY active lock for this portfolio
         const lockInfo = (locks || []).find(l =>
-          String(l.portfolio_id || '').trim().toLowerCase() === String(portfolio.id).trim().toLowerCase() &&
-          Number(l.issue_hour) === currentHourForTooltip
+          String(l.portfolio_id || '').trim().toLowerCase() === String(portfolio.id).trim().toLowerCase()
         )
-        // Only show as locked if there's actually a lock for the current hour
+        // Only show as locked if there's actually a lock
         const isLockedTooltip = !!lockInfo
 
         return (

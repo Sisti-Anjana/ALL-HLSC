@@ -111,19 +111,70 @@ export const portfolioService = {
   },
 
   lock: async (tenantId: string, portfolioId: string, userEmail: string, issueHour: number) => {
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
+    // Locks should expire at the start of the next wall-clock hour
+    // e.g., if it's 5:45 AM, the lock expires at 6:00 AM.
+    const now = new Date()
+    const expiresAt = new Date(now)
+    expiresAt.setHours(now.getHours() + 1, 0, 0, 0) // Top of the next hour
+
+    // Safety check: If less than 15 minutes remain in the hour, give them a full hour
+    // to prevent immediate expiration.
+    const minutesLeft = 60 - now.getMinutes()
+    if (minutesLeft < 15) {
+      expiresAt.setHours(expiresAt.getHours() + 1)
+    }
+
     const sessionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}` // Generate unique session ID
 
     // First, clean up expired locks for this tenant and user (Fire and forget - don't await to improve speed)
-    supabase
+    await supabase
       .from('hour_reservations')
       .delete()
       .eq('tenant_id', tenantId)
       .eq('monitored_by', userEmail)
       .lt('expires_at', new Date().toISOString())
-      .then(({ error }) => {
-        if (error) console.error('Background cleanup error:', error)
-      })
+
+    // 0. PRE-CHECK: Ensure user doesn't already have an active lock on ANOTHER portfolio
+    // (A user can only lock ONE portfolio at a time)
+    const { data: existingUserLocks, error: existingUserLocksError } = await supabase
+      .from('hour_reservations')
+      .select('portfolio_id, issue_hour')
+      .eq('tenant_id', tenantId)
+      .eq('monitored_by', userEmail)
+      .gt('expires_at', new Date().toISOString())
+
+    if (existingUserLocksError) {
+      console.error('Error checking user existing locks:', existingUserLocksError)
+    }
+
+    if (existingUserLocks && existingUserLocks.length > 0) {
+      // User has active locks. Check if it's for the same portfolio/hour (idempotent retry)
+      // or for a different one (violation).
+      const activeLock = existingUserLocks[0] // Taking the first one found
+
+      // If the existing lock is for a DIFFERENT portfolio, reject.
+      if (activeLock.portfolio_id !== portfolioId) {
+        // Query portfolio name for better error message
+        const { data: pName } = await supabase
+          .from('portfolios')
+          .select('name')
+          .eq('portfolio_id', activeLock.portfolio_id)
+          .single()
+
+        const otherPortfolioName = pName?.name || 'another portfolio'
+
+        throw new Error(`You already have an active lock on "${otherPortfolioName}". Please unlock it or complete your work there before locking a new portfolio.`)
+      }
+
+      // If it IS the same portfolio but DIFFERENT hour?
+      // "receive in a single client the person should be able to lock only one portfolio"
+      // This implies 1 portfolio at a time, regardless of hour.
+      if (activeLock.portfolio_id === portfolioId && activeLock.issue_hour !== issueHour) {
+        throw new Error(`You already have an active lock on this portfolio for Hour ${activeLock.issue_hour}. Please finish that hour first.`)
+      }
+
+      // If it's the SAME portfolio AND SAME hour, we let it fall through to the next check which handles idempotency.
+    }
 
     // 1. Check if ANYONE has a lock on this specific portfolio/hour
     const { data: currentLock, error: currentLockError } = await supabase

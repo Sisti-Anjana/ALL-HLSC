@@ -571,7 +571,7 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-base truncate">
                   {hasOtherLock
-                    ? `Finish "${userOtherLock?.portfolio?.name || 'other lock'}" first`
+                    ? `Finish "${userOtherLock?.portfolio?.name || 'other lock'}" (Hour ${userOtherLock?.issue_hour}) first`
                     : isLockedByAnyone && !isLockedByMe
                       ? `Locked by ${lockInfo?.monitored_by?.split('@')[0] || 'another user'}`
                       : 'Log New Issue'}

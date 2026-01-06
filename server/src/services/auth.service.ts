@@ -125,6 +125,62 @@ export const authService = {
     return userResult
   },
 
+  switchTenant: async (email: string, targetTenantId: string) => {
+    try {
+      console.log('🔄 Switching tenant for user:', email, 'Target Tenant:', targetTenantId)
+
+      // 1. Fetch user records for this email
+      const { data: users, error: fetchError } = await supabase
+        .from('users')
+        .select('user_id, email, full_name, role, tenant_id, is_active, tenant:tenants(*)')
+        .ilike('email', email)
+
+      if (fetchError || !users) {
+        throw new Error('User not found')
+      }
+
+      // 2. Find the specific user account for the target tenant
+      const targetUser = users.find(u => u.tenant_id === targetTenantId && u.is_active)
+
+      if (!targetUser) {
+        throw new Error('You do not have access to this client')
+      }
+
+      // 3. Verify the tenant is active
+      if (targetUser.tenant && (targetUser.tenant as any).status !== 'active') {
+        if ((targetUser.tenant as any).status === 'deleted' || (targetUser.tenant as any).status === 'suspended') {
+          throw new Error('Client account is not active')
+        }
+      }
+
+      console.log('✅ Found valid target user account:', targetUser.user_id)
+
+      // 4. Generate new token
+      const token = generateToken({
+        userId: targetUser.user_id,
+        tenantId: targetUser.tenant_id,
+        email: targetUser.email,
+        role: targetUser.role,
+      })
+
+      return {
+        token,
+        user: {
+          id: targetUser.user_id,
+          email: targetUser.email,
+          fullName: targetUser.full_name,
+          role: targetUser.role,
+          tenantId: targetUser.tenant_id,
+          tenantName: (targetUser.tenant as any)?.name,
+        },
+      }
+
+    } catch (error: any) {
+      console.error('Switch tenant error:', error.message)
+      throw error
+    }
+  },
+
   register: async (data: { email: string; password: string; fullName: string; tenantId?: string }) => {
     const passwordHash = await hashPassword(data.password)
 

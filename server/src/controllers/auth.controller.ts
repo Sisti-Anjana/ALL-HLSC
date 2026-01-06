@@ -59,6 +59,24 @@ export const authController = {
     }
   },
 
+  switchTenant: async (req: Request, res: Response) => {
+    try {
+      const { tenantId } = req.body
+      const user = (req as AuthRequest).user
+
+      if (!user) {
+        return res.status(401).json({ success: false, error: 'Unauthorized' })
+      }
+
+      console.log('🔄 Tenant switch requested by:', user.email, 'to:', tenantId)
+      const result = await authService.switchTenant(user.email, tenantId)
+
+      res.json({ success: true, data: result })
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message })
+    }
+  },
+
   logout: async (req: Request, res: Response) => {
     res.json({ success: true, message: 'Logged out successfully' })
   },

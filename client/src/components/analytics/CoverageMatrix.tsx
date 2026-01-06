@@ -1450,65 +1450,63 @@ const UserPerformanceModal: React.FC<UserPerformanceModalProps> = ({
         <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={onClose}></div>
 
         <div
-          className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle max-w-3xl w-full"
+          className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle max-w-lg w-full"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Green Header */}
-          <div className="text-white px-6 py-4 rounded-t-lg" style={{ backgroundColor: '#76ab3f' }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-bold text-white tracking-tight">Top Performer Details</h3>
-                <p className="text-green-50 text-sm mt-0.5 font-medium">Performance breakdown</p>
-              </div>
-              <button
-                onClick={onClose}
-                className="text-white hover:text-gray-200 transition-colors p-1"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+          <div className="text-white px-6 py-4 rounded-t-lg flex items-center justify-between" style={{ backgroundColor: '#76ab3f' }}>
+            <div>
+              <h3 className="text-xl font-bold text-white tracking-tight">Top Performer Details</h3>
+              <p className="text-white text-sm mt-0.5 font-medium opacity-90">Performance breakdown</p>
             </div>
+            <button
+              onClick={onClose}
+              className="text-white hover:text-gray-200 transition-colors p-1"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
 
-          <div className="px-6 py-6 bg-white">
-            <div className="space-y-6">
+          <div className="px-6 py-5 bg-white">
+            <div className="space-y-4">
 
               {/* User Rank Card */}
-              <div className="flex items-center gap-4 bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+              <div className="flex items-center gap-3 bg-white border border-gray-100 rounded-xl p-3 shadow-sm">
                 <div className="flex items-center justify-center w-12 h-12 bg-amber-400 rounded-lg text-white text-xl font-bold shadow-sm shrink-0">
                   {rank || 1}
                 </div>
                 <div>
-                  <h4 className="text-lg font-bold text-gray-900">{user.displayName}</h4>
+                  <h4 className="text-base font-bold text-gray-900">{user.displayName}</h4>
                   <p className="text-sm text-gray-500 font-medium">Rank #{rank || 1} in this category</p>
                 </div>
               </div>
 
               {/* Category Information */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-2">
                   <div className="w-1 h-4 bg-[#76ab3f] rounded-full"></div>
-                  <h5 className="font-bold text-gray-700">Category Information</h5>
+                  <h5 className="font-bold text-gray-700 text-sm">Category Information</h5>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-                  <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-200 border-dashed">
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-100 space-y-2">
+                  <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-500 font-medium">Category</span>
                     <span className="text-sm font-bold text-gray-800">Most Total Portfolios Monitored</span>
                   </div>
-                  <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-200 border-dashed">
+                  <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-500 font-medium">Metric</span>
                     <span className="text-sm font-bold text-gray-800">Total Portfolios Monitored</span>
                   </div>
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                     <span className="text-sm text-gray-500 font-medium">Achieved Value</span>
-                    <span className="text-lg font-bold text-[#76ab3f]">{details.totalPortfoliosMonitored}</span>
+                    <span className="text-2xl font-bold text-[#76ab3f]">{details.totalPortfoliosMonitored}</span>
                   </div>
                 </div>
               </div>
 
               {/* Why they're in the top list */}
-              <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
+              <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
                 <h5 className="text-blue-800 font-bold text-sm mb-1">Why they're in the top list</h5>
                 <p className="text-blue-700 text-xs leading-relaxed">
                   {user.displayName} achieved <span className="font-bold">{details.totalPortfoliosMonitored} total portfolios monitored</span>, ranking them <span className="font-bold">#{rank || 1}</span> among all team members in the "Most Total Portfolios Monitored" category.
@@ -1517,40 +1515,39 @@ const UserPerformanceModal: React.FC<UserPerformanceModalProps> = ({
 
               {/* Complete Performance Metrics */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-2">
                   <div className="w-1 h-4 bg-[#76ab3f] rounded-full"></div>
-                  <h5 className="font-bold text-gray-700">Complete Performance Metrics</h5>
+                  <h5 className="font-bold text-gray-700 text-sm">Complete Performance Metrics</h5>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="border border-blue-100 rounded-lg p-3">
+                  <div className="bg-white border border-blue-100 rounded-lg p-3 text-center">
                     <div className="text-xs font-bold text-blue-600 mb-1">Total Count</div>
-                    <div className="text-xl font-bold text-gray-800">{details.totalCount}</div>
+                    <div className="text-2xl font-bold text-blue-600">{details.totalCount}</div>
                   </div>
-                  <div className="border border-red-100 rounded-lg p-3">
+                  <div className="bg-white border border-red-100 rounded-lg p-3 text-center">
                     <div className="text-xs font-bold text-red-600 mb-1">Active Issues</div>
-                    <div className="text-xl font-bold text-gray-800">{details.activeIssues}</div>
+                    <div className="text-2xl font-bold text-red-600">{details.activeIssues}</div>
                   </div>
-                  <div className="border border-purple-100 rounded-lg p-3">
+                  <div className="bg-white border border-purple-100 rounded-lg p-3 text-center">
                     <div className="text-xs font-bold text-purple-600 mb-1">Active Hours</div>
-                    <div className="text-xl font-bold text-gray-800">{details.monitoringActiveHours}</div>
+                    <div className="text-2xl font-bold text-purple-600">{details.monitoringActiveHours}</div>
                   </div>
-                  <div className="border border-green-100 rounded-lg p-3">
+                  <div className="bg-white border border-green-100 rounded-lg p-3 text-center">
                     <div className="text-xs font-bold text-green-600 mb-1">Missed Alerts</div>
-                    <div className="text-xl font-bold text-gray-800">{details.missedAlerts}</div>
+                    <div className="text-2xl font-bold text-green-600">{details.missedAlerts}</div>
                   </div>
                 </div>
               </div>
 
               <div className="flex justify-end pt-2">
-                <Button
-                  variant="primary"
+                <button
                   onClick={onClose}
-                  style={{ backgroundColor: '#76ab3f' }}
                   className="px-6 py-2 font-semibold text-white rounded-lg shadow-sm hover:shadow-md transition-shadow text-sm"
+                  style={{ backgroundColor: '#76ab3f' }}
                 >
                   Close
-                </Button>
+                </button>
               </div>
             </div>
           </div>

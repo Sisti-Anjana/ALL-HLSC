@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 
 interface AuthContextType {
@@ -7,6 +8,9 @@ interface AuthContextType {
   login: (credentials: any) => Promise<any>
   logout: () => void
   isAuthenticated: boolean
+  availableTenants: any[]
+  setAvailableTenants: (tenants: any[]) => void
+  switchTenant: (tenantId: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -33,6 +37,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     return null
   })
+
+  const [availableTenants, setAvailableTenants] = useState<any[]>(() => {
+    try {
+      const stored = localStorage.getItem('available_tenants')
+      return stored ? JSON.parse(stored) : []
+    } catch (e) {
+      return []
+    }
+  })
+
   const [loading, setLoading] = useState(false)
 
   const login = async (credentials: any) => {
@@ -108,10 +122,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }
 
+  const queryClient = useQueryClient()
+
+  const switchTenant = async (tenantId: string) => {
+    setLoading(true)
+    try {
+      const { authService } = await import('../services/authService')
+      const response = await authService.switchTenant(tenantId)
+
+      localStorage.setItem('auth_token', response.token!)
+      localStorage.setItem('user', JSON.stringify(response.user))
+      setUser(response.user)
+      toast.success(`Switched to ${response.user?.tenantName}`)
+
+      // Refetch all queries to update UI with new tenant data
+      await queryClient.resetQueries()
+      await queryClient.invalidateQueries()
+
+      // Navigate to dashboard to ensure clean state
+      // window.location.href = '/' // Optional: force navigation to dashboard if needed
+    } catch (error: any) {
+      console.error('Switch tenant error:', error)
+      toast.error(error.message || 'Failed to switch tenant')
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const logout = () => {
     localStorage.removeItem('auth_token')
     localStorage.removeItem('user')
+    localStorage.removeItem('available_tenants')
     setUser(null)
+    setAvailableTenants([])
   }
 
   return (
@@ -122,6 +166,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         login,
         logout,
         isAuthenticated: !!user,
+        availableTenants,
+        setAvailableTenants: (tenants: any[]) => {
+          localStorage.setItem('available_tenants', JSON.stringify(tenants))
+          setAvailableTenants(tenants)
+        },
+        switchTenant,
       }}
     >
       {children}

@@ -1,11 +1,13 @@
 import { Router } from 'express'
 import { authController } from '../controllers/auth.controller'
 import { validateLogin, validateRegister } from '../validators/auth.validator'
+import { authenticate } from '../middleware/auth.middleware'
 
 const router = Router()
 
 router.post('/login', validateLogin, authController.login)
 router.post('/admin/login', validateLogin, authController.adminLogin)
+router.post('/switch-tenant', authenticate, authController.switchTenant)
 router.post('/register', validateRegister, authController.register)
 router.post('/logout', authController.logout)
 router.post('/refresh', authController.refreshToken)

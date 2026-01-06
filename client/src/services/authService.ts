@@ -9,6 +9,7 @@ export interface AuthResponse {
     email: string
     fullName: string
     role: string
+    tenantName?: string
   }
   multiple?: boolean
   accounts?: Array<{
@@ -49,6 +50,14 @@ export const authService = {
       })
       throw error
     }
+  },
+
+  switchTenant: async (tenantId: string): Promise<AuthResponse> => {
+    const response = await api.post<ApiResponse<AuthResponse>>('/auth/switch-tenant', { tenantId })
+    if (response.data.success && response.data.data) {
+      return response.data.data
+    }
+    throw new Error(response.data.error || 'Failed to switch client')
   },
 
   adminLogin: async (credentials: LoginCredentials): Promise<AuthResponse> => {

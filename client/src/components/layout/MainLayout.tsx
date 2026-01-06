@@ -1,12 +1,14 @@
 import React, { useState } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../context/AuthContext'
 import { useTenant } from '../../context/TenantContext'
 import toast from 'react-hot-toast'
 import ScrollToTop from '../common/ScrollToTop'
 
 const MainLayout: React.FC = () => {
-  const { user, logout } = useAuth()
+  const queryClient = useQueryClient()
+  const { user, logout, availableTenants, switchTenant } = useAuth()
   const { selectedTenantId, selectedTenant, setSelectedTenantId, tenants, isLoading: tenantsLoading } = useTenant()
   const location = useLocation()
   const navigate = useNavigate()
@@ -89,30 +91,51 @@ const MainLayout: React.FC = () => {
 
             {/* Right Side */}
             <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0">
-              {/* Client Selector for Super Admin - Hidden on small screens */}
-              {isSuperAdmin && (
+              {/* Client Selector - For Super Admin OR Multi-tenant Users */}
+              {(isSuperAdmin || (availableTenants && availableTenants.length > 1)) && (
                 <div className="hidden lg:flex items-center gap-2">
                   <label className="text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">Client:</label>
                   <select
-                    value={selectedTenantId || ''}
-                    onChange={(e) => {
-                      const tenantId = e.target.value || null
-                      setSelectedTenantId(tenantId)
-                      window.location.reload()
+                    value={isSuperAdmin ? (selectedTenantId || '') : (user?.tenantId || '')}
+                    onChange={async (e) => {
+                      const val = e.target.value
+                      if (!val) return
+
+                      if (isSuperAdmin) {
+                        setSelectedTenantId(val)
+                        // Wait for state to update, then invalidate queries
+                        setTimeout(async () => {
+                          await queryClient.resetQueries()
+                          await queryClient.invalidateQueries()
+                          toast.success('Client switched')
+                        }, 100)
+                      } else {
+                        switchTenant(val)
+                      }
                     }}
                     className="px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-xs sm:text-sm font-medium text-gray-900 min-w-[120px] sm:min-w-[180px]"
-                    disabled={tenantsLoading}
+                    disabled={isSuperAdmin ? tenantsLoading : false}
                   >
-                    {tenantsLoading ? (
-                      <option>Loading...</option>
-                    ) : tenants.length === 0 ? (
-                      <option>No clients</option>
+                    {isSuperAdmin ? (
+                      tenantsLoading ? (
+                        <option>Loading...</option>
+                      ) : tenants.length === 0 ? (
+                        <option>No clients available</option>
+                      ) : (
+                        <>
+                          <option value="">Select a client</option>
+                          {tenants.map((tenant) => (
+                            <option key={tenant.tenant_id} value={tenant.tenant_id}>
+                              {tenant.name}
+                            </option>
+                          ))}
+                        </>
+                      )
                     ) : (
                       <>
-                        <option value="">Select client</option>
-                        {tenants.map((tenant) => (
-                          <option key={tenant.tenant_id} value={tenant.tenant_id}>
-                            {tenant.name}
+                        {availableTenants.map((tenant) => (
+                          <option key={tenant.tenantId} value={tenant.tenantId}>
+                            {tenant.tenantName}
                           </option>
                         ))}
                       </>
@@ -226,30 +249,50 @@ const MainLayout: React.FC = () => {
                   </Link>
                 )
               })}
-              {/* Mobile Client Selector for Super Admin */}
-              {isSuperAdmin && (
+              {/* Mobile Client Selector */}
+              {(isSuperAdmin || (availableTenants && availableTenants.length > 1)) && (
                 <div className="px-4 py-2.5">
                   <label className="block text-xs text-white mb-1">Client:</label>
                   <select
-                    value={selectedTenantId || ''}
+                    value={isSuperAdmin ? (selectedTenantId || '') : (user?.tenantId || '')}
                     onChange={(e) => {
-                      const tenantId = e.target.value || null
-                      setSelectedTenantId(tenantId)
-                      window.location.reload()
+                      const val = e.target.value
+                      if (!val) return
+
+                      if (isSuperAdmin) {
+                        setSelectedTenantId(val)
+                        setTimeout(async () => {
+                          await queryClient.resetQueries()
+                          await queryClient.invalidateQueries()
+                          toast.success('Client switched')
+                        }, 100)
+                      } else {
+                        switchTenant(val)
+                      }
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm font-medium text-gray-900"
-                    disabled={tenantsLoading}
+                    disabled={isSuperAdmin ? tenantsLoading : false}
                   >
-                    {tenantsLoading ? (
-                      <option>Loading...</option>
-                    ) : tenants.length === 0 ? (
-                      <option>No clients available</option>
+                    {isSuperAdmin ? (
+                      tenantsLoading ? (
+                        <option>Loading...</option>
+                      ) : tenants.length === 0 ? (
+                        <option>No clients available</option>
+                      ) : (
+                        <>
+                          <option value="">Select a client</option>
+                          {tenants.map((tenant) => (
+                            <option key={tenant.tenant_id} value={tenant.tenant_id}>
+                              {tenant.name}
+                            </option>
+                          ))}
+                        </>
+                      )
                     ) : (
                       <>
-                        <option value="">Select a client</option>
-                        {tenants.map((tenant) => (
-                          <option key={tenant.tenant_id} value={tenant.tenant_id}>
-                            {tenant.name}
+                        {availableTenants.map((tenant) => (
+                          <option key={tenant.tenantId} value={tenant.tenantId}>
+                            {tenant.tenantName}
                           </option>
                         ))}
                       </>
