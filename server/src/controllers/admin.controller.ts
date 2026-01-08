@@ -109,7 +109,7 @@ export const adminController = {
 
   getLocks: async (req: AuthRequest, res: Response) => {
     try {
-      const locks = await adminService.getLocks(req.tenantId || null)
+      const locks = await adminService.getLocks(req.tenantId || null, req.user?.email)
       res.json({ success: true, data: locks })
     } catch (error: any) {
       console.error('Error in getLocks controller:', error)

@@ -134,12 +134,10 @@ export const portfolioService = {
       .eq('monitored_by', userEmail)
       .lt('expires_at', new Date().toISOString())
 
-    // 0. PRE-CHECK: Ensure user doesn't already have an active lock on ANOTHER portfolio
-    // (A user can only lock ONE portfolio at a time)
+    // 0. PRE-CHECK: Ensure user doesn't already have an active lock system-wide
     const { data: existingUserLocks, error: existingUserLocksError } = await supabase
       .from('hour_reservations')
-      .select('portfolio_id, issue_hour')
-      .eq('tenant_id', tenantId)
+      .select('portfolio_id, tenant_id, issue_hour, tenant:tenants(name)')
       .eq('monitored_by', userEmail)
       .gt('expires_at', new Date().toISOString())
 
@@ -148,35 +146,36 @@ export const portfolioService = {
     }
 
     if (existingUserLocks && existingUserLocks.length > 0) {
-      // User has active locks. Check if it's for the same portfolio/hour (idempotent retry)
-      // or for a different one (violation).
-      const activeLock = existingUserLocks[0] // Taking the first one found
+      const activeLock = existingUserLocks[0]
+      const activeTenant = (activeLock as any).tenant
 
-      // If the existing lock is for a DIFFERENT portfolio, reject.
-      if (activeLock.portfolio_id !== portfolioId) {
-        // Query portfolio name for better error message
-        const { data: pName } = await supabase
-          .from('portfolios')
-          .select('name')
-          .eq('portfolio_id', activeLock.portfolio_id)
-          .single()
-
-        const otherPortfolioName = pName?.name || 'another portfolio'
-
-        throw new Error(`You already have an active lock on "${otherPortfolioName}". Please unlock it or complete your work there before locking a new portfolio.`)
+      // Scenario A: Same Tenant + Same Portfolio
+      if (activeLock.tenant_id === tenantId && activeLock.portfolio_id === portfolioId) {
+        if (activeLock.issue_hour === issueHour) {
+          // Exactly the same lock - return it (Idempotent)
+          console.log(`User ${userEmail} already holds exact lock for ${portfolioId} @ ${issueHour}. Returning existing.`)
+          return activeLock
+        } else {
+          // Same portfolio but different hour
+          throw new Error(`You already have an active lock on this portfolio for Hour ${activeLock.issue_hour}. Please finish that hour first.`)
+        }
       }
 
-      // If it IS the same portfolio but DIFFERENT hour?
-      // "receive in a single client the person should be able to lock only one portfolio"
-      // This implies 1 portfolio at a time, regardless of hour.
-      if (activeLock.portfolio_id === portfolioId && activeLock.issue_hour !== issueHour) {
-        throw new Error(`You already have an active lock on this portfolio for Hour ${activeLock.issue_hour}. Please finish that hour first.`)
-      }
+      // Scenario B: Different Portfolio OR Different Tenant
+      // Get the name of the portfolio we are currently locking to show in the error
+      const { data: pName } = await supabase
+        .from('portfolios')
+        .select('name')
+        .eq('portfolio_id', activeLock.portfolio_id)
+        .single()
 
-      // If it's the SAME portfolio AND SAME hour, we let it fall through to the next check which handles idempotency.
+      const otherPortfolioName = pName?.name || 'another portfolio'
+      const otherTenantName = activeTenant?.name || 'another client'
+
+      throw new Error(`You already have an active lock on "${otherPortfolioName}" in "${otherTenantName}". Please finish it first.`)
     }
 
-    // 1. Check if ANYONE has a lock on this specific portfolio/hour
+    // 1. Check if ANYONE ELSE has a lock on this specific portfolio/hour
     const { data: currentLock, error: currentLockError } = await supabase
       .from('hour_reservations')
       .select('*')
@@ -186,23 +185,20 @@ export const portfolioService = {
       .gt('expires_at', new Date().toISOString())
       .single()
 
-    if (currentLockError && currentLockError.code !== 'PGRST116') { // PGRST116 = no rows returned
+    if (currentLockError && currentLockError.code !== 'PGRST116') {
       console.error('Error checking current lock status:', currentLockError)
-      // Fallthrough to try insert if check fails? No, safer to throw or let insert handle it.
     }
 
     if (currentLock) {
-      // Lock exists!
-      if (currentLock.monitored_by?.toLowerCase() === userEmail.toLowerCase()) {
-        console.log(`User ${userEmail} already holds the lock for portfolio ${portfolioId} at hour ${issueHour}. Returning existing lock (Idempotent).`)
-        return currentLock
-      } else {
+      // Someone else holds the lock
+      if (currentLock.monitored_by?.toLowerCase() !== userEmail.toLowerCase()) {
         console.log(`Portfolio ${portfolioId} is already locked by ${currentLock.monitored_by} for hour ${issueHour}`)
         throw new Error(`This portfolio is already locked for this hour by ${currentLock.monitored_by}`)
       }
+      return currentLock // Should have been caught by pre-check but for safety
     }
 
-    // 2. No active lock found (or at least check didn't find one). Try to insert.
+    // 2. No active lock found. Try to insert.
     const { data, error } = await supabase
       .from('hour_reservations')
       .insert({
@@ -219,13 +215,29 @@ export const portfolioService = {
 
     if (error) {
       console.error('Error locking portfolio:', error)
-      // Handle unique constraint violation (portfolio already locked for this hour)
       if (error.code === '23505') {
-        // Race condition: someone locked it between our check and insert
         throw new Error('This portfolio is already locked for this hour by another user')
       }
       throw new Error(`Failed to lock portfolio: ${error.message}`)
     }
+
+    // SUCCESS: Reset all_sites_checked status to 'No' when a new lock is acquired
+    // This ensures consistency if it was previously marked as 'Yes'
+    try {
+      await supabase
+        .from('portfolios')
+        .update({
+          all_sites_checked: 'No',
+          all_sites_checked_date: null,
+          all_sites_checked_hour: null
+        })
+        .eq('tenant_id', tenantId)
+        .eq('portfolio_id', portfolioId)
+    } catch (updateError) {
+      console.error('Failed to reset all_sites_checked status during lock:', updateError)
+      // Don't fail the lock if this secondary update fails
+    }
+
     return data
   },
 

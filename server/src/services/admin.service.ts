@@ -179,129 +179,56 @@ export const adminService = {
     return { success: true }
   },
 
-  getLocks: async (tenantId: string | null) => {
-    // Super admin without selected tenant should return empty array
+  getLocks: async (tenantId: string | null, userEmail?: string) => {
+    // Current tenant locks are required to show dashboard indicators for all users
     if (!tenantId || tenantId === 'null' || tenantId.trim() === '') {
       return []
     }
+
     try {
-      // First, clean up expired locks
-      const { error: cleanupError } = await supabase
+      // 1. Fetch ALL active locks for the CURRENT tenant (for dashboard visibility)
+      const { data: currentTenantLocks, error: locksError } = await supabase
         .from('hour_reservations')
-        .delete()
-        .eq('tenant_id', tenantId)
-        .lt('expires_at', new Date().toISOString())
-
-      if (cleanupError) {
-        console.error('Error cleaning up expired locks:', cleanupError)
-        // Don't throw - continue to fetch active locks
-      }
-
-      console.log('Fetching locks for tenant:', tenantId)
-      // First fetch locks without join to see what we have
-      const { data: locksData, error: locksError } = await supabase
-        .from('hour_reservations')
-        .select('*')
+        .select('*, portfolio:portfolios(name), tenant:tenants(name)')
         .eq('tenant_id', tenantId)
         .gt('expires_at', new Date().toISOString())
         .order('reserved_at', { ascending: false })
 
       if (locksError) {
-        console.error('Error fetching locks:', locksError)
+        console.error('Error fetching current tenant locks:', locksError)
         throw new Error(`Failed to fetch locks: ${locksError.message}`)
       }
 
-      // Now fetch portfolio names for each lock and clean up stale locks
-      const locksWithPortfolios = await Promise.all(
-        (locksData || []).map(async (lock) => {
-          let portfolioName = null
-          let isStaleLock = false
-          console.log(`Fetching portfolio for lock: portfolio_id=${lock.portfolio_id}, tenant_id=${tenantId}`)
+      // 2. If userEmail is provided, fetch any active locks for this user across OTHER tenants
+      let userOtherLocks: any[] = []
+      if (userEmail) {
+        const { data: otherLocks, error: otherError } = await supabase
+          .from('hour_reservations')
+          .select('*, portfolio:portfolios(name), tenant:tenants(name)')
+          .eq('monitored_by', userEmail)
+          .neq('tenant_id', tenantId) // Only in other tenants
+          .gt('expires_at', new Date().toISOString())
 
-          if (lock.portfolio_id) {
-            // Try with tenant_id first
-            const { data: portfolio, error: portfolioError } = await supabase
-              .from('portfolios')
-              .select('name')
-              .eq('portfolio_id', lock.portfolio_id)
-              .eq('tenant_id', tenantId)
-              .single()
+        if (otherError) {
+          console.error('Error fetching user cross-tenant locks:', otherError)
+        } else {
+          userOtherLocks = otherLocks || []
+        }
+      }
 
-            if (portfolioError) {
-              console.error(`Error fetching portfolio ${lock.portfolio_id} with tenant ${tenantId}:`, portfolioError)
-              // Try without tenant_id check
-              const { data: portfolioAlt, error: portfolioAltError } = await supabase
-                .from('portfolios')
-                .select('name')
-                .eq('portfolio_id', lock.portfolio_id)
-                .single()
+      // Combine both lists. Use a Map to ensure uniqueness by reservation ID
+      const allLocksMap = new Map()
 
-              if (portfolioAltError) {
-                console.error(`Error fetching portfolio ${lock.portfolio_id} without tenant:`, portfolioAltError)
-                // Portfolio doesn't exist - this is a stale lock
-                isStaleLock = true
-                console.log(`Detected stale lock for non-existent portfolio: ${lock.portfolio_id}`)
+      // Add current tenant locks
+      currentTenantLocks?.forEach(lock => allLocksMap.set(lock.id, lock))
 
-                // Automatically clean up stale lock
-                const { error: deleteError } = await supabase
-                  .from('hour_reservations')
-                  .delete()
-                  .eq('id', lock.id)
+      // Add other tenant locks
+      userOtherLocks.forEach(lock => allLocksMap.set(lock.id, lock))
 
-                if (deleteError) {
-                  console.error('Error deleting stale lock:', deleteError)
-                } else {
-                  console.log('Stale lock cleaned up successfully')
-                }
-              } else if (portfolioAlt) {
-                portfolioName = portfolioAlt.name
-                console.log(`Found portfolio name (without tenant check): ${portfolioName}`)
-              }
-            } else if (portfolio) {
-              portfolioName = portfolio.name
-              console.log(`Found portfolio name: ${portfolioName}`)
-            }
-          } else {
-            console.error(`Lock ${lock.id} has no portfolio_id - invalid lock`)
-            isStaleLock = true
-
-            // Automatically clean up invalid lock
-            const { error: deleteError } = await supabase
-              .from('hour_reservations')
-              .delete()
-              .eq('id', lock.id)
-
-            if (deleteError) {
-              console.error('Error deleting invalid lock:', deleteError)
-            } else {
-              console.log('Invalid lock cleaned up successfully')
-            }
-          }
-
-          // Return null for stale locks so they're filtered out
-          if (isStaleLock) {
-            return null
-          }
-
-          // Always return portfolio object, even if name is null (show ID as fallback)
-          return {
-            ...lock,
-            portfolio: {
-              id: lock.portfolio_id || 'N/A',
-              name: portfolioName || `Portfolio ID: ${lock.portfolio_id || 'N/A'}`
-            }
-          }
-        })
-      )
-
-      // Filter out null values (stale locks that were cleaned up)
-      const validLocks = locksWithPortfolios.filter(lock => lock !== null)
-
-      console.log('Locks fetched successfully:', validLocks?.length || 0, `(cleaned up ${(locksWithPortfolios?.length || 0) - (validLocks?.length || 0)} stale locks)`)
-      return validLocks || []
-    } catch (error: any) {
-      console.error('Exception in getLocks:', error)
-      throw error
+      return Array.from(allLocksMap.values())
+    } catch (err: any) {
+      console.error('Unexpected error in getLocks service:', err)
+      throw err
     }
   },
 

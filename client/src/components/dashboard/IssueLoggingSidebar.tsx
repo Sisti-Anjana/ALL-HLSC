@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { issueService } from '../../services/issueService'
 import { CreateIssueData } from '../../types/issue.types'
@@ -30,6 +30,8 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
   const [caseNumber, setCaseNumber] = useState('')
   const [issueDescription, setIssueDescription] = useState('')
   const [missedAlertsBy, setMissedAlertsBy] = useState<string>('')
+  const [allSitesChecked, setAllSitesChecked] = useState<'Yes' | 'No' | null>(null)
+  const [sitesCheckedDetails, setSitesCheckedDetails] = useState('')
 
   // Fetch portfolio details
   const { data: portfolio } = useQuery<Portfolio>({
@@ -69,6 +71,52 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
         Number(lock.issue_hour) === currentHour
     )
   }, [isOpen, portfolioId, locks, currentHour])
+
+  // Refs to track previous values for auto-save
+  const prevPortfolioIdRef = useRef<string | null>(portfolioId)
+  const prevHourRef = useRef<number | undefined>(hour)
+  const currentFormStateRef = useRef({
+    issuePresent,
+    issueDescription,
+    caseNumber,
+    missedAlertsBy,
+    portfolioId,
+    hour,
+    monitoredBy: (lockForThisPortfolio?.monitored_by && lockForThisPortfolio.monitored_by.trim())
+      ? lockForThisPortfolio.monitored_by
+      : (user?.email || '')
+  })
+
+  // Update form state ref on every change
+  useEffect(() => {
+    currentFormStateRef.current = {
+      issuePresent,
+      issueDescription,
+      caseNumber,
+      missedAlertsBy,
+      portfolioId,
+      hour,
+      monitoredBy: (lockForThisPortfolio?.monitored_by && lockForThisPortfolio.monitored_by.trim())
+        ? lockForThisPortfolio.monitored_by
+        : (user?.email || '')
+    }
+  }, [issuePresent, issueDescription, caseNumber, missedAlertsBy, portfolioId, hour, lockForThisPortfolio, user?.email])
+
+
+  // Check if at least one issue at this hour was logged by current user
+  const hasIssuesAtThisHour = useMemo(() => {
+    if (!user?.email || issues.length === 0) return false
+
+    return issues.some(issue => {
+      let issueMonitoredBy: string | undefined
+      if (Array.isArray(issue.monitored_by)) {
+        issueMonitoredBy = issue.monitored_by[0] as string | undefined
+      } else {
+        issueMonitoredBy = issue.monitored_by as string | undefined
+      }
+      return issueMonitoredBy?.toLowerCase() === user.email.toLowerCase()
+    })
+  }, [issues, user?.email])
 
   // Lock portfolio when sidebar opens
   const lockMutation = useMutation({
@@ -166,6 +214,49 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || 'Failed to log issue')
+    },
+  })
+
+  // Update all sites checked status mutation
+  const updateStatusMutation = useMutation({
+    mutationFn: (data: { allSitesChecked: 'Yes' | 'No'; sitesCheckedDetails?: string }) => {
+      if (!hasIssuesAtThisHour) {
+        throw new Error('Please log at least one issue before marking sites as checked.')
+      }
+
+      const now = new Date()
+      const hourToSave = hour !== undefined && hour !== null ? hour : now.getHours()
+
+      return portfolioService.updateAllSitesChecked(portfolioId!, {
+        allSitesChecked: data.allSitesChecked,
+        hour: hourToSave,
+        date: now.toISOString().split('T')[0],
+        checkedBy: user?.id || '',
+        notes: data.sitesCheckedDetails,
+      })
+    },
+    onSuccess: async (_, variables) => {
+      if (variables.allSitesChecked === 'Yes') {
+        toast.success('Portfolio status updated and unlocked successfully')
+      } else {
+        toast.success('Portfolio status updated successfully')
+      }
+
+      // Invalidate and refetch all related queries
+      queryClient.invalidateQueries({ queryKey: ['portfolio', portfolioId] })
+      queryClient.invalidateQueries({ queryKey: ['portfolios'] })
+      queryClient.invalidateQueries({ queryKey: ['portfolio-activity'] })
+      queryClient.invalidateQueries({ queryKey: ['portfolio-locks'] })
+      queryClient.invalidateQueries({ queryKey: ['locks'] })
+
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['portfolio-locks'] }),
+        queryClient.refetchQueries({ queryKey: ['locks'] }),
+        queryClient.refetchQueries({ queryKey: ['portfolio-activity'] }),
+      ])
+    },
+    onError: (error: any) => {
+      toast.error(error.message || error.response?.data?.error || 'Failed to update portfolio status')
     },
   })
 
@@ -268,6 +359,96 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, portfolioId, hour, user?.email])
 
+  // Sync sites checked state with portfolio data
+  useEffect(() => {
+    if (isOpen && portfolio) {
+      const checkedStatus = portfolio.all_sites_checked === 'Pending'
+        ? null
+        : (portfolio.all_sites_checked === 'Yes' || portfolio.all_sites_checked === 'No'
+          ? portfolio.all_sites_checked
+          : null)
+      setAllSitesChecked(checkedStatus)
+      setSitesCheckedDetails(portfolio.sites_checked_details || '')
+    } else if (!isOpen) {
+      setAllSitesChecked(null)
+      setSitesCheckedDetails('')
+    }
+  }, [isOpen, portfolio])
+
+  // Trigger auto-save when hour or portfolioId changes
+  useEffect(() => {
+    // Check if we switched context (different portfolio or different hour)
+    const contextChanged = prevPortfolioIdRef.current !== portfolioId || prevHourRef.current !== hour
+
+    if (contextChanged) {
+      const stateToSave = currentFormStateRef.current
+
+      // Validation for auto-save: must have something typed and a valid selection
+      const hasValidDraft = stateToSave.issuePresent === 'no' ||
+        (stateToSave.issuePresent === 'yes' && stateToSave.issueDescription.trim().length > 0 && stateToSave.issueDescription !== 'No issue')
+
+      if (hasValidDraft && stateToSave.portfolioId && stateToSave.hour !== undefined) {
+        console.log('💾 Context changed, auto-saving draft...', {
+          from: { portfolioId: prevPortfolioIdRef.current, hour: prevHourRef.current },
+          to: { portfolioId, hour },
+          draft: stateToSave.issueDescription
+        })
+
+        const issueData: any = {
+          portfolio_id: stateToSave.portfolioId,
+          site_name: '',
+          issue_hour: stateToSave.hour,
+          description: stateToSave.issuePresent === 'no' ? 'No issue' : stateToSave.issueDescription.trim(),
+          severity: (stateToSave.issuePresent === 'yes' ? 'high' : 'low').toLowerCase(),
+          status: 'open',
+          monitored_by: stateToSave.monitoredBy,
+          missed_by: (stateToSave.issuePresent === 'yes' && stateToSave.missedAlertsBy) ? [stateToSave.missedAlertsBy] : null,
+          notes: stateToSave.caseNumber ? `Case #: ${stateToSave.caseNumber} (Auto-saved)` : 'Auto-saved',
+        }
+
+        // Remove nulls/undefined but keep required fields
+        Object.keys(issueData).forEach(key => {
+          if (issueData[key] === null || issueData[key] === undefined) {
+            delete issueData[key]
+          }
+        })
+
+        // Use a silent version of the mutation (don't show toasts or reset CURRENT form)
+        // because the user is already looking at a new hour/portfolio
+        issueService.create(issueData).then(() => {
+          queryClient.invalidateQueries({ queryKey: ['issues', stateToSave.portfolioId, stateToSave.hour] })
+          queryClient.invalidateQueries({ queryKey: ['portfolio-activity'] })
+          console.log('✅ Auto-save successful')
+        }).catch(err => {
+          console.error('❌ Auto-save failed:', err)
+        })
+      }
+
+      // Update refs for next change
+      prevPortfolioIdRef.current = portfolioId
+      prevHourRef.current = hour
+    }
+  }, [portfolioId, hour, queryClient, user?.tenantId, user?.email])
+
+  // Browser refresh auto-save
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const stateToSave = currentFormStateRef.current
+      const hasValidDraft = stateToSave.issuePresent === 'no' ||
+        (stateToSave.issuePresent === 'yes' && stateToSave.issueDescription.trim().length > 0 && stateToSave.issueDescription !== 'No issue')
+
+      if (hasValidDraft) {
+        // Standard browser dialog
+        e.preventDefault()
+        e.returnValue = ''
+        return ''
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [])
+
   // Close sidebar without unlocking (lock stays until user unlocks or marks all sites checked)
   const handleClose = () => {
     onClose()
@@ -324,6 +505,43 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
     })
 
     createMutation.mutate(issueData)
+  }
+
+  const handleAllSitesChecked = (value: 'Yes' | 'No') => {
+    if (!hasIssuesAtThisHour) {
+      toast.error('Please log at least one issue before marking sites as checked.')
+      return
+    }
+
+    setAllSitesChecked(value)
+
+    // Always call the update mutation to persist the status
+    updateStatusMutation.mutate({
+      allSitesChecked: value,
+      sitesCheckedDetails: sitesCheckedDetails || undefined,
+    })
+
+    // If "No" is selected and we don't have a lock, automatically re-lock
+    if (value === 'No' && !lockForThisPortfolio) {
+      console.log('🔄 All sites checked set to "No", triggering auto-lock...')
+      lockMutation.mutate()
+    }
+  }
+
+  const handleDetailsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setSitesCheckedDetails(value)
+
+    // Auto-save if "Yes" is already selected and user is typing details (debounced)
+    if (allSitesChecked === 'Yes' && value.trim()) {
+      const timeoutId = setTimeout(() => {
+        updateStatusMutation.mutate({
+          allSitesChecked: 'Yes',
+          sitesCheckedDetails: value.trim() || undefined,
+        })
+      }, 1000)
+      return () => clearTimeout(timeoutId)
+    }
   }
 
   const formatDateTime = (dateString: string) => {
@@ -394,10 +612,19 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
               🚩 LOCKED BY {monitoredByName.toUpperCase()}
             </span>
           ) : (
-            <span className="flex items-center gap-1.5 px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full border border-yellow-200">
-              <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
-              ⚠️ VIEW ONLY (NOT LOCKED)
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1.5 px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full border border-yellow-200">
+                <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
+                ⚠️ VIEW ONLY (NOT LOCKED)
+              </span>
+              <button
+                onClick={() => lockMutation.mutate()}
+                disabled={lockMutation.isPending}
+                className="px-2 py-0.5 bg-blue-600 text-white text-[10px] font-bold rounded-full hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {lockMutation.isPending ? 'LOCKING...' : 'LOCK NOW'}
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -498,12 +725,27 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
           </div>
 
           <Button
-            onClick={handleAddIssue}
-            disabled={createMutation.isPending || !issueDescription.trim() || (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase())}
+            onClick={() => {
+              if (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() === user?.email?.toLowerCase()) {
+                handleAddIssue()
+              } else {
+                lockMutation.mutate()
+              }
+            }}
+            disabled={createMutation.isPending || lockMutation.isPending || (!lockForThisPortfolio && (user?.role === 'super_admin')) || (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase())}
             className="w-full"
-            style={{ backgroundColor: (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase()) ? '#9ca3af' : '#76ab3f' }}
+            style={{
+              backgroundColor: (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase())
+                ? '#9ca3af'
+                : !lockForThisPortfolio
+                  ? '#3b82f6' // Blue for "Lock to Add"
+                  : '#76ab3f' // Green for "Add Issue"
+            }}
           >
-            {createMutation.isPending ? 'Adding...' : (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase()) ? 'Locked by another user' : 'Add Issue'}
+            {createMutation.isPending ? 'Adding...' :
+              lockMutation.isPending ? 'Locking...' :
+                (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase()) ? 'Locked by another user' :
+                  !lockForThisPortfolio ? 'Lock Portfolio to Add Issue' : 'Add Issue'}
           </Button>
 
           {lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase() && (
@@ -511,6 +753,61 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
               You cannot log issues because this portfolio is locked by {monitoredByName}.
             </p>
           )}
+
+          {/* Sites Checked Section */}
+          <div className="pt-4 border-t border-gray-100 space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-2">
+                All sites checked?
+              </label>
+              {!hasIssuesAtThisHour && (
+                <p className="text-[10px] text-yellow-700 font-medium mb-2">
+                  ⚠️ Log at least one issue first.
+                </p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleAllSitesChecked('Yes')}
+                  disabled={!hasIssuesAtThisHour}
+                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors border-2 ${!hasIssuesAtThisHour
+                    ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
+                    : allSitesChecked === 'Yes'
+                      ? 'bg-white border-blue-500 text-blue-700'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    }`}
+                >
+                  Yes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAllSitesChecked('No')}
+                  disabled={!hasIssuesAtThisHour}
+                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors border-2 ${!hasIssuesAtThisHour
+                    ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
+                    : allSitesChecked === 'No'
+                      ? 'bg-yellow-100 border-yellow-400 text-yellow-800'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    }`}
+                >
+                  No
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Which sites have you checked?
+              </label>
+              <input
+                type="text"
+                value={sitesCheckedDetails}
+                onChange={handleDetailsChange}
+                placeholder="e.g., Site 1 to Site 5"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Existing Issues */}

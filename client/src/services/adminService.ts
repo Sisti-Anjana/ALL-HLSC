@@ -28,6 +28,7 @@ export interface PortfolioLock {
   tenant_id: string
   portfolio_id: string
   portfolio?: { name: string }
+  tenant?: { name: string }
   issue_hour: number
   monitored_by: string
   reserved_at: string
