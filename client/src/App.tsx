@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './context/AuthContext'
@@ -9,7 +9,6 @@ import AdminRoute from './components/auth/AdminRoute'
 import MainLayout from './components/layout/MainLayout'
 import AuthLayout from './components/layout/AuthLayout'
 import UserLogin from './components/auth/UserLogin'
-import AdminLogin from './components/auth/AdminLogin'
 import ForgotPassword from './components/auth/ForgotPassword'
 import Dashboard from './components/dashboard/Dashboard'
 import PortfolioList from './components/portfolio/PortfolioList'
@@ -38,7 +37,7 @@ function App() {
               <Routes>
                 <Route element={<AuthLayout />}>
                   <Route path="/login" element={<UserLogin />} />
-                  <Route path="/admin/login" element={<AdminLogin />} />
+                  <Route path="/admin/login" element={<Navigate to="/login" replace />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                 </Route>
                 <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
@@ -49,21 +48,21 @@ function App() {
                   <Route path="/issues/:id" element={<IssueDetailsTable />} />
                   <Route path="/issues-by-user" element={<IssuesByUser />} />
                   {/* Admin-only routes - only accessible to super_admin and tenant_admin */}
-                  <Route 
-                    path="/analytics" 
+                  <Route
+                    path="/analytics"
                     element={
                       <AdminRoute>
                         <PerformanceAnalytics />
                       </AdminRoute>
-                    } 
+                    }
                   />
-                  <Route 
-                    path="/coverage-matrix" 
+                  <Route
+                    path="/coverage-matrix"
                     element={
                       <AdminRoute>
                         <CoverageMatrix />
                       </AdminRoute>
-                    } 
+                    }
                   />
                   <Route path="/admin" element={<AdminPanel />} />
                 </Route>

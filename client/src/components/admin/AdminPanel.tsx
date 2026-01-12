@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../context/AuthContext'
 import { adminService } from '../../services/adminService'
 import { portfolioService } from '../../services/portfolioService'
-import { User, CreateUserData } from '../../types/user.types'
+
 import { Portfolio } from '../../types/portfolio.types'
 import toast from 'react-hot-toast'
 import UserManagement from './UserManagement'
@@ -18,7 +18,7 @@ import Modal from '../common/Modal'
 const AdminPanel: React.FC = () => {
   const { user } = useAuth()
   const isSuperAdmin = user?.role === 'super_admin'
-  
+
   const [activeTab, setActiveTab] = useState<'portfolios' | 'users' | 'locks' | 'logs' | 'clients'>(
     'portfolios'
   )
@@ -40,11 +40,10 @@ const AdminPanel: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
             >
               {tab.label}
             </button>
@@ -173,13 +172,12 @@ const PortfoliosTab: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.site_range || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <span
-                      className={`px-2 py-1 rounded text-xs ${
-                        p.all_sites_checked === 'Yes'
-                          ? 'bg-green-100 text-green-800'
-                          : p.all_sites_checked === 'No'
+                      className={`px-2 py-1 rounded text-xs ${p.all_sites_checked === 'Yes'
+                        ? 'bg-green-100 text-green-800'
+                        : p.all_sites_checked === 'No'
                           ? 'bg-red-100 text-red-800'
                           : 'bg-yellow-100 text-yellow-800'
-                      }`}
+                        }`}
                     >
                       {p.all_sites_checked || 'Pending'}
                     </span>
@@ -292,7 +290,7 @@ const LocksTab: React.FC = () => {
   }
 
   // Filter locks for current user if needed (for debugging)
-  const currentUserLocks = locks?.filter(lock => 
+  const currentUserLocks = locks?.filter(lock =>
     lock.monitored_by?.toLowerCase() === user?.email?.toLowerCase()
   ) || []
 
@@ -305,9 +303,9 @@ const LocksTab: React.FC = () => {
         </div>
         <div className="flex gap-2">
           {currentUserLocks.length > 0 && (
-            <Button 
-              onClick={handleUnlockAll} 
-              variant="danger" 
+            <Button
+              onClick={handleUnlockAll}
+              variant="danger"
               size="sm"
               isLoading={unlockAllMutation.isPending}
             >
@@ -659,8 +657,8 @@ const ClientsTab: React.FC = () => {
                         tenant.status === 'active'
                           ? 'success'
                           : tenant.status === 'suspended'
-                          ? 'danger'
-                          : 'default'
+                            ? 'danger'
+                            : 'default'
                       }
                     >
                       {tenant.status}

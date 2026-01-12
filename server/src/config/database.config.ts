@@ -44,6 +44,9 @@ export const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVIC
   auth: {
     persistSession: false,
   },
+  global: {
+    fetch: require('node-fetch'),
+  },
 })
 
 console.log('✅ Supabase client created successfully')

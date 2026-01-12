@@ -34,12 +34,47 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
     showAbove: boolean
   } | null>(null)
 
+  // Helper to compute local Y/H value
+  const computeLocalYValue = (lastUpdated: Date | string | null) => {
+    if (!lastUpdated) return { yValue: 'Y0', yValueNumber: 0 }
+
+    const date = new Date(lastUpdated)
+    const now = new Date()
+
+    // Reset hours to compare dates only for Y-value logic
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+
+    // Calculate difference in milliseconds
+    const diffTime = today.getTime() - checkDate.getTime()
+    // Convert to days (floor to handle partial days correctly)
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+
+    if (diffDays === 0) {
+      // It's today, return current hour of the update in local time
+      const hour = date.getHours()
+      return { yValue: `H${hour}`, yValueNumber: hour }
+    } else if (diffDays === 1) {
+      return { yValue: 'Y0', yValueNumber: 0 }
+    } else {
+      return { yValue: `Y${diffDays - 1}`, yValueNumber: diffDays - 1 }
+    }
+  }
+
   // Use React Query to fetch portfolio activity
   const { data: portfolios = [], isLoading: loading, isRefetching: isRefreshing, error, refetch } = useQuery<PortfolioActivity[]>({
     queryKey: ['portfolio-activity'],
     queryFn: async () => {
       const data = await analyticsService.getPortfolioActivity()
-      return data
+      // Recalculate yValue client-side to match local timezone
+      return data.map(p => {
+        const { yValue, yValueNumber } = computeLocalYValue(p.lastUpdated)
+        return {
+          ...p,
+          yValue,
+          yValueNumber
+        }
+      })
     },
     refetchInterval: 5000, // Auto-refresh every 5 seconds (reduced from 1s to prevent page freeze)
     staleTime: 3000, // Consider data fresh for 3 seconds to reduce unnecessary refetches
@@ -221,9 +256,38 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
   if (loading && portfolios.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="text-center py-8">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-2 text-gray-600">Loading portfolios...</p>
+        {/* Header Skeleton */}
+        <div className="mb-6 animate-pulse">
+          <div className="flex justify-between items-center mb-4">
+            <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+            <div className="h-4 bg-gray-200 rounded w-48 hidden sm:block"></div>
+          </div>
+
+          {/* Legend Skeleton */}
+          <div className="flex gap-4 mb-6 pb-4 border-b border-gray-100">
+            <div className="h-4 bg-gray-200 rounded w-20"></div>
+            <div className="h-4 bg-gray-200 rounded w-20"></div>
+            <div className="h-4 bg-gray-200 rounded w-20"></div>
+          </div>
+
+          {/* Controls Skeleton */}
+          <div className="flex justify-between items-center mb-6">
+            <div className="h-10 bg-gray-200 rounded w-64"></div>
+            <div className="h-10 bg-gray-200 rounded w-32"></div>
+          </div>
+        </div>
+
+        {/* Grid Skeleton */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2 sm:gap-3">
+          {[...Array(14)].map((_, i) => (
+            <div key={i} className="bg-gray-50 border-2 border-gray-100 rounded-lg p-2.5 h-20 animate-pulse flex flex-col justify-between">
+              <div className="flex justify-between items-start">
+                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                <div className="h-4 bg-gray-200 rounded w-8"></div>
+              </div>
+              <div className="h-3 bg-gray-200 rounded w-1/2 mt-2"></div>
+            </div>
+          ))}
         </div>
       </div>
     )
@@ -497,4 +561,3 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
 }
 
 export default QuickPortfolioReference
-

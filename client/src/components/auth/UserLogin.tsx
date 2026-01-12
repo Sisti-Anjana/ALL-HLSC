@@ -69,14 +69,14 @@ const UserLogin: React.FC = () => {
             </div>
             {/* Welcome Text */}
             <h3 className="text-xl font-semibold text-black">
-              Welcome to User Login
+              Welcome
             </h3>
           </div>
 
           {/* Right Section - Green Background */}
           <div className="w-full md:w-1/2 flex flex-col justify-center p-6 md:p-8" style={{ backgroundColor: '#76ab3f' }}>
             <h2 className="text-3xl font-bold text-white mb-2">
-              User Login
+              Login
             </h2>
             <p className="text-base text-white mb-6">
               Secure access to your account
@@ -145,18 +145,13 @@ const UserLogin: React.FC = () => {
                 className="w-full text-white py-3 rounded-lg font-semibold text-base transition-opacity disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
                 style={{ backgroundColor: '#5f8a32' }}
               >
-                {loading ? 'Signing in...' : 'User Login'}
+                {loading ? 'Signing in...' : 'Sign In'}
               </button>
             </form>
 
             {/* Divider and Admin Link */}
             <div className="mt-6 pt-4 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.3)' }}>
-              <Link
-                to="/admin/login"
-                className="block w-full text-center text-white hover:opacity-80 font-medium transition-opacity"
-              >
-                Admin user? Click here
-              </Link>
+              {/* Admin link removed */}
             </div>
           </div>
         </div>

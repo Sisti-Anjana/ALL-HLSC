@@ -21,11 +21,17 @@ export const authController = {
       console.log('✅ Login successful for:', result.user?.email)
       res.json({ success: true, data: result })
     } catch (error: any) {
-      console.error('❌ Login failed:', error.message)
+      console.error('❌ Login failed with detailed error:')
+      console.error('   Message:', error.message)
+      console.error('   Name:', error.name)
+      console.error('   Cause:', error.cause)
       console.error('   Stack:', error.stack)
+
       res.status(400).json({
         success: false,
         error: error.message,
+        name: error.name,
+        cause: error.cause,
         details: process.env.NODE_ENV === 'development' ? error.stack : undefined
       })
     }

@@ -10,6 +10,10 @@ import { Issue } from '../../types/issue.types'
 import { User } from '../../types/user.types'
 import toast from 'react-hot-toast'
 import Button from '../common/Button'
+import SidebarHeader from './sidebar/SidebarHeader'
+import IssueForm from './sidebar/IssueForm'
+import SitesChecked from './sidebar/SitesChecked'
+import IssueList from './sidebar/IssueList'
 
 interface IssueLoggingSidebarProps {
   isOpen: boolean
@@ -572,62 +576,15 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
 
   return (
     <div className="sticky top-[120px] h-[calc(100vh-140px)] w-full bg-white shadow-xl flex flex-col border border-gray-200 rounded-lg overflow-hidden">
-      {/* Header */}
-      <div className="bg-gray-50 border-b border-gray-200 p-4">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-lg font-semibold text-gray-900">
-            {displayName} - Hour {hour}
-          </h3>
-          <button
-            onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        <p className="text-sm text-gray-600">Monitored by {monitoredByName}</p>
-
-        {/* Lock Status Indicator */}
-        <div className="mt-3 flex items-center gap-2">
-          {user?.role === 'super_admin' ? (
-            <span className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-bold rounded-full border border-blue-200">
-              <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-              👀 SUPER ADMIN VIEW
-            </span>
-          ) : lockMutation.isPending ? (
-            <span className="flex items-center gap-1.5 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-bold rounded-full animate-pulse">
-              <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
-              SECURING LOCK...
-            </span>
-          ) : lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() === user?.email?.toLowerCase() ? (
-            <span className="flex items-center gap-1.5 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-full border border-green-200">
-              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-              🔒 LICENSED MONITORING (LOCKED BY YOU)
-            </span>
-          ) : lockForThisPortfolio ? (
-            <span className="flex items-center gap-1.5 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-bold rounded-full border border-purple-200">
-              <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
-              🚩 LOCKED BY {monitoredByName.toUpperCase()}
-            </span>
-          ) : (
-            <div className="flex items-center gap-2">
-              <span className="flex items-center gap-1.5 px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full border border-yellow-200">
-                <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
-                ⚠️ VIEW ONLY (NOT LOCKED)
-              </span>
-              <button
-                onClick={() => lockMutation.mutate()}
-                disabled={lockMutation.isPending}
-                className="px-2 py-0.5 bg-blue-600 text-white text-[10px] font-bold rounded-full hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
-                {lockMutation.isPending ? 'LOCKING...' : 'LOCK NOW'}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+      <SidebarHeader
+        displayName={displayName}
+        hour={hour || 0}
+        monitoredByName={monitoredByName}
+        user={user}
+        lockMutation={lockMutation}
+        lockForThisPortfolio={lockForThisPortfolio}
+        onClose={handleClose}
+      />
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
@@ -638,215 +595,36 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
           </p>
         </div>
 
-        {/* Add Issue Form */}
-        <div className="space-y-4">
-          <h4 className="font-semibold text-gray-900">Add issue for this hour:</h4>
+        <IssueForm
+          issuePresent={issuePresent}
+          setIssuePresent={setIssuePresent}
+          setIssueDescription={setIssueDescription}
+          setMissedAlertsBy={setMissedAlertsBy}
+          caseNumber={caseNumber}
+          setCaseNumber={setCaseNumber}
+          issueDescription={issueDescription}
+          missedAlertsBy={missedAlertsBy}
+          users={users}
+          handleAddIssue={handleAddIssue}
+          createMutation={createMutation}
+          lockMutation={lockMutation}
+          lockForThisPortfolio={lockForThisPortfolio}
+          user={user}
+          monitoredByName={monitoredByName}
+        />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Issue Present</label>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setIssuePresent('yes')
-                  if (issueDescription === 'No issue') {
-                    setIssueDescription('')
-                  }
-                }}
-                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${issuePresent === 'yes'
-                  ? 'bg-red-100 text-red-800 border-2 border-red-300'
-                  : 'bg-white text-gray-700 border-2 border-gray-300 hover:bg-gray-50'
-                  }`}
-              >
-                Yes
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIssuePresent('no')
-                  setIssueDescription('No issue')
-                  setMissedAlertsBy('') // Clear missed alerts when No is selected
-                }}
-                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${issuePresent === 'no'
-                  ? 'bg-green-100 text-green-800 border-2 border-green-300'
-                  : 'bg-white text-gray-700 border-2 border-gray-300 hover:bg-gray-50'
-                  }`}
-              >
-                No
-              </button>
-            </div>
-          </div>
+        <SitesChecked
+          hasIssuesAtThisHour={hasIssuesAtThisHour || false}
+          allSitesChecked={allSitesChecked}
+          handleAllSitesChecked={handleAllSitesChecked}
+          sitesCheckedDetails={sitesCheckedDetails}
+          handleDetailsChange={handleDetailsChange}
+        />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Case #</label>
-            <input
-              type="text"
-              value={caseNumber}
-              onChange={(e) => setCaseNumber(e.target.value)}
-              placeholder="Case number"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Issue Description</label>
-            <textarea
-              value={issueDescription}
-              onChange={(e) => setIssueDescription(e.target.value)}
-              placeholder={issuePresent === '' ? "Select issue present first" : issuePresent === 'no' ? "No issue" : "Describe the problem..."}
-              disabled={issuePresent === 'no'}
-              rows={4}
-              className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${issuePresent === 'no' ? 'bg-gray-100 cursor-not-allowed' : ''
-                }`}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Issues Missed By (optional)</label>
-            <select
-              value={missedAlertsBy}
-              onChange={(e) => setMissedAlertsBy(e.target.value)}
-              disabled={issuePresent === 'no' || issuePresent === ''}
-              className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${issuePresent === 'no' || issuePresent === '' ? 'bg-gray-100 cursor-not-allowed' : ''
-                }`}
-            >
-              <option value="">Select</option>
-              {users
-                .filter(u => u.is_active)
-                .map((u) => {
-                  const username = u.email.split('@')[0]
-                  return (
-                    <option key={u.id} value={u.email}>
-                      {username} ({u.full_name})
-                    </option>
-                  )
-                })}
-            </select>
-          </div>
-
-          <Button
-            onClick={() => {
-              if (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() === user?.email?.toLowerCase()) {
-                handleAddIssue()
-              } else {
-                lockMutation.mutate()
-              }
-            }}
-            disabled={createMutation.isPending || lockMutation.isPending || (!lockForThisPortfolio && (user?.role === 'super_admin')) || (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase())}
-            className="w-full"
-            style={{
-              backgroundColor: (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase())
-                ? '#9ca3af'
-                : !lockForThisPortfolio
-                  ? '#3b82f6' // Blue for "Lock to Add"
-                  : '#76ab3f' // Green for "Add Issue"
-            }}
-          >
-            {createMutation.isPending ? 'Adding...' :
-              lockMutation.isPending ? 'Locking...' :
-                (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase()) ? 'Locked by another user' :
-                  !lockForThisPortfolio ? 'Lock Portfolio to Add Issue' : 'Add Issue'}
-          </Button>
-
-          {lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase() && (
-            <p className="text-[10px] text-center text-red-600 font-medium">
-              You cannot log issues because this portfolio is locked by {monitoredByName}.
-            </p>
-          )}
-
-          {/* Sites Checked Section */}
-          <div className="pt-4 border-t border-gray-100 space-y-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">
-                All sites checked?
-              </label>
-              {!hasIssuesAtThisHour && (
-                <p className="text-[10px] text-yellow-700 font-medium mb-2">
-                  ⚠️ Log at least one issue first.
-                </p>
-              )}
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleAllSitesChecked('Yes')}
-                  disabled={!hasIssuesAtThisHour}
-                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors border-2 ${!hasIssuesAtThisHour
-                    ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
-                    : allSitesChecked === 'Yes'
-                      ? 'bg-white border-blue-500 text-blue-700'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                    }`}
-                >
-                  Yes
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAllSitesChecked('No')}
-                  disabled={!hasIssuesAtThisHour}
-                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors border-2 ${!hasIssuesAtThisHour
-                    ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
-                    : allSitesChecked === 'No'
-                      ? 'bg-yellow-100 border-yellow-400 text-yellow-800'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                    }`}
-                >
-                  No
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Which sites have you checked?
-              </label>
-              <input
-                type="text"
-                value={sitesCheckedDetails}
-                onChange={handleDetailsChange}
-                placeholder="e.g., Site 1 to Site 5"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Existing Issues */}
-        <div className="space-y-2">
-          <h4 className="font-semibold text-gray-900">Issues for this hour ({issues.length}):</h4>
-          {issues.length === 0 ? (
-            <div className="text-sm text-gray-500 py-4 text-center">No issues logged yet</div>
-          ) : (
-            <div className="space-y-2">
-              {issues.map((issue) => (
-                <div key={issue.id} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      {issue.description ? (
-                        <p className="text-sm text-gray-900 mb-1">{issue.description}</p>
-                      ) : (
-                        <p className="text-sm text-gray-500 italic">No issue</p>
-                      )}
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        {issue.monitored_by && issue.monitored_by.length > 0 ? (
-                          <>
-                            <span>•</span>
-                            <span>{issue.monitored_by[0]?.split('@')[0] || 'Unknown'}</span>
-                          </>
-                        ) : null}
-                        {issue.created_at && (
-                          <>
-                            <span>•</span>
-                            <span>{formatDateTime(issue.created_at)}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <IssueList
+          issues={issues}
+          formatDateTime={formatDateTime}
+        />
       </div>
 
       {/* Footer */}

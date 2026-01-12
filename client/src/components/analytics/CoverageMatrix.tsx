@@ -102,17 +102,6 @@ const CoverageMatrix: React.FC = () => {
     } */
   }, [users, usersLoading])
 
-  // Create mapping from user ID to user info (email, full_name)
-  const userIdToUser = useMemo(() => {
-    const map: { [key: string]: { email: string; full_name: string } } = {}
-    users.forEach((user) => {
-      map[user.id] = {
-        email: user.email,
-        full_name: user.full_name || user.email.split('@')[0]
-      }
-    })
-    return map
-  }, [users])
 
   // Fetch issues
   const { data: allIssues = [] } = useQuery<Issue[]>({
