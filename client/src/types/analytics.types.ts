@@ -47,5 +47,6 @@ export interface PortfolioActivity {
   status: 'no-activity' | '3h' | '2h' | '1h' | 'updated'
   lastUpdated: Date | null
   hoursSinceLastActivity: number | null
+  allSitesChecked?: 'Yes' | 'No' | 'Pending'
 }
 

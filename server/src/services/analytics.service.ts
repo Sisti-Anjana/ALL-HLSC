@@ -214,7 +214,7 @@ export const analyticsService = {
       const result = (portfolios || []).map(portfolio => {
         const portfolioId = portfolio.portfolio_id || portfolio.id
         const portfolioIssues = (issues || []).filter(i => i.portfolio_id === portfolioId)
-        
+
         // Calculate Y/H value based on last checked date
         let yValue = 'Y0' // Default: checked yesterday
         let yValueNumber = 0
@@ -229,33 +229,33 @@ export const analyticsService = {
           const dateStr = portfolio.all_sites_checked_date
           const [year, month, day] = dateStr.split('-').map(Number)
           const checkedDateOnly = new Date(year, month - 1, day) // month is 0-indexed
-          
+
           // Calculate days difference
           const daysDiff = Math.floor((today.getTime() - checkedDateOnly.getTime()) / (1000 * 60 * 60 * 24))
-          
+
           console.log(`Portfolio ${portfolio.portfolio_id}: daysDiff=${daysDiff}, checkedHour=${portfolio.all_sites_checked_hour}, currentHour=${now.getHours()}`)
-          
+
           if (daysDiff === 0) {
             // Checked today - show the exact hour it was checked
-            const checkedHour = portfolio.all_sites_checked_hour !== null && portfolio.all_sites_checked_hour !== undefined 
-              ? portfolio.all_sites_checked_hour 
+            const checkedHour = portfolio.all_sites_checked_hour !== null && portfolio.all_sites_checked_hour !== undefined
+              ? portfolio.all_sites_checked_hour
               : 0 // Default to 0 if hour not set
             const currentHour = now.getHours()
-            
+
             console.log(`Portfolio ${portfolio.portfolio_id}: checkedHour=${checkedHour}, currentHour=${currentHour}`)
-            
+
             // Y/H badge shows the EXACT HOUR it was checked: H5 = checked in hour 5
             yValue = `H${checkedHour}`
             yValueNumber = checkedHour
-            
+
             // Calculate hour difference for status calculation (handle day rollover)
             let hoursDiff = currentHour - checkedHour
             if (hoursDiff < 0) {
               hoursDiff = 24 + hoursDiff // If checked hour is later in the day (e.g., checked at 23, now is 1)
             }
-            
+
             console.log(`Portfolio ${portfolio.portfolio_id}: checkedHour=${checkedHour}, yValue=${yValue}, hoursDiff=${hoursDiff}, status will be ${hoursDiff === 0 ? 'updated (green)' : hoursDiff <= 3 ? `${hoursDiff}h` : 'no-activity'}`)
-            
+
             // Set status based on hours - only green if checked within last hour (same hour)
             if (hoursDiff === 0) {
               status = 'updated' // Green status - checked in current hour
@@ -272,8 +272,8 @@ export const analyticsService = {
             lastCheckedDate = new Date(year, month - 1, day, checkedHour)
           } else if (daysDiff === 1) {
             // Checked yesterday - show Y0 (yesterday, 0 days ago)
-            const checkedHour = portfolio.all_sites_checked_hour !== null && portfolio.all_sites_checked_hour !== undefined 
-              ? portfolio.all_sites_checked_hour 
+            const checkedHour = portfolio.all_sites_checked_hour !== null && portfolio.all_sites_checked_hour !== undefined
+              ? portfolio.all_sites_checked_hour
               : 0
             yValue = 'Y0'
             yValueNumber = 0
@@ -281,8 +281,8 @@ export const analyticsService = {
             lastCheckedDate = new Date(year, month - 1, day, checkedHour)
           } else {
             // Checked more than 1 day ago - show Y1, Y2, etc. (days ago)
-            const checkedHour = portfolio.all_sites_checked_hour !== null && portfolio.all_sites_checked_hour !== undefined 
-              ? portfolio.all_sites_checked_hour 
+            const checkedHour = portfolio.all_sites_checked_hour !== null && portfolio.all_sites_checked_hour !== undefined
+              ? portfolio.all_sites_checked_hour
               : 0
             yValue = `Y${daysDiff - 1}` // Days ago (Y1 = 1 day ago, Y2 = 2 days ago, etc.)
             yValueNumber = daysDiff - 1
@@ -296,13 +296,13 @@ export const analyticsService = {
             const lastIssueTime = new Date(lastIssue.created_at)
             const issueDate = new Date(lastIssueTime.getFullYear(), lastIssueTime.getMonth(), lastIssueTime.getDate())
             const daysDiff = Math.floor((today.getTime() - issueDate.getTime()) / (1000 * 60 * 60 * 24))
-            
+
             if (daysDiff === 0) {
               // Checked today - show the hour the issue was created (H = Today/Hour)
               const issueHour = lastIssueTime.getHours()
               yValue = `H${issueHour}`
               yValueNumber = issueHour
-              
+
               // Don't set status to 'updated' (green) based on issues - only based on "All sites checked = Yes"
               // Use issues only for Y/H value calculation, not for status color
               const hoursDiff = Math.floor((now.getTime() - lastIssueTime.getTime()) / (1000 * 60 * 60))
@@ -346,6 +346,7 @@ export const analyticsService = {
           status,
           lastUpdated: lastCheckedDate,
           hoursSinceLastActivity,
+          allSitesChecked: portfolio.all_sites_checked,
         }
       })
 
@@ -368,7 +369,7 @@ export const analyticsService = {
         totalIssues: 0,
       }))
     }
-    
+
     // Get total portfolios count
     const { count: totalPortfolios, error: portfoliosError } = await supabase
       .from('portfolios')
@@ -430,14 +431,14 @@ export const analyticsService = {
       const hourPortfolios = (portfolioData || []).filter(
         portfolio => portfolio.all_sites_checked_hour === hour && portfolio.portfolio_id
       )
-      
+
       // Get unique portfolios for this hour
       const uniquePortfolios = new Set(hourPortfolios.map(p => p.portfolio_id))
       const portfoliosChecked = uniquePortfolios.size
-      
+
       // Calculate coverage percentage
-      const coverage = totalPortfoliosCount > 0 
-        ? Math.round((portfoliosChecked / totalPortfoliosCount) * 100 * 10) / 10 
+      const coverage = totalPortfoliosCount > 0
+        ? Math.round((portfoliosChecked / totalPortfoliosCount) * 100 * 10) / 10
         : 0
 
       // Count total issues for this hour (for tooltip display)

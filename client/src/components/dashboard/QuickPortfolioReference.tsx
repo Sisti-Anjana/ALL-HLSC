@@ -36,7 +36,7 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
 
   // Helper to compute local Y/H value
   const computeLocalYValue = (lastUpdated: Date | string | null) => {
-    if (!lastUpdated) return { yValue: 'Y0', yValueNumber: 0 }
+    if (!lastUpdated) return { yValue: 'Y0', yValueNumber: 0, daysDiff: 0, hour: 0 }
 
     const date = new Date(lastUpdated)
     const now = new Date()
@@ -50,14 +50,15 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
     // Convert to days (floor to handle partial days correctly)
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
 
+    const hour = date.getHours()
+
     if (diffDays === 0) {
       // It's today, return current hour of the update in local time
-      const hour = date.getHours()
-      return { yValue: `H${hour}`, yValueNumber: hour }
+      return { yValue: `H${hour}`, yValueNumber: hour, daysDiff: 0, hour }
     } else if (diffDays === 1) {
-      return { yValue: 'Y0', yValueNumber: 0 }
+      return { yValue: 'Y0', yValueNumber: 0, daysDiff: 1, hour }
     } else {
-      return { yValue: `Y${diffDays - 1}`, yValueNumber: diffDays - 1 }
+      return { yValue: `Y${diffDays - 1}`, yValueNumber: diffDays - 1, daysDiff: diffDays, hour }
     }
   }
 
@@ -68,11 +69,42 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
       const data = await analyticsService.getPortfolioActivity()
       // Recalculate yValue client-side to match local timezone
       return data.map(p => {
-        const { yValue, yValueNumber } = computeLocalYValue(p.lastUpdated)
+        const { yValue, yValueNumber, daysDiff, hour: checkedHour } = computeLocalYValue(p.lastUpdated)
+
+        let status = p.status
+
+        // Recalculate status client-side to ensure Green color works with local time
+        // Only override if we have allSitesChecked info
+        if (p.allSitesChecked === 'Yes') {
+          const now = new Date()
+          const currentHour = now.getHours()
+
+          if (daysDiff === 0) {
+            // Checked today
+            let hoursDiff = currentHour - checkedHour
+            if (hoursDiff < 0) hoursDiff = 0 // Should not happen if time is sync, but safety
+
+            if (hoursDiff === 0) {
+              status = 'updated' // Green
+            } else if (hoursDiff === 1) {
+              status = '1h'
+            } else if (hoursDiff === 2) {
+              status = '2h'
+            } else if (hoursDiff === 3) {
+              status = '3h'
+            } else {
+              status = 'no-activity'
+            }
+          } else {
+            status = 'no-activity'
+          }
+        }
+
         return {
           ...p,
           yValue,
-          yValueNumber
+          yValueNumber,
+          status
         }
       })
     },
