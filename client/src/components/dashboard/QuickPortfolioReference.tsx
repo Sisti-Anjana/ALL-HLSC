@@ -62,7 +62,7 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
   }
 
   // Use React Query to fetch portfolio activity
-  const { data: portfolios = [], isLoading: loading, isRefetching: isRefreshing, error, refetch } = useQuery<PortfolioActivity[]>({
+  const { data: portfolios = [], isLoading: loading, error } = useQuery<PortfolioActivity[]>({
     queryKey: ['portfolio-activity'],
     queryFn: async () => {
       const data = await analyticsService.getPortfolioActivity()
@@ -131,31 +131,6 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
     queryKey: ['admin-users'],
     queryFn: adminService.getUsers,
   })
-
-  // Log errors but don't block the UI
-  useEffect(() => {
-    if (locksError) {
-      console.error('Error fetching locks:', locksError)
-      // Don't show toast for locks error as it's not critical for the UI
-    }
-  }, [locksError])
-
-  // Create a set of locked portfolio IDs
-  const lockedPortfolioIds = useMemo(() => {
-    // Normalize IDs to strings for consistent comparison
-    const ids = new Set(locks.map(lock => String(lock.portfolio_id || '').trim()).filter(id => id !== ''))
-    console.log('🔒 QuickPortfolioReference - Locked portfolio IDs computed:', {
-      locksCount: locks.length,
-      lockedIds: Array.from(ids),
-      allLocks: locks.map(l => ({
-        portfolio_id: l.portfolio_id,
-        portfolio_id_string: String(l.portfolio_id),
-        hour: l.issue_hour,
-        monitored_by: l.monitored_by,
-      })),
-    })
-    return ids
-  }, [locks])
 
   // Update lastUpdated when data changes
   useEffect(() => {
@@ -364,7 +339,6 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
               String(l.portfolio_id || '').trim().toLowerCase() === portfolioIdString.toLowerCase()
             )
             const isLocked = !!activeLock
-            const isMyLock = activeLock?.monitored_by?.toLowerCase() === user?.email?.toLowerCase()
 
             const statusColors = getStatusColor(portfolio.status)
             const colors = statusColors.split(' ')

@@ -1,7 +1,7 @@
 import React from 'react'
 import { Portfolio } from '../../types/portfolio.types'
 import Badge from '../common/Badge'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { formatTime } from '../../utils/dateUtils'
 
 interface PortfolioCardProps {
@@ -12,8 +12,8 @@ interface PortfolioCardProps {
 }
 
 const PortfolioCard: React.FC<PortfolioCardProps> = ({ portfolio, onDelete, onEdit, onLogIssue }) => {
-  const navigate = useNavigate()
-  
+  // const navigate = useNavigate()
+
   const getStatusBadge = () => {
     if (portfolio.is_locked) {
       return (

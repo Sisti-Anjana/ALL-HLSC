@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Modal from '../common/Modal'
-import Button from '../common/Button'
+// import Button from '../common/Button'
 import { portfolioService } from '../../services/portfolioService'
 import { adminService, PortfolioLock } from '../../services/adminService'
 import { useAuth } from '../../context/AuthContext'
@@ -373,14 +373,14 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
     }
   }
 
-  const handleSaveSitesChecked = () => {
-    if (allSitesChecked) {
-      updateMutation.mutate({
-        allSitesChecked,
-        sitesCheckedDetails: sitesCheckedDetails || undefined,
-      })
-    }
-  }
+  // const handleSaveSitesChecked = () => {
+  //   if (allSitesChecked) {
+  //     updateMutation.mutate({
+  //       allSitesChecked,
+  //       sitesCheckedDetails: sitesCheckedDetails || undefined,
+  //     })
+  //   }
+  // }
 
   const handleViewIssues = () => {
     onClose()

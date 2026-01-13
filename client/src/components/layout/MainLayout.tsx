@@ -12,7 +12,7 @@ const MainLayout: React.FC = () => {
   const { selectedTenantId, selectedTenant, setSelectedTenantId, tenants, isLoading: tenantsLoading } = useTenant()
   const location = useLocation()
   const navigate = useNavigate()
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  // const [sidebarOpen, setSidebarOpen] = useState(true)
   const isSuperAdmin = user?.role === 'super_admin'
 
   const handleLogout = async () => {
