@@ -39,7 +39,12 @@ export class LockCleanupService {
      * Performs the actual database cleanup
      * Deletes all reservations where expires_at is in the past
      */
-    private static async cleanup() {
+    /**
+     * Performs the actual database cleanup
+     * Deletes all reservations where expires_at is in the past
+     * Now public to allow "Lazy Cleanup" triggering (e.g. from API calls)
+     */
+    public static async cleanup() {
         try {
             const now = new Date()
             const nowIso = now.toISOString()

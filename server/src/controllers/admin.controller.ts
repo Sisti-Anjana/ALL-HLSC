@@ -109,6 +109,10 @@ export const adminController = {
 
   getLocks: async (req: AuthRequest, res: Response) => {
     try {
+      // Lazy Cleanup: Trigger cleanup whenever locks are requested
+      // This ensures the list is fresh without needing a background cron job
+      await import('../services/lockCleanup.service').then(m => m.LockCleanupService.cleanup()).catch(err => console.error('Lazy cleanup failed:', err))
+
       const locks = await adminService.getLocks(req.tenantId || null, req.user?.email)
       res.json({ success: true, data: locks })
     } catch (error: any) {
