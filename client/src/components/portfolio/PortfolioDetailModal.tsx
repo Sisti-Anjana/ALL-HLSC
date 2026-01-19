@@ -240,7 +240,14 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
       return portfolioService.updateAllSitesChecked(portfolioId, {
         allSitesChecked: data.allSitesChecked,
         hour: hourToSave, // Use lock hour or current hour
-        date: now.toISOString().split('T')[0], // Date only (YYYY-MM-DD) since column is DATE type
+        // FIX: Use local date (YYYY-MM-DD) instead of toISOString() which is UTC and causes next-day issues
+        date: (() => {
+          const d = new Date()
+          const year = d.getFullYear()
+          const month = String(d.getMonth() + 1).padStart(2, '0')
+          const day = String(d.getDate()).padStart(2, '0')
+          return `${year}-${month}-${day}`
+        })(),
         checkedBy: user?.id || '', // Use user ID (UUID) - required for database
         notes: data.sitesCheckedDetails,
       })

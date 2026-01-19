@@ -54,6 +54,45 @@ app.get('/api/debug/config', (req, res) => {
   })
 })
 
+// Debug endpoint to check connectivity
+app.get('/api/debug/connectivity', async (req, res) => {
+  const { config } = require('./config/constants')
+  const results: any = {}
+
+  try {
+    const google = await fetch('https://www.google.com', { method: 'HEAD' })
+    results.google = { ok: google.ok, status: google.status }
+  } catch (e: any) {
+    results.google = { error: e.message }
+  }
+
+  try {
+    if (config.SUPABASE_URL) {
+      // 1. Try raw fetch
+      const supabase = await fetch(config.SUPABASE_URL, {
+        method: 'GET',
+        headers: { 'apikey': config.SUPABASE_SERVICE_KEY }
+      })
+      results.supabaseRaw = { ok: supabase.ok, status: supabase.status }
+
+      // 2. Try Supabase Client
+      const { supabase: supabaseClient } = require('./config/database.config')
+      const { data, error } = await supabaseClient.from('users').select('count', { count: 'exact', head: true })
+      if (error) {
+        results.supabaseClient = { success: false, error: error.message, details: error }
+      } else {
+        results.supabaseClient = { success: true, count: data }
+      }
+    } else {
+      results.supabase = 'No URL configured'
+    }
+  } catch (e: any) {
+    results.supabase = { error: e.message, cause: e.cause }
+  }
+
+  res.json({ results })
+})
+
 // Error handling middleware (must be last)
 app.use(errorHandler)
 

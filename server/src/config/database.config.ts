@@ -40,12 +40,15 @@ console.log('✅ Supabase client initializing...')
 console.log('   URL:', config.SUPABASE_URL)
 console.log('   Service Key:', config.SUPABASE_SERVICE_KEY.substring(0, 30) + '...')
 
+// Use native fetch (Node 18+ has built-in fetch)
+// No need for node-fetch dependency
 export const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY, {
   auth: {
     persistSession: false,
   },
   global: {
-    fetch: require('node-fetch'),
+    headers: { 'x-my-custom-header': 'portfolio-tracker' },
+    fetch: (...args) => fetch(...args),
   },
 })
 

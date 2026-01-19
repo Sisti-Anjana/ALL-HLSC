@@ -9,14 +9,37 @@ export const authService = {
 
       // 1. Fetch ALL users with this email (remove limit(1))
       // Use case-insensitive email search
-      const { data: users, error: fetchError } = await supabase
-        .from('users')
-        .select('user_id, email, password_hash, full_name, role, tenant_id, is_active, tenant:tenants(*)')
-        .ilike('email', credentials.email)
+      let users, fetchError
+      try {
+        const result = await supabase
+          .from('users')
+          .select('user_id, email, password_hash, full_name, role, tenant_id, is_active, tenant:tenants(*)')
+          .ilike('email', credentials.email)
+        
+        users = result.data
+        fetchError = result.error
+      } catch (networkError: any) {
+        console.error('❌ Network/Connection error:', networkError)
+        console.error('   Error name:', networkError.name)
+        console.error('   Error message:', networkError.message)
+        console.error('   Error code:', networkError.code)
+        console.error('   Error cause:', networkError.cause)
+        
+        // Check for common connection issues
+        if (networkError.message?.includes('fetch') || networkError.message?.includes('ECONNREFUSED') || networkError.message?.includes('ENOTFOUND')) {
+          throw new Error('Unable to connect to database. Please check your internet connection and Supabase configuration.')
+        }
+        
+        throw new Error(`Database connection error: ${networkError.message || 'Unknown error'}`)
+      }
 
       if (fetchError) {
         console.error('❌ Database error details:', fetchError)
-        throw new Error(`Database error: ${fetchError.message}`)
+        console.error('   Error code:', fetchError.code)
+        console.error('   Error message:', fetchError.message)
+        console.error('   Error details:', fetchError.details)
+        console.error('   Error hint:', fetchError.hint)
+        throw new Error(`Database error: ${fetchError.message || 'Unknown database error'}`)
       }
 
       if (!users || users.length === 0) {

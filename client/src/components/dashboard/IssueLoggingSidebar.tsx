@@ -150,30 +150,41 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
 
       // Immediately invalidate all related queries
       console.log('🔄 Lock mutation - Invalidating queries...')
-      await queryClient.invalidateQueries({ queryKey: ['portfolio-activity'] })
-      await queryClient.invalidateQueries({ queryKey: ['portfolio-locks'] })
-      await queryClient.invalidateQueries({ queryKey: ['locks'] })
+      queryClient.invalidateQueries({ queryKey: ['portfolio-activity'] })
+      queryClient.invalidateQueries({ queryKey: ['portfolio-locks'] })
+      queryClient.invalidateQueries({ queryKey: ['locks'] })
 
-      // Force immediate refetch for active queries
+      // Force immediate refetch for active queries - don't await, fire and forget for speed
       console.log('🔄 Lock mutation - Refetching queries...')
-      await Promise.all([
-        queryClient.refetchQueries({
-          queryKey: ['portfolio-locks'],
-        }),
-        queryClient.refetchQueries({
-          queryKey: ['locks'],
-        }),
-        queryClient.refetchQueries({
-          queryKey: ['portfolio-activity'],
-        }),
-      ])
+      queryClient.refetchQueries({
+        queryKey: ['portfolio-locks'],
+        type: 'active', // Only refetch active queries
+      })
+      queryClient.refetchQueries({
+        queryKey: ['locks'],
+        type: 'active',
+      })
+      queryClient.refetchQueries({
+        queryKey: ['portfolio-activity'],
+        type: 'active',
+      })
 
-      // Also manually trigger a refetch after a short delay to ensure UI updates
-      setTimeout(async () => {
+      // Also manually trigger multiple refetches with delays to ensure UI updates
+      setTimeout(() => {
+        console.log('🔄 Lock mutation - Delayed refetch after 200ms...')
+        queryClient.refetchQueries({ queryKey: ['portfolio-locks'], type: 'active' })
+      }, 200)
+      
+      setTimeout(() => {
         console.log('🔄 Lock mutation - Delayed refetch after 500ms...')
-        await queryClient.refetchQueries({ queryKey: ['portfolio-locks'] })
-        console.log('✅ Lock mutation - Delayed refetch completed')
+        queryClient.refetchQueries({ queryKey: ['portfolio-locks'], type: 'active' })
       }, 500)
+      
+      setTimeout(() => {
+        console.log('🔄 Lock mutation - Delayed refetch after 1000ms...')
+        queryClient.refetchQueries({ queryKey: ['portfolio-locks'], type: 'active' })
+        console.log('✅ Lock mutation - All delayed refetches completed')
+      }, 1000)
 
       console.log('✅ Lock mutation - All queries updated, showing success toast')
       toast.success('Portfolio locked successfully')

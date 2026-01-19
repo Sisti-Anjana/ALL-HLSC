@@ -106,7 +106,7 @@ export const analyticsService = {
   getPortfolioHeatmap: async (tenantId: string) => {
     const { data: portfolios, error: portfoliosError } = await supabase
       .from('portfolios')
-      .select('id, name')
+      .select('portfolio_id, name')
       .eq('tenant_id', tenantId)
 
     if (portfoliosError) throw new Error(`Failed to fetch portfolios: ${portfoliosError.message}`)
@@ -119,12 +119,12 @@ export const analyticsService = {
     if (issuesError) throw new Error(`Failed to fetch issues: ${issuesError.message}`)
 
     return portfolios?.map(portfolio => {
-      const portfolioIssues = issues?.filter(i => i.portfolio_id === portfolio.id) || []
+      const portfolioIssues = issues?.filter(i => i.portfolio_id === portfolio.portfolio_id) || []
       const openIssues = portfolioIssues.filter(i => i.status === 'open').length
       const totalIssues = portfolioIssues.length
 
       return {
-        portfolioId: portfolio.id,
+        portfolioId: portfolio.portfolio_id,
         portfolioName: portfolio.name,
         totalIssues,
         openIssues,
@@ -136,7 +136,7 @@ export const analyticsService = {
   getCoverageMatrix: async (tenantId: string) => {
     const { data: portfolios, error: portfoliosError } = await supabase
       .from('portfolios')
-      .select('id, name')
+      .select('portfolio_id, name')
       .eq('tenant_id', tenantId)
 
     if (portfoliosError) throw new Error(`Failed to fetch portfolios: ${portfoliosError.message}`)
@@ -150,9 +150,9 @@ export const analyticsService = {
 
     const matrix: { [key: string]: { [key: number]: number } } = {}
     portfolios?.forEach(portfolio => {
-      matrix[portfolio.id] = {}
+      matrix[portfolio.portfolio_id] = {}
       for (let hour = 0; hour < 24; hour++) {
-        matrix[portfolio.id][hour] = 0
+        matrix[portfolio.portfolio_id][hour] = 0
       }
     })
 
@@ -165,7 +165,7 @@ export const analyticsService = {
     })
 
     return {
-      portfolios: portfolios?.map(p => ({ id: p.id, name: p.name })) || [],
+      portfolios: portfolios?.map(p => ({ id: p.portfolio_id, name: p.name })) || [],
       matrix,
     }
   },
@@ -212,7 +212,7 @@ export const analyticsService = {
       yesterday.setDate(yesterday.getDate() - 1)
 
       const result = (portfolios || []).map(portfolio => {
-        const portfolioId = portfolio.portfolio_id || portfolio.id
+        const portfolioId = portfolio.portfolio_id
         const portfolioIssues = (issues || []).filter(i => i.portfolio_id === portfolioId)
 
         // Calculate Y/H value based on last checked date

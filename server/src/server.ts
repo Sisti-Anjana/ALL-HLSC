@@ -11,6 +11,7 @@ const server = app.listen(PORT, () => {
 
   // Start the background lock cleanup service
   LockCleanupService.start()
+  console.log('🔄 Server restarted at', new Date().toISOString())
 })
 
 server.on('error', (error: NodeJS.ErrnoException) => {

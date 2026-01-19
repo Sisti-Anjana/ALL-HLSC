@@ -122,18 +122,20 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
         count: result.length,
         locks: result.map(l => ({
           portfolio_id: l.portfolio_id,
+          portfolio_id_type: typeof l.portfolio_id,
           hour: l.issue_hour,
           monitored_by: l.monitored_by,
         })),
       })
       return result
     },
-    refetchInterval: 3000, // Refresh every 3 seconds (reduced from 1s to prevent page freeze)
+    refetchInterval: 2000, // Refresh every 2 seconds for faster updates
     retry: 2, // Retry up to 2 times on failure
     retryDelay: 1000, // Wait 1 second between retries
     staleTime: 0, // Always consider data stale to ensure fresh locks
     refetchOnMount: true, // Always refetch when component mounts
     refetchOnWindowFocus: true, // Refetch when window regains focus
+    gcTime: 0, // Don't cache - always fetch fresh data
   })
 
   // Debug: Log when locks change
@@ -143,12 +145,26 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
       locksLoading,
       locks: locks.map(l => ({
         portfolio_id: l.portfolio_id,
+        portfolio_id_type: typeof l.portfolio_id,
         hour: l.issue_hour,
         monitored_by: l.monitored_by,
       })),
       error: locksError?.message,
     })
   }, [locks, locksLoading, locksError])
+
+  // Subscribe to query cache updates to force re-render when locks change
+  useEffect(() => {
+    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+      if (event?.query?.queryKey?.[0] === 'portfolio-locks') {
+        console.log('🔄 QuickPortfolioReference - portfolio-locks query cache updated:', {
+          state: event.query.state.status,
+          dataUpdatedAt: event.query.state.dataUpdatedAt,
+        })
+      }
+    })
+    return () => unsubscribe()
+  }, [queryClient])
 
   // Fetch all issues to get recent workers
   const { data: allIssues = [] } = useQuery<Issue[]>({
@@ -364,13 +380,62 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
           </div>
         ) : (
           filteredPortfolios.map((portfolio) => {
-            // Normalize portfolio ID to string for comparison
+            // Normalize portfolio ID to string for comparison - handle both number and string IDs
             const portfolioIdString = String(portfolio.id || '').trim()
+            const portfolioIdNumber = typeof portfolio.id === 'number' ? portfolio.id : parseInt(portfolioIdString, 10)
+            
             // Check for ANY active lock for this portfolio, regardless of hour
-            const activeLock = (locks || []).find(l =>
-              String(l.portfolio_id || '').trim().toLowerCase() === portfolioIdString.toLowerCase()
-            )
+            // Try both string and number comparison to handle type mismatches
+            const activeLock = (locks || []).find(l => {
+              const lockPortfolioId = String(l.portfolio_id || '').trim()
+              const lockPortfolioIdNumber = typeof l.portfolio_id === 'number' 
+                ? l.portfolio_id 
+                : parseInt(lockPortfolioId, 10)
+              
+              // Try multiple comparison methods
+              const stringMatch = lockPortfolioId.toLowerCase() === portfolioIdString.toLowerCase()
+              const numberMatch = !isNaN(portfolioIdNumber) && !isNaN(lockPortfolioIdNumber) && portfolioIdNumber === lockPortfolioIdNumber
+              const matches = stringMatch || numberMatch
+              
+              if (matches) {
+                console.log('🔒 QuickPortfolioReference - Found lock match:', {
+                  portfolioId: portfolioIdString,
+                  portfolioIdNumber,
+                  lockPortfolioId,
+                  lockPortfolioIdNumber,
+                  portfolioName: portfolio.name,
+                  hour: l.issue_hour,
+                  monitored_by: l.monitored_by,
+                  matchType: stringMatch ? 'string' : 'number',
+                })
+              }
+              return matches
+            })
             const isLocked = !!activeLock
+            
+            // Debug log for "BESS & AES Trimark" specifically
+            if (portfolio.name && portfolio.name.toLowerCase().includes('bess')) {
+              console.log('🔍 QuickPortfolioReference - BESS portfolio lock check:', {
+                portfolioId: portfolioIdString,
+                portfolioIdNumber,
+                portfolioIdType: typeof portfolio.id,
+                portfolioName: portfolio.name,
+                locksCount: locks.length,
+                isLocked,
+                activeLock: activeLock ? {
+                  portfolio_id: activeLock.portfolio_id,
+                  portfolio_id_type: typeof activeLock.portfolio_id,
+                  hour: activeLock.issue_hour,
+                  monitored_by: activeLock.monitored_by,
+                } : null,
+                allLocks: locks.map(l => ({
+                  portfolio_id: l.portfolio_id,
+                  portfolio_id_type: typeof l.portfolio_id,
+                  hour: l.issue_hour,
+                  monitored_by: l.monitored_by,
+                })),
+              })
+            }
 
             const statusColors = getStatusColor(portfolio.status)
             const colors = statusColors.split(' ')
