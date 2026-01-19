@@ -51,9 +51,9 @@ function getESTOffset(): number {
  * Get current hour in EST (0-23)
  */
 export function getESTHour(): number {
-  const estTime = getESTTime()
-  // Use toLocaleString to get EST hour
-  const estHourString = estTime.toLocaleString('en-US', {
+  const now = new Date()
+  // Get EST hour directly
+  const estHourString = now.toLocaleString('en-US', {
     timeZone: 'America/New_York',
     hour: '2-digit',
     hour12: false,
@@ -65,8 +65,8 @@ export function getESTHour(): number {
  * Get current date in EST (YYYY-MM-DD format)
  */
 export function getESTDateString(): string {
-  const estTime = getESTTime()
-  const estDateString = estTime.toLocaleString('en-US', {
+  const now = new Date()
+  const estDateString = now.toLocaleDateString('en-US', {
     timeZone: 'America/New_York',
     year: 'numeric',
     month: '2-digit',
