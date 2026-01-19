@@ -54,7 +54,11 @@ export const analyticsService = {
     }
   },
 
-  getHourlyCoverage: async (tenantId: string) => {
+  getHourlyCoverage: async (tenantId: string | null) => {
+    // Super admin without selected tenant should return empty data
+    if (!tenantId || tenantId === 'null' || tenantId.trim() === '') {
+      return Array.from({ length: 24 }, (_, hour) => ({ hour, count: 0 }))
+    }
     const { data, error } = await supabase
       .from('issues')
       .select('issue_hour')
@@ -72,7 +76,11 @@ export const analyticsService = {
     return hourlyCounts.map((count, hour) => ({ hour, count }))
   },
 
-  getIssuesOverTime: async (tenantId: string, days: number = 30) => {
+  getIssuesOverTime: async (tenantId: string | null, days: number = 30) => {
+    // Super admin without selected tenant should return empty data
+    if (!tenantId || tenantId === 'null' || tenantId.trim() === '') {
+      return []
+    }
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - days)
 
@@ -103,7 +111,11 @@ export const analyticsService = {
     }))
   },
 
-  getPortfolioHeatmap: async (tenantId: string) => {
+  getPortfolioHeatmap: async (tenantId: string | null) => {
+    // Super admin without selected tenant should return empty data
+    if (!tenantId || tenantId === 'null' || tenantId.trim() === '') {
+      return []
+    }
     const { data: portfolios, error: portfoliosError } = await supabase
       .from('portfolios')
       .select('portfolio_id, name')
@@ -133,7 +145,14 @@ export const analyticsService = {
     }) || []
   },
 
-  getCoverageMatrix: async (tenantId: string) => {
+  getCoverageMatrix: async (tenantId: string | null) => {
+    // Super admin without selected tenant should return empty data
+    if (!tenantId || tenantId === 'null' || tenantId.trim() === '') {
+      return {
+        portfolios: [],
+        matrix: {},
+      }
+    }
     const { data: portfolios, error: portfoliosError } = await supabase
       .from('portfolios')
       .select('portfolio_id, name')
