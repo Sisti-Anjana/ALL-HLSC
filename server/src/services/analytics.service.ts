@@ -211,15 +211,17 @@ export const analyticsService = {
       const yesterday = new Date(today)
       yesterday.setDate(yesterday.getDate() - 1)
 
-      const result = (portfolios || []).map((portfolio: {
-        portfolio_id: any
-        name: any
-        subtitle: any
-        site_range: any
-        all_sites_checked_date: any
-        all_sites_checked: any
-        all_sites_checked_hour: any
-      }) => {
+      type PortfolioRow = {
+        portfolio_id: string | number
+        name: string
+        subtitle: string | null
+        site_range: string | null
+        all_sites_checked_date: string | null
+        all_sites_checked: string | null
+        all_sites_checked_hour: number | null
+      }
+
+      const result = (portfolios || []).map((portfolio: PortfolioRow) => {
         const portfolioId = portfolio.portfolio_id
         const portfolioIssues = (issues || []).filter(i => i.portfolio_id === portfolioId)
 
