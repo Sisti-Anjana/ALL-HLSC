@@ -1,7 +1,6 @@
 import { Response } from 'express'
 import { AuthRequest } from '../middleware/auth.middleware'
 import { adminService } from '../services/admin.service'
-import { LockCleanupService } from '../services/lock-cleanup.service'
 
 export const adminController = {
   getUsers: async (req: AuthRequest, res: Response) => {
@@ -110,10 +109,7 @@ export const adminController = {
 
   getLocks: async (req: AuthRequest, res: Response) => {
     try {
-      // Lazy Cleanup: Trigger cleanup whenever locks are requested
-      // This ensures the list is fresh without needing a background cron job
-      await LockCleanupService.cleanup().catch(err => console.error('Lazy cleanup failed:', err))
-
+      // Cleanup is handled in adminService.getLocks
       const locks = await adminService.getLocks(req.tenantId || null, req.user?.email)
       res.json({ success: true, data: locks })
     } catch (error: any) {
