@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Bar } from 'react-chartjs-2'
+import { Bar, getElementAtEvent } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -58,6 +58,8 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
     metric: string
     value: number
   } | null>(null)
+
+  const chartRef = useRef<any>(null)
 
   // Save filters to localStorage when they change
   useEffect(() => {
@@ -722,6 +724,95 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
         </Card>
       </div>
 
+      {/* Main Graph - User Activity Overview */}
+      <Card className="mb-6">
+        <h2 className="text-lg font-bold text-gray-900 mb-4" style={{ fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>User Activity Overview</h2>
+        <div style={{ height: '300px' }}>
+          <Bar
+            ref={chartRef}
+            data={{
+              labels: analytics.perUserStats.sort((a, b) => b.portfoliosCount - a.portfoliosCount).map(u => u.displayName || u.user),
+              datasets: [
+                {
+                  label: 'Total Portfolios Monitored',
+                  data: analytics.perUserStats.sort((a, b) => b.portfoliosCount - a.portfoliosCount).map(u => u.portfoliosCount),
+                  backgroundColor: '#76AB3F',
+                  borderRadius: 4,
+                  barThickness: 40,
+                }
+              ]
+            }}
+            options={{
+              responsive: true,
+              maintainAspectRatio: false,
+              onClick: (event) => {
+                if (chartRef.current) {
+                  const elements = getElementAtEvent(chartRef.current, event)
+                  if (elements.length > 0) {
+                    const index = elements[0].index
+                    const sortedUsers = analytics.perUserStats.sort((a, b) => b.portfoliosCount - a.portfoliosCount)
+                    const user = sortedUsers[index]
+                    if (user) {
+                      // Find rank based on current sort
+                      const rank = index + 1
+                      setSelectedPerformer({
+                        user,
+                        rank,
+                        category: 'Total Portfolios',
+                        metric: 'Portfolios Monitored',
+                        value: user.portfoliosCount
+                      })
+                    }
+                  }
+                }
+              },
+              plugins: {
+                legend: {
+                  display: false,
+                },
+                tooltip: {
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  padding: 12,
+                  titleFont: { size: 14, weight: 'bold' },
+                  bodyFont: { size: 13 },
+                  displayColors: false,
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  grid: {
+                    color: '#f3f4f6',
+                  },
+                  border: {
+                    display: false,
+                  },
+                  ticks: {
+                    font: { size: 11 },
+                    color: '#6b7280'
+                  }
+                },
+                x: {
+                  grid: {
+                    display: false,
+                  },
+                  border: {
+                    display: false,
+                  },
+                  ticks: {
+                    font: { size: 11, weight: '500' },
+                    color: '#374151',
+                    autoSkip: false,
+                    maxRotation: 45,
+                    minRotation: 0
+                  }
+                }
+              }
+            }}
+          />
+        </div>
+      </Card>
+
       {/* Bottom Section - Top Performers + Team Performance */}
       <div className="grid grid-cols-12 gap-4 max-w-7xl">
         {/* Top Performers - Left Side */}
@@ -956,16 +1047,94 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
               <div className="bg-gray-50 rounded-lg p-2 border border-gray-100 space-y-1">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-500 font-medium">Category</span>
-                  <span className="text-sm font-bold text-gray-800">Most Total Portfolios Monitored</span>
+                  <span className="text-sm font-bold text-gray-800">{selectedPerformer.category}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-500 font-medium">Metric</span>
-                  <span className="text-sm font-bold text-gray-800">Total Portfolios Monitored</span>
+                  <span className="text-sm font-bold text-gray-800">{selectedPerformer.metric}</span>
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                   <span className="text-sm text-gray-500 font-medium">Achieved Value</span>
-                  <span className="text-2xl font-bold text-[#76ab3f]">{selectedPerformer.user.portfoliosCount}</span>
+                  <span className="text-2xl font-bold text-[#76ab3f]">{selectedPerformer.value}</span>
                 </div>
+              </div>
+            </div>
+
+            {/* Hourly Breakdown Chart */}
+            <div className="mt-4">
+              <h5 className="font-bold text-gray-700 text-sm mb-2">Hourly Breakdown</h5>
+              <div style={{ height: '200px' }}>
+                <Bar
+                  data={{
+                    labels: Array.from({ length: 24 }, (_, i) => i.toString()),
+                    datasets: [
+                      {
+                        label: 'Portfolios',
+                        data: Array.from({ length: 24 }, (_, i) => selectedPerformer.user.hourlyBreakdown[i]?.portfolios || 0),
+                        backgroundColor: '#76AB3F',
+                        borderRadius: 2,
+                      },
+                      {
+                        label: 'Issues',
+                        data: Array.from({ length: 24 }, (_, i) => selectedPerformer.user.hourlyBreakdown[i]?.issues || 0),
+                        backgroundColor: '#3B82F6',
+                        borderRadius: 2,
+                      },
+                      {
+                        label: 'Active Issues',
+                        data: Array.from({ length: 24 }, (_, i) => selectedPerformer.user.hourlyBreakdown[i]?.issuesYes || 0),
+                        backgroundColor: '#EF4444',
+                        borderRadius: 2,
+                      }
+                    ]
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: 'bottom',
+                        labels: {
+                          boxWidth: 8,
+                          usePointStyle: true,
+                          pointStyle: 'rectRounded',
+                          font: { size: 10 }
+                        }
+                      },
+                      tooltip: {
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        titleColor: '#1f2937',
+                        bodyColor: '#4b5563',
+                        borderColor: '#e5e7eb',
+                        borderWidth: 1,
+                        padding: 8,
+                        displayColors: true,
+                        callbacks: {
+                          afterBody: (context: any) => {
+                            const dataIndex = context[0].dataIndex
+                            const portfolios = selectedPerformer.user.hourlyBreakdown[dataIndex]?.portfolioNames || []
+                            if (portfolios.length > 0) {
+                              return '\nChecked: ' + portfolios.join(', ')
+                            }
+                            return ''
+                          }
+                        }
+                      }
+                    },
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        grid: { color: '#f3f4f6' },
+                        ticks: { stepSize: 1, font: { size: 10 } }
+                      },
+                      x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 10 } },
+                        title: { display: true, text: 'Hour', font: { size: 10 } }
+                      }
+                    }
+                  }}
+                />
               </div>
             </div>
 
