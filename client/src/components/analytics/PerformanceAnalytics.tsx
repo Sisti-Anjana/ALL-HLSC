@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Bar, getElementAtEvent } from 'react-chartjs-2'
+import { Bar } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -745,24 +745,21 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
             options={{
               responsive: true,
               maintainAspectRatio: false,
-              onClick: (event) => {
-                if (chartRef.current) {
-                  const elements = getElementAtEvent(chartRef.current, event)
-                  if (elements.length > 0) {
-                    const index = elements[0].index
-                    const sortedUsers = analytics.perUserStats.sort((a, b) => b.portfoliosCount - a.portfoliosCount)
-                    const user = sortedUsers[index]
-                    if (user) {
-                      // Find rank based on current sort
-                      const rank = index + 1
-                      setSelectedPerformer({
-                        user,
-                        rank,
-                        category: 'Total Portfolios',
-                        metric: 'Portfolios Monitored',
-                        value: user.portfoliosCount
-                      })
-                    }
+              onClick: (event, elements) => {
+                if (elements && elements.length > 0) {
+                  const index = elements[0].index
+                  const sortedUsers = analytics.perUserStats.sort((a, b) => b.portfoliosCount - a.portfoliosCount)
+                  const user = sortedUsers[index]
+                  if (user) {
+                    // Find rank based on current sort
+                    const rank = index + 1
+                    setSelectedPerformer({
+                      user,
+                      rank,
+                      category: 'Total Portfolios',
+                      metric: 'Portfolios Monitored',
+                      value: user.portfoliosCount
+                    })
                   }
                 }
               },
@@ -800,7 +797,7 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
                     display: false,
                   },
                   ticks: {
-                    font: { size: 11, weight: '500' },
+                    font: { size: 11, weight: 'bold' },
                     color: '#374151',
                     autoSkip: false,
                     maxRotation: 45,
