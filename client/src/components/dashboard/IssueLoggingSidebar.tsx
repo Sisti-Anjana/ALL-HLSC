@@ -14,6 +14,7 @@ import SidebarHeader from './sidebar/SidebarHeader'
 import IssueForm from './sidebar/IssueForm'
 import SitesChecked from './sidebar/SitesChecked'
 import IssueList from './sidebar/IssueList'
+import { getESTHour, getESTDateString } from '../../utils/timezone'
 
 interface IssueLoggingSidebarProps {
   isOpen: boolean
@@ -174,12 +175,12 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
         console.log('🔄 Lock mutation - Delayed refetch after 200ms...')
         queryClient.refetchQueries({ queryKey: ['portfolio-locks'], type: 'active' })
       }, 200)
-      
+
       setTimeout(() => {
         console.log('🔄 Lock mutation - Delayed refetch after 500ms...')
         queryClient.refetchQueries({ queryKey: ['portfolio-locks'], type: 'active' })
       }, 500)
-      
+
       setTimeout(() => {
         console.log('🔄 Lock mutation - Delayed refetch after 1000ms...')
         queryClient.refetchQueries({ queryKey: ['portfolio-locks'], type: 'active' })

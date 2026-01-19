@@ -24,6 +24,7 @@ const IssueDetailsTable: React.FC = () => {
   const portfolioParam = searchParams.get('portfolio')
   const hourParam = searchParams.get('hour')
   const currentHour = getESTHour().toString()
+  // console.log('Current EST Hour:', currentHour)
 
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('')
