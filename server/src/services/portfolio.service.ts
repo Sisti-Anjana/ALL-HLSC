@@ -111,18 +111,9 @@ export const portfolioService = {
   },
 
   lock: async (tenantId: string, portfolioId: string, userEmail: string, issueHour: number) => {
-    // Locks should expire at the start of the next wall-clock hour
-    // e.g., if it's 5:45 AM, the lock expires at 6:00 AM.
+    // Locks expire exactly 1 hour after creation (not at top of next hour)
     const now = new Date()
-    const expiresAt = new Date(now)
-    expiresAt.setHours(now.getHours() + 1, 0, 0, 0) // Top of the next hour
-
-    // Safety check: If less than 15 minutes remain in the hour, give them a full hour
-    // to prevent immediate expiration.
-    const minutesLeft = 60 - now.getMinutes()
-    if (minutesLeft < 15) {
-      expiresAt.setHours(expiresAt.getHours() + 1)
-    }
+    const expiresAt = new Date(now.getTime() + 60 * 60 * 1000) // Exactly 1 hour from now
 
     const sessionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}` // Generate unique session ID
 

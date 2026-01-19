@@ -18,10 +18,10 @@ export class LockCleanupService {
         // Run once immediately on start
         this.cleanup()
 
-        // Then run every 60 seconds (1 minute)
+        // Run every 30 seconds to ensure locks expire promptly after 1 hour
         this.intervalId = setInterval(() => {
             this.cleanup()
-        }, 60 * 1000)
+        }, 30 * 1000)
     }
 
     /**
@@ -60,31 +60,12 @@ export class LockCleanupService {
                 console.error('❌ Error during time-based lock cleanup:', timeError.message)
             }
 
-            // 2. Aggressively delete locks from PREVIOUS hours (Clock-hour enforcement)
-            // e.g., if it's 6:00 AM, all Hour 5 locks MUST go.
-            // We handle midnight wraparound: if it's Hour 0, Hour 23 is the previous hour.
-            const prevHour = currentHour === 0 ? 23 : currentHour - 1
-
-            // We delete anything where issue_hour is NOT current and NOT next (to allow some buffer)
-            // Actually, user wants "for every one hour... automatically removed"
-            // So we delete anything that isn't the current wall-clock hour.
-            const { count: hourCount, error: hourError } = await supabase
-                .from('hour_reservations')
-                .delete({ count: 'exact' })
-                .neq('issue_hour', currentHour)
-                // Buffer: Don't delete if it was JUST created in the last 2 minutes 
-                // (This handles the case where someone locks the "Next Hour" at 5:59 AM)
-                .lt('reserved_at', new Date(now.getTime() - 2 * 60 * 1000).toISOString())
-
-            if (hourError) {
-                console.error('❌ Error during hour-based lock cleanup:', hourError.message)
-            }
-
-            const totalDeleted = (timeCount || 0) + (hourCount || 0)
+            // 2. Cleanup is now handled by expires_at timestamp only
+            // Locks expire exactly 1 hour after creation, so we only need to check expires_at
             if (totalDeleted > 0) {
-                console.log(`🧹 [LOCK_CLEANUP] Automatically removed ${totalDeleted} stale locks. (Time-based: ${timeCount || 0}, Hour-based: ${hourCount || 0}) at ${now.toLocaleTimeString()}`)
+                console.log(`🧹 [LOCK_CLEANUP] Automatically removed ${totalDeleted} expired locks (expired after 1 hour) at ${now.toLocaleTimeString()}`)
             } else if (Math.random() > 0.98) {
-                console.log(`⏱️ [LOCK_CLEANUP] Service active. Current Hour: ${currentHour}:00`)
+                console.log(`⏱️ [LOCK_CLEANUP] Service active. Checking for expired locks every 30 seconds. Current Hour: ${currentHour}:00`)
             }
         } catch (err) {
             console.error('❌ Unexpected error in lock cleanup service:', err)
