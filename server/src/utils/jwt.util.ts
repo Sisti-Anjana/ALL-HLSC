@@ -9,10 +9,9 @@ export interface TokenPayload {
 }
 
 export const generateToken = (payload: TokenPayload): string => {
-  const options: SignOptions = {
-    expiresIn: config.JWT_EXPIRES_IN,
-  }
-  return jwt.sign(payload, config.JWT_SECRET, options)
+  // Ensure expiresIn is a valid string or number for jwt.sign
+  const expiresIn: string | number = config.JWT_EXPIRES_IN || '7d'
+  return jwt.sign(payload, config.JWT_SECRET, { expiresIn } as SignOptions)
 }
 
 export const verifyToken = (token: string): TokenPayload => {
