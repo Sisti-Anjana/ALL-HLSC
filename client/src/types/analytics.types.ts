@@ -48,5 +48,8 @@ export interface PortfolioActivity {
   lastUpdated: Date | null
   hoursSinceLastActivity: number | null
   allSitesChecked?: 'Yes' | 'No' | 'Pending'
+  // Raw data from server for timezone-aware client-side calculation
+  allSitesCheckedDate?: string | null // Format: "YYYY-MM-DD"
+  allSitesCheckedHour?: number | null // Hour (0-23)
 }
 

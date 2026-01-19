@@ -67,25 +67,49 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
     queryKey: ['portfolio-activity'],
     queryFn: async () => {
       const data = await analyticsService.getPortfolioActivity()
-      // Recalculate yValue client-side to match local timezone
+      // TIMEZONE FIX: Calculate everything client-side using local timezone
+      // Server returns raw data (date string and hour), we calculate status here
       return data.map(p => {
-        const { yValue, yValueNumber, daysDiff, hour: checkedHour } = computeLocalYValue(p.lastUpdated)
+        const now = new Date()
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        let yValue = 'Y0'
+        let yValueNumber = 0
+        let status: 'no-activity' | '3h' | '2h' | '1h' | 'updated' = 'no-activity'
+        let lastCheckedDate: Date | null = null
 
-        let status = p.status
-
-        // Recalculate status client-side to ensure Green color works with local time
-        // Only override if we have allSitesChecked info
-        if (p.allSitesChecked === 'Yes') {
-          const now = new Date()
+        // Use raw allSitesCheckedDate and allSitesCheckedHour from server
+        if (p.allSitesChecked === 'Yes' && p.allSitesCheckedDate && p.allSitesCheckedHour !== null && p.allSitesCheckedHour !== undefined) {
+          // Parse date string in LOCAL timezone (not UTC)
+          const [year, month, day] = p.allSitesCheckedDate.split('-').map(Number)
+          const checkedDateOnly = new Date(year, month - 1, day) // Creates date in local timezone
+          const checkedHour = p.allSitesCheckedHour
           const currentHour = now.getHours()
 
-          if (daysDiff === 0) {
-            // Checked today
-            let hoursDiff = currentHour - checkedHour
-            if (hoursDiff < 0) hoursDiff = 0 // Should not happen if time is sync, but safety
+          // Calculate days difference using local dates
+          const daysDiff = Math.floor((today.getTime() - checkedDateOnly.getTime()) / (1000 * 60 * 60 * 24))
 
+          console.log(`🕐 Portfolio ${p.id} - Local timezone calc:`, {
+            checkedDate: p.allSitesCheckedDate,
+            checkedHour,
+            currentHour,
+            daysDiff,
+            localNow: now.toLocaleString(),
+          })
+
+          if (daysDiff === 0) {
+            // Checked today - show the exact hour it was checked
+            yValue = `H${checkedHour}`
+            yValueNumber = checkedHour
+
+            // Calculate hour difference (handle day rollover)
+            let hoursDiff = currentHour - checkedHour
+            if (hoursDiff < 0) {
+              hoursDiff = 24 + hoursDiff // Handle midnight rollover
+            }
+
+            // Set status based on hours - green if checked in current hour
             if (hoursDiff === 0) {
-              status = 'updated' // Green
+              status = 'updated' // Green - checked in current hour
             } else if (hoursDiff === 1) {
               status = '1h'
             } else if (hoursDiff === 2) {
@@ -95,8 +119,28 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
             } else {
               status = 'no-activity'
             }
-          } else {
+
+            lastCheckedDate = new Date(year, month - 1, day, checkedHour)
+          } else if (daysDiff === 1) {
+            // Checked yesterday
+            yValue = 'Y0'
+            yValueNumber = 0
             status = 'no-activity'
+            lastCheckedDate = new Date(year, month - 1, day, checkedHour)
+          } else {
+            // Checked more than 1 day ago
+            yValue = `Y${daysDiff - 1}`
+            yValueNumber = daysDiff - 1
+            status = 'no-activity'
+            lastCheckedDate = new Date(year, month - 1, day, checkedHour)
+          }
+        } else {
+          // No "All sites checked = Yes" - use lastUpdated if available
+          if (p.lastUpdated) {
+            const { yValue: computedY, yValueNumber: computedYNum } = computeLocalYValue(p.lastUpdated)
+            yValue = computedY
+            yValueNumber = computedYNum
+            lastCheckedDate = p.lastUpdated
           }
         }
 
@@ -104,7 +148,8 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
           ...p,
           yValue,
           yValueNumber,
-          status
+          status,
+          lastUpdated: lastCheckedDate || p.lastUpdated,
         }
       })
     },

@@ -224,12 +224,8 @@ export const analyticsService = {
 
       console.log('Issues found:', issues?.length || 0)
 
-      // Calculate activity status for each portfolio
-      const now = new Date()
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      const yesterday = new Date(today)
-      yesterday.setDate(yesterday.getDate() - 1)
-
+      // TIMEZONE FIX: Don't calculate status on server - let client handle it with local timezone
+      // Server just returns raw data, client will recalculate everything using local time
       type PortfolioRow = {
         portfolio_id: string | number
         name: string
@@ -244,138 +240,25 @@ export const analyticsService = {
         const portfolioId = portfolio.portfolio_id
         const portfolioIssues = (issues || []).filter(i => i.portfolio_id === portfolioId)
 
-        // Calculate Y/H value based on last checked date
-        let yValue = 'Y0' // Default: checked yesterday
-        let yValueNumber = 0
-        let status: 'no-activity' | '3h' | '2h' | '1h' | 'updated' = 'no-activity'
-        let hoursSinceLastActivity: number | null = null
-        let lastCheckedDate: Date | null = null
-
-        // ONLY use all_sites_checked_date if all_sites_checked = 'Yes'
-        // Portfolio should only be green if explicitly marked as "All sites checked = Yes"
-        if (portfolio.all_sites_checked === 'Yes' && portfolio.all_sites_checked_date) {
-          // Parse the date string (format: YYYY-MM-DD)
-          const dateStr = portfolio.all_sites_checked_date
-          const [year, month, day] = dateStr.split('-').map(Number)
-          const checkedDateOnly = new Date(year, month - 1, day) // month is 0-indexed
-
-          // Calculate days difference
-          const daysDiff = Math.floor((today.getTime() - checkedDateOnly.getTime()) / (1000 * 60 * 60 * 24))
-
-          console.log(`Portfolio ${portfolio.portfolio_id}: daysDiff=${daysDiff}, checkedHour=${portfolio.all_sites_checked_hour}, currentHour=${now.getHours()}`)
-
-          if (daysDiff === 0) {
-            // Checked today - show the exact hour it was checked
-            const checkedHour = portfolio.all_sites_checked_hour !== null && portfolio.all_sites_checked_hour !== undefined
-              ? portfolio.all_sites_checked_hour
-              : 0 // Default to 0 if hour not set
-            const currentHour = now.getHours()
-
-            console.log(`Portfolio ${portfolio.portfolio_id}: checkedHour=${checkedHour}, currentHour=${currentHour}`)
-
-            // Y/H badge shows the EXACT HOUR it was checked: H5 = checked in hour 5
-            yValue = `H${checkedHour}`
-            yValueNumber = checkedHour
-
-            // Calculate hour difference for status calculation (handle day rollover)
-            let hoursDiff = currentHour - checkedHour
-            if (hoursDiff < 0) {
-              hoursDiff = 24 + hoursDiff // If checked hour is later in the day (e.g., checked at 23, now is 1)
-            }
-
-            console.log(`Portfolio ${portfolio.portfolio_id}: checkedHour=${checkedHour}, yValue=${yValue}, hoursDiff=${hoursDiff}, status will be ${hoursDiff === 0 ? 'updated (green)' : hoursDiff <= 3 ? `${hoursDiff}h` : 'no-activity'}`)
-
-            // Set status based on hours - only green if checked within last hour (same hour)
-            if (hoursDiff === 0) {
-              status = 'updated' // Green status - checked in current hour
-            } else if (hoursDiff === 1) {
-              status = '1h'
-            } else if (hoursDiff === 2) {
-              status = '2h'
-            } else if (hoursDiff === 3) {
-              status = '3h'
-            } else {
-              status = 'no-activity'
-            }
-            hoursSinceLastActivity = hoursDiff
-            lastCheckedDate = new Date(year, month - 1, day, checkedHour)
-          } else if (daysDiff === 1) {
-            // Checked yesterday - show Y0 (yesterday, 0 days ago)
-            const checkedHour = portfolio.all_sites_checked_hour !== null && portfolio.all_sites_checked_hour !== undefined
-              ? portfolio.all_sites_checked_hour
-              : 0
-            yValue = 'Y0'
-            yValueNumber = 0
-            status = 'no-activity'
-            lastCheckedDate = new Date(year, month - 1, day, checkedHour)
-          } else {
-            // Checked more than 1 day ago - show Y1, Y2, etc. (days ago)
-            const checkedHour = portfolio.all_sites_checked_hour !== null && portfolio.all_sites_checked_hour !== undefined
-              ? portfolio.all_sites_checked_hour
-              : 0
-            yValue = `Y${daysDiff - 1}` // Days ago (Y1 = 1 day ago, Y2 = 2 days ago, etc.)
-            yValueNumber = daysDiff - 1
-            status = 'no-activity'
-            lastCheckedDate = new Date(year, month - 1, day, checkedHour)
-          }
-        } else {
-          // No "All sites checked = Yes" - use last issue time for Y/H value only, but status stays non-green
-          const lastIssue = portfolioIssues.length > 0 ? portfolioIssues[0] : null
-          if (lastIssue) {
-            const lastIssueTime = new Date(lastIssue.created_at)
-            const issueDate = new Date(lastIssueTime.getFullYear(), lastIssueTime.getMonth(), lastIssueTime.getDate())
-            const daysDiff = Math.floor((today.getTime() - issueDate.getTime()) / (1000 * 60 * 60 * 24))
-
-            if (daysDiff === 0) {
-              // Checked today - show the hour the issue was created (H = Today/Hour)
-              const issueHour = lastIssueTime.getHours()
-              yValue = `H${issueHour}`
-              yValueNumber = issueHour
-
-              // Don't set status to 'updated' (green) based on issues - only based on "All sites checked = Yes"
-              // Use issues only for Y/H value calculation, not for status color
-              const hoursDiff = Math.floor((now.getTime() - lastIssueTime.getTime()) / (1000 * 60 * 60))
-              if (hoursDiff < 2) {
-                status = '1h'
-              } else if (hoursDiff < 3) {
-                status = '2h'
-              } else if (hoursDiff < 4) {
-                status = '3h'
-              } else {
-                status = 'no-activity'
-              }
-              hoursSinceLastActivity = hoursDiff
-            } else if (daysDiff === 1) {
-              // Checked yesterday - show Y0 (Y = Yesterday)
-              yValue = 'Y0'
-              yValueNumber = 0
-              status = 'no-activity'
-            } else {
-              // Checked more than 1 day ago - show Y1, Y2, etc. (days before yesterday)
-              yValue = `Y${daysDiff - 1}`
-              yValueNumber = daysDiff - 1
-              status = 'no-activity'
-            }
-            lastCheckedDate = lastIssueTime
-          } else {
-            // No check date and no issues - default to Y0 (yesterday)
-            yValue = 'Y0'
-            yValueNumber = 0
-            status = 'no-activity'
-          }
-        }
-
+        // Return raw data - client will calculate status using local timezone
+        // This fixes timezone issues between server (UTC) and client (local time)
         return {
           id: portfolioId,
           name: portfolio.name,
           subtitle: portfolio.subtitle || '',
           siteRange: portfolio.site_range || '',
-          yValue: yValue, // Format: "Y0", "Y1", "H0", "H1", etc.
-          yValueNumber: yValueNumber, // Numeric value for sorting
-          status,
-          lastUpdated: lastCheckedDate,
-          hoursSinceLastActivity,
+          // Return raw date/hour - client will calculate Y/H value and status
+          allSitesCheckedDate: portfolio.all_sites_checked_date,
+          allSitesCheckedHour: portfolio.all_sites_checked_hour,
           allSitesChecked: portfolio.all_sites_checked,
+          // For backwards compatibility, set default values (client will override)
+          yValue: 'Y0',
+          yValueNumber: 0,
+          status: 'no-activity' as const,
+          lastUpdated: portfolio.all_sites_checked_date 
+            ? new Date(portfolio.all_sites_checked_date + 'T00:00:00')
+            : (portfolioIssues.length > 0 ? new Date(portfolioIssues[0].created_at) : null),
+          hoursSinceLastActivity: null,
         }
       })
 
