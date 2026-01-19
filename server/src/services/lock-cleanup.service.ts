@@ -51,7 +51,8 @@ export class LockCleanupService {
             const currentHour = now.getHours()
 
             // 1. Delete by expiration timestamp (standard)
-            const { count: timeCount, error: timeError } = await supabase
+            // Locks expire exactly 1 hour after creation, so we only need to check expires_at
+            const { count: deletedCount, error: timeError } = await supabase
                 .from('hour_reservations')
                 .delete({ count: 'exact' })
                 .lt('expires_at', nowIso)
@@ -60,10 +61,9 @@ export class LockCleanupService {
                 console.error('❌ Error during time-based lock cleanup:', timeError.message)
             }
 
-            // 2. Cleanup is now handled by expires_at timestamp only
-            // Locks expire exactly 1 hour after creation, so we only need to check expires_at
-            if (totalDeleted > 0) {
-                console.log(`🧹 [LOCK_CLEANUP] Automatically removed ${totalDeleted} expired locks (expired after 1 hour) at ${now.toLocaleTimeString()}`)
+            // Log cleanup results
+            if (deletedCount && deletedCount > 0) {
+                console.log(`🧹 [LOCK_CLEANUP] Automatically removed ${deletedCount} expired locks (expired after 1 hour) at ${now.toLocaleTimeString()}`)
             } else if (Math.random() > 0.98) {
                 console.log(`⏱️ [LOCK_CLEANUP] Service active. Checking for expired locks every 30 seconds. Current Hour: ${currentHour}:00`)
             }
