@@ -13,6 +13,7 @@ import Button from '../common/Button'
 import IssueExportButtons from '../common/IssueExportButtons'
 import ConfirmDialog from '../common/ConfirmDialog'
 import { useDebounce } from '../../hooks/useDebounce'
+import { getESTHour, getESTDateString, formatESTTime, formatESTDate } from '../../utils/timezone'
 
 const IssueDetailsTable: React.FC = () => {
   const { user } = useAuth()
