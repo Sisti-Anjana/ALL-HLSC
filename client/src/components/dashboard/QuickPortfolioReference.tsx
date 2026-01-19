@@ -11,6 +11,7 @@ import { User } from '../../types/user.types'
 import PortfolioDetailModal from '../portfolio/PortfolioDetailModal'
 import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
+import { getESTTime, getESTHour, getESTDateString, formatESTTime, getESTDaysDiff } from '../../utils/timezone'
 
 interface QuickPortfolioReferenceProps {
   onPortfolioSelected?: (portfolioId: string, hour: number) => void
@@ -34,31 +35,41 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
     showAbove: boolean
   } | null>(null)
 
-  // Helper to compute local Y/H value
-  const computeLocalYValue = (lastUpdated: Date | string | null) => {
+  // Helper to compute Y/H value using EST timezone
+  const computeESTYValue = (lastUpdated: Date | string | null) => {
     if (!lastUpdated) return { yValue: 'Y0', yValueNumber: 0, daysDiff: 0, hour: 0 }
 
     const date = new Date(lastUpdated)
-    const now = new Date()
+    const nowEST = getESTTime()
+    const todayEST = getESTDateString()
 
-    // Reset hours to compare dates only for Y-value logic
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+    // Get EST date components from the date
+    const checkDateEST = date.toLocaleDateString('en-US', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+    const [checkMonth, checkDay, checkYear] = checkDateEST.split('/').map(Number)
+    const checkDateString = `${checkYear}-${String(checkMonth).padStart(2, '0')}-${String(checkDay).padStart(2, '0')}`
 
-    // Calculate difference in milliseconds
-    const diffTime = today.getTime() - checkDate.getTime()
-    // Convert to days (floor to handle partial days correctly)
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+    // Calculate days difference in EST
+    const diffDays = getESTDaysDiff(checkDateString)
 
-    const hour = date.getHours()
+    // Get hour in EST
+    const hourEST = parseInt(date.toLocaleString('en-US', {
+      timeZone: 'America/New_York',
+      hour: '2-digit',
+      hour12: false,
+    }), 10)
 
     if (diffDays === 0) {
-      // It's today, return current hour of the update in local time
-      return { yValue: `H${hour}`, yValueNumber: hour, daysDiff: 0, hour }
+      // It's today in EST, return current hour of the update in EST
+      return { yValue: `H${hourEST}`, yValueNumber: hourEST, daysDiff: 0, hour: hourEST }
     } else if (diffDays === 1) {
-      return { yValue: 'Y0', yValueNumber: 0, daysDiff: 1, hour }
+      return { yValue: 'Y0', yValueNumber: 0, daysDiff: 1, hour: hourEST }
     } else {
-      return { yValue: `Y${diffDays - 1}`, yValueNumber: diffDays - 1, daysDiff: diffDays, hour }
+      return { yValue: `Y${diffDays - 1}`, yValueNumber: diffDays - 1, daysDiff: diffDays, hour: hourEST }
     }
   }
 
@@ -67,11 +78,12 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
     queryKey: ['portfolio-activity'],
     queryFn: async () => {
       const data = await analyticsService.getPortfolioActivity()
-      // TIMEZONE FIX: Calculate everything client-side using local timezone
-      // Server returns raw data (date string and hour), we calculate status here
+      // TIMEZONE FIX: Calculate everything using EST timezone (default for all users)
+      // Server returns raw data (date string and hour number), we calculate status here using EST
       return data.map(p => {
-        const now = new Date()
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        const nowEST = getESTTime()
+        const currentHourEST = getESTHour()
+        const todayEST = getESTDateString()
         let yValue = 'Y0'
         let yValueNumber = 0
         let status: 'no-activity' | '3h' | '2h' | '1h' | 'updated' = 'no-activity'
@@ -79,37 +91,32 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
 
         // Use raw allSitesCheckedDate and allSitesCheckedHour from server
         if (p.allSitesChecked === 'Yes' && p.allSitesCheckedDate && p.allSitesCheckedHour !== null && p.allSitesCheckedHour !== undefined) {
-          // Parse date string in LOCAL timezone (not UTC)
-          const [year, month, day] = p.allSitesCheckedDate.split('-').map(Number)
-          const checkedDateOnly = new Date(year, month - 1, day) // Creates date in local timezone
+          // Calculate days difference in EST
+          const daysDiff = getESTDaysDiff(p.allSitesCheckedDate)
           const checkedHour = p.allSitesCheckedHour
-          const currentHour = now.getHours()
 
-          // Calculate days difference using local dates
-          const daysDiff = Math.floor((today.getTime() - checkedDateOnly.getTime()) / (1000 * 60 * 60 * 24))
-
-          console.log(`🕐 Portfolio ${p.id} - Local timezone calc:`, {
+          console.log(`🕐 Portfolio ${p.id} - EST timezone calc:`, {
             checkedDate: p.allSitesCheckedDate,
             checkedHour,
-            currentHour,
+            currentHourEST,
             daysDiff,
-            localNow: now.toLocaleString(),
+            estNow: formatESTTime(nowEST),
           })
 
           if (daysDiff === 0) {
-            // Checked today - show the exact hour it was checked
+            // Checked today in EST - show the exact hour it was checked
             yValue = `H${checkedHour}`
             yValueNumber = checkedHour
 
-            // Calculate hour difference (handle day rollover)
-            let hoursDiff = currentHour - checkedHour
+            // Calculate hour difference in EST (handle day rollover)
+            let hoursDiff = currentHourEST - checkedHour
             if (hoursDiff < 0) {
               hoursDiff = 24 + hoursDiff // Handle midnight rollover
             }
 
-            // Set status based on hours - green if checked in current hour
+            // Set status based on hours - green if checked in current hour (EST)
             if (hoursDiff === 0) {
-              status = 'updated' // Green - checked in current hour
+              status = 'updated' // Green - checked in current hour (EST)
             } else if (hoursDiff === 1) {
               status = '1h'
             } else if (hoursDiff === 2) {
@@ -120,24 +127,28 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
               status = 'no-activity'
             }
 
-            lastCheckedDate = new Date(year, month - 1, day, checkedHour)
+            // Create date object for EST (use UTC methods to avoid timezone conversion)
+            const [year, month, day] = p.allSitesCheckedDate.split('-').map(Number)
+            lastCheckedDate = new Date(Date.UTC(year, month - 1, day, checkedHour, 0, 0))
           } else if (daysDiff === 1) {
-            // Checked yesterday
+            // Checked yesterday in EST
             yValue = 'Y0'
             yValueNumber = 0
             status = 'no-activity'
-            lastCheckedDate = new Date(year, month - 1, day, checkedHour)
+            const [year, month, day] = p.allSitesCheckedDate.split('-').map(Number)
+            lastCheckedDate = new Date(Date.UTC(year, month - 1, day, checkedHour, 0, 0))
           } else {
-            // Checked more than 1 day ago
+            // Checked more than 1 day ago in EST
             yValue = `Y${daysDiff - 1}`
             yValueNumber = daysDiff - 1
             status = 'no-activity'
-            lastCheckedDate = new Date(year, month - 1, day, checkedHour)
+            const [year, month, day] = p.allSitesCheckedDate.split('-').map(Number)
+            lastCheckedDate = new Date(Date.UTC(year, month - 1, day, checkedHour, 0, 0))
           }
         } else {
-          // No "All sites checked = Yes" - use lastUpdated if available
+          // No "All sites checked = Yes" - use lastUpdated if available, calculate using EST
           if (p.lastUpdated) {
-            const { yValue: computedY, yValueNumber: computedYNum } = computeLocalYValue(p.lastUpdated)
+            const { yValue: computedY, yValueNumber: computedYNum } = computeESTYValue(p.lastUpdated)
             yValue = computedY
             yValueNumber = computedYNum
             lastCheckedDate = p.lastUpdated
@@ -225,10 +236,10 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
     queryFn: adminService.getUsers,
   })
 
-  // Update lastUpdated when data changes
+  // Update lastUpdated when data changes (using EST time)
   useEffect(() => {
     if (portfolios && portfolios.length > 0) {
-      setLastUpdated(new Date())
+      setLastUpdated(getESTTime())
     }
   }, [portfolios, loading])
 
@@ -281,12 +292,8 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
     if (!date) return 'N/A'
     const dateObj = date instanceof Date ? date : new Date(date)
     if (isNaN(dateObj.getTime())) return 'Invalid Date'
-    return dateObj.toLocaleTimeString('en-US', {
-      hour12: false,
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    })
+    // Format time in EST timezone
+    return formatESTTime(dateObj)
   }
 
   const filteredPortfolios: PortfolioActivity[] = (portfolios || []).filter((p: PortfolioActivity) =>

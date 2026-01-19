@@ -58,8 +58,8 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
     staleTime: 2000, // Consider data fresh for 2 seconds
   })
 
-  // Fetch issues for this portfolio and hour
-  const currentHour = hour !== undefined && hour !== null ? hour : new Date().getHours()
+  // Fetch issues for this portfolio and hour (use EST timezone)
+  const currentHour = hour !== undefined && hour !== null ? hour : getESTHour()
   const { data: issues = [] } = useQuery<Issue[]>({
     queryKey: ['issues', portfolioId, currentHour],
     queryFn: () => issueService.getAll({ portfolio_id: portfolioId!, issue_hour: currentHour }),
@@ -239,13 +239,14 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
         throw new Error('Please log at least one issue before marking sites as checked.')
       }
 
-      const now = new Date()
-      const hourToSave = hour !== undefined && hour !== null ? hour : now.getHours()
+      // Use EST timezone for date and hour
+      const hourToSave = hour !== undefined && hour !== null ? hour : getESTHour()
+      const dateEST = getESTDateString()
 
       return portfolioService.updateAllSitesChecked(portfolioId!, {
         allSitesChecked: data.allSitesChecked,
         hour: hourToSave,
-        date: now.toISOString().split('T')[0],
+        date: dateEST, // Use EST date string
         checkedBy: user?.id || '',
         notes: data.sitesCheckedDetails,
       })

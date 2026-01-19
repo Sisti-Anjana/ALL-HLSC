@@ -19,10 +19,10 @@ const IssueDetailsTable: React.FC = () => {
   const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
 
-  // Get portfolio and hour from URL query parameters
+  // Get portfolio and hour from URL query parameters (use EST)
   const portfolioParam = searchParams.get('portfolio')
   const hourParam = searchParams.get('hour')
-  const currentHour = new Date().getHours().toString()
+  const currentHour = getESTHour().toString()
 
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('')
@@ -37,14 +37,14 @@ const IssueDetailsTable: React.FC = () => {
   const [selectedPortfolio, setSelectedPortfolio] = useState<string>(
     portfolioParam || 'all'
   )
-  const todayStr = new Date().toISOString().split('T')[0]
+  const todayStr = getESTDateString() // Use EST date
   const [startDate, setStartDate] = useState(todayStr)
   const [endDate, setEndDate] = useState(todayStr)
   const [quickRange, setQuickRange] = useState<string>('today')
 
-  // Initialize dates on mount
+  // Initialize dates on mount (use EST)
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0]
+    const today = getESTDateString()
     setStartDate(today)
     setEndDate(today)
     handleQuickRange('today')
@@ -55,10 +55,10 @@ const IssueDetailsTable: React.FC = () => {
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
 
-  // New issue form states
+  // New issue form states (use EST hour)
   const [newIssue, setNewIssue] = useState<Partial<CreateIssueData>>({
     portfolio_id: '',
-    issue_hour: new Date().getHours(),
+    issue_hour: getESTHour(),
     description: '',
     monitored_by: user?.email ? [user.email] : [],
   })
@@ -362,21 +362,13 @@ const IssueDetailsTable: React.FC = () => {
   }
 
   const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString)
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    const year = date.getFullYear()
-    const hours = String(date.getHours()).padStart(2, '0')
-    const minutes = String(date.getMinutes()).padStart(2, '0')
-    return `${month}/${day}/${year}, ${hours}:${minutes}`
+    // Format in EST timezone
+    return formatESTTime(dateString)
   }
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    const year = date.getFullYear()
-    return `${month}/${day}/${year}`
+    // Format in EST timezone
+    return formatESTDate(dateString)
   }
 
   const getCurrentDateTime = () => {
