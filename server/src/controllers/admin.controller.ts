@@ -1,7 +1,7 @@
 import { Response } from 'express'
 import { AuthRequest } from '../middleware/auth.middleware'
 import { adminService } from '../services/admin.service'
-import { LockCleanupService } from '../services/lockCleanup.service'
+import { LockCleanupService } from '../services/lock-cleanup.service'
 
 export const adminController = {
   getUsers: async (req: AuthRequest, res: Response) => {
