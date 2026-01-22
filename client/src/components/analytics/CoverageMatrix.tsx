@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Bar } from 'react-chartjs-2'
+import { Bar, getElementAtEvent } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -9,6 +9,7 @@ import {
   Title,
   Tooltip,
   Legend,
+  ArcElement,
 } from 'chart.js'
 import { issueService } from '../../services/issueService'
 import { portfolioService } from '../../services/portfolioService'
@@ -110,7 +111,7 @@ const CoverageMatrix: React.FC = () => {
   })
 
   // Fetch admin logs
-  const { data: adminLogs = [], error: adminLogsError } = useQuery<any[]>({
+  const { data: adminLogs = [] } = useQuery<any[]>({
     queryKey: ['admin-logs'],
     queryFn: adminService.getLogs,
   })
@@ -255,12 +256,12 @@ const CoverageMatrix: React.FC = () => {
 
       const portfolio = portfolios.find(p => p.id === portfolioId)
       if (portfolio) {
-        const portfolioDetail = `${portfolio.name}${portfolio.site_range ? ` (${portfolio.site_range})` : ''}`
+        const portfolioDetail = `${portfolio.name}${portfolio.site_range ? ` (${portfolio.site_range})` : ''} `
         hourData.portfolios.push(portfolioDetail)
       }
 
       // Track the key to prevent double-counting the latest session from the portfolios table
-      const key = `${portfolioId}_${logDate}_${logHour}_${userStr}`
+      const key = `${portfolioId}_${logDate}_${logHour}_${userStr} `
       completionKeys.add(key)
     })
 
@@ -395,7 +396,6 @@ const CoverageMatrix: React.FC = () => {
       } else {
         displayName = (checkedByUser as any).full_name.trim()
       }
-
       const completionHour = portfolio.all_sites_checked_hour ?? 0
 
       // Apply hour filter to fallback portfolios
@@ -412,7 +412,7 @@ const CoverageMatrix: React.FC = () => {
       }) */
 
       const portfolioId = portfolio.id || (portfolio as any).portfolio_id
-      const key = `${portfolioId}_${normalizedCheckedDate}_${completionHour}_${userEmail.toLowerCase()}`
+      const key = `${portfolioId}_${normalizedCheckedDate}_${completionHour}_${userEmail.toLowerCase()} `
 
       // Check if we already have this completion session from the logs to avoid double counting the latest session
       if (completionKeys.has(key)) {
@@ -430,7 +430,7 @@ const CoverageMatrix: React.FC = () => {
 
       // Add portfolio details
       const siteRange = portfolio.site_range ? ` (${portfolio.site_range})` : ''
-      const portfolioDetail = `${portfolio.name}${siteRange}`
+      const portfolioDetail = `${portfolio.name}${siteRange} `
       hourData.portfolios.push(portfolioDetail)
 
       // Mark as seen so we don't count it again if there are multiple fallback iterations (though there shouldn't be)
@@ -548,18 +548,9 @@ const CoverageMatrix: React.FC = () => {
     )
 
     return filteredUsers.sort((a, b) => b.totalPortfolios - a.totalPortfolios)
-  }, [filteredIssues, userSearch, fromDate, toDate, hourFilter, users, portfolios, adminLogs, usersLoading])
+  }, [filteredIssues, userSearch, fromDate, toDate, hourFilter, users, portfolios, adminLogs, usersLoading, currentUser])
 
-  // Calculate max count for color coding
-  const maxCount = useMemo(() => {
-    let max = 0
-    matrixData.forEach((user) => {
-      Object.values(user.hours).forEach((hourData) => {
-        max = Math.max(max, hourData.completionsCount)
-      })
-    })
-    return max
-  }, [matrixData])
+
 
   // Get cell color class
   const getCellColorClass = (count: number) => {
@@ -726,17 +717,7 @@ const CoverageMatrix: React.FC = () => {
   }, [matrixData])
 
   // Handle chart bar click
-  const handleChartClick = (event: any, elements: any[]) => {
-    // If a bar was clicked
-    if (elements && elements.length > 0) {
-      const clickedElement = elements[0]
-      const dataIndex = clickedElement.index
-      const clickedUser = userCoverageData[dataIndex]
-      if (clickedUser && clickedUser.userData) {
-        setSelectedUser(clickedUser.userData)
-      }
-    }
-  }
+
 
   const chartData = {
     labels: userCoverageData.map((u) => u.userName),
@@ -760,7 +741,17 @@ const CoverageMatrix: React.FC = () => {
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    onClick: handleChartClick,
+    onClick: (event: any, elements: any[]) => {
+      // Use elements directly from the event
+      if (elements && elements.length > 0) {
+        const clickedElement = elements[0]
+        const dataIndex = clickedElement.index
+        const clickedUser = userCoverageData[dataIndex]
+        if (clickedUser && clickedUser.userData) {
+          setSelectedUser(clickedUser.userData)
+        }
+      }
+    },
     onHover: (event: any, elements: any[]) => {
       // Change cursor to pointer when hovering over bars
       if (elements && elements.length > 0) {
@@ -780,7 +771,7 @@ const CoverageMatrix: React.FC = () => {
             const baseLabel = `${user.userName}: ${user.totalPortfolios} portfolios`
             if (user.portfolios && user.portfolios.length > 0) {
               // Show individual portfolios instead of aggregating with (xN)
-              const portfolioList = user.portfolios.map((name: string) => ` • ${name}`)
+              const portfolioList = user.portfolios.map((name: string) => ` • ${name} `)
               return [baseLabel, ...portfolioList]
             }
             return baseLabel
@@ -1001,7 +992,7 @@ const CoverageMatrix: React.FC = () => {
                 className={`px-3 py-1.5 text-sm rounded-md transition-all ${fromDate === toDate && fromDate === new Date().toISOString().split('T')[0]
                   ? 'text-white shadow-md'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                  } `}
                 style={fromDate === toDate && fromDate === new Date().toISOString().split('T')[0] ? { backgroundColor: '#76ab3f' } : {}}
               >
                 Today
@@ -1182,7 +1173,7 @@ const CoverageMatrix: React.FC = () => {
                   {Array.from({ length: 24 }, (_, i) => (
                     <th
                       key={i}
-                      className={`px-2 py-2 text-center text-xs font-semibold uppercase min-w-[60px] cursor-pointer hover:bg-green-50 transition-colors ${hourFilter === i.toString() ? 'bg-green-100 text-green-800 border-b-2 border-green-600' : 'text-gray-700'}`}
+                      className={`px-2 py-2 text-center text-xs font-semibold uppercase min-w-[60px] cursor-pointer hover:bg-green-50 transition-colors ${hourFilter === i.toString() ? 'bg-green-100 text-green-800 border-b-2 border-green-600' : 'text-gray-700'} `}
                       onClick={() => setHourFilter(hourFilter === i.toString() ? 'all' : i.toString())}
                       title={`Click to filter page by ${i}:00`}
                     >
@@ -1233,7 +1224,7 @@ const CoverageMatrix: React.FC = () => {
                                 key={hour}
                                 className={`px-2 py-2 text-center text-xs font-semibold cursor-pointer transition-colors ${getCellColorClass(
                                   count
-                                )}`}
+                                )} `}
                                 onMouseEnter={(e) => handleCellMouseEnter(e, row.userName, hour)}
                                 onMouseLeave={handleCellMouseLeave}
                               >
@@ -1356,7 +1347,7 @@ const CoverageMatrix: React.FC = () => {
                 </div>
               </div>
               <div className="bg-gray-50 p-2 rounded border text-[10px] font-mono whitespace-pre">
-                {`HOUR FILTER: ${hourFilter}\nDATE RANGE: ${fromDate} to ${toDate}\n`}
+                {`HOUR FILTER: ${hourFilter} \nDATE RANGE: ${fromDate} to ${toDate} \n`}
               </div>
               <table className="w-full text-left">
                 <thead>
@@ -1429,9 +1420,65 @@ const UserPerformanceModal: React.FC<UserPerformanceModalProps> = ({
   hourFilter,
   rank,
 }) => {
+  const [selectedHour, setSelectedHour] = useState<number | null>(null)
   const details = getUserPerformanceDetails(user)
 
+  // Get data for selected hour or all hours
+  const getHourData = (hour: number | null) => {
+    if (hour === null) {
+      return details
+    }
+    const hourData = user.hours[hour]
+    if (!hourData) {
+      return {
+        totalCount: 0,
+        activeIssues: 0,
+        healthySites: 0,
+        missedAlerts: 0,
+        totalPortfoliosMonitored: 0,
+        monitoringActiveHours: 0,
+        portfolios: [],
+        hourlyBreakdown: []
+      }
+    }
 
+    const allIssues = new Set<string>()
+    const activeIssues: Issue[] = []
+    const missedAlerts: Issue[] = []
+
+    hourData.issues.forEach((issue) => {
+      allIssues.add(issue.id)
+      if (issue.description && issue.description.toLowerCase() !== 'no issue') {
+        activeIssues.push(issue)
+      }
+      if (issue.missed_by && issue.missed_by.length > 0) {
+        missedAlerts.push(issue)
+      }
+    })
+
+    const healthySites = allIssues.size - activeIssues.length
+
+    return {
+      totalCount: allIssues.size,
+      activeIssues: activeIssues.length,
+      healthySites,
+      missedAlerts: missedAlerts.length,
+      totalPortfoliosMonitored: hourData.completionsCount,
+      monitoringActiveHours: 1,
+      portfolios: hourData.portfolios,
+      hourlyBreakdown: [{
+        hour,
+        portfolios: hourData.completionsCount,
+        issues: hourData.issues.length,
+        activeIssues: hourData.activeIssues.length,
+      }]
+    }
+  }
+
+  const displayData = getHourData(selectedHour)
+
+  // Get unique portfolio names (remove duplicates)
+  const uniquePortfolios = Array.from(new Set(displayData.portfolios))
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto" onClick={onClose}>
@@ -1439,14 +1486,14 @@ const UserPerformanceModal: React.FC<UserPerformanceModalProps> = ({
         <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={onClose}></div>
 
         <div
-          className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle max-w-lg w-full"
+          className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle max-w-2xl w-full"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Green Header */}
           <div className="text-white px-6 py-4 rounded-t-lg flex items-center justify-between" style={{ backgroundColor: '#76ab3f' }}>
             <div>
-              <h3 className="text-xl font-bold text-white tracking-tight">Top Performer Details</h3>
-              <p className="text-white text-sm mt-0.5 font-medium opacity-90">Performance breakdown</p>
+              <h3 className="text-xl font-bold text-white tracking-tight">User Performance Details</h3>
+              <p className="text-white text-sm mt-0.5 font-medium opacity-90">{user.displayName}</p>
             </div>
             <button
               onClick={onClose}
@@ -1458,75 +1505,147 @@ const UserPerformanceModal: React.FC<UserPerformanceModalProps> = ({
             </button>
           </div>
 
-          <div className="px-6 py-5 bg-white">
+          <div className="px-6 py-5 bg-white max-h-[80vh] overflow-y-auto">
             <div className="space-y-4">
-
-              {/* User Rank Card */}
-              <div className="flex items-center gap-3 bg-white border border-gray-100 rounded-xl p-3 shadow-sm">
-                <div className="flex items-center justify-center w-12 h-12 bg-amber-400 rounded-lg text-white text-xl font-bold shadow-sm shrink-0">
-                  {rank || 1}
+              {/* KPI Cards */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                  <div className="text-xs font-bold text-blue-600 mb-1">Total Count</div>
+                  <div className="text-2xl font-bold text-blue-600">{displayData.totalCount}</div>
                 </div>
-                <div>
-                  <h4 className="text-base font-bold text-gray-900">{user.displayName}</h4>
-                  <p className="text-sm text-gray-500 font-medium">Rank #{rank || 1} in this category</p>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
+                  <div className="text-xs font-bold text-red-600 mb-1">Active Issues</div>
+                  <div className="text-2xl font-bold text-red-600">{displayData.activeIssues}</div>
                 </div>
-              </div>
-
-              {/* Category Information */}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-1 h-4 bg-[#76ab3f] rounded-full"></div>
-                  <h5 className="font-bold text-gray-700 text-sm">Category Information</h5>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
+                  <div className="text-xs font-bold text-green-600 mb-1">Healthy Sites</div>
+                  <div className="text-2xl font-bold text-green-600">{displayData.healthySites}</div>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3 border border-gray-100 space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500 font-medium">Category</span>
-                    <span className="text-sm font-bold text-gray-800">Most Total Portfolios Monitored</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500 font-medium">Metric</span>
-                    <span className="text-sm font-bold text-gray-800">Total Portfolios Monitored</span>
-                  </div>
-                  <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                    <span className="text-sm text-gray-500 font-medium">Achieved Value</span>
-                    <span className="text-2xl font-bold text-[#76ab3f]">{details.totalPortfoliosMonitored}</span>
-                  </div>
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center">
+                  <div className="text-xs font-bold text-orange-600 mb-1">Missed Alerts</div>
+                  <div className="text-2xl font-bold text-orange-600">{displayData.missedAlerts}</div>
                 </div>
               </div>
 
-              {/* Why they're in the top list */}
-              <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
-                <h5 className="text-blue-800 font-bold text-sm mb-1">Why they're in the top list</h5>
-                <p className="text-blue-700 text-xs leading-relaxed">
-                  {user.displayName} achieved <span className="font-bold">{details.totalPortfoliosMonitored} total portfolios monitored</span>, ranking them <span className="font-bold">#{rank || 1}</span> among all team members in the "Most Total Portfolios Monitored" category.
-                </p>
+              {/* Additional Metrics */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-center">
+                  <div className="text-xs font-bold text-purple-600 mb-1">Total Portfolios Monitored</div>
+                  <div className="text-2xl font-bold text-purple-600">{displayData.totalPortfoliosMonitored}</div>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                  <div className="text-xs font-bold text-blue-600 mb-1">Monitoring Active Hours</div>
+                  <div className="text-2xl font-bold text-blue-600">{displayData.monitoringActiveHours}</div>
+                </div>
               </div>
 
-              {/* Complete Performance Metrics */}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-1 h-4 bg-[#76ab3f] rounded-full"></div>
-                  <h5 className="font-bold text-gray-700 text-sm">Complete Performance Metrics</h5>
+              {/* Total Portfolios Monitored Section */}
+              {uniquePortfolios.length > 0 && (
+                <div className="mt-4">
+                  <h5 className="font-bold text-gray-700 text-sm mb-2">
+                    Total Portfolios Monitored ({uniquePortfolios.length})
+                  </h5>
+                  <div className="flex flex-wrap gap-2">
+                    {uniquePortfolios.map((portfolio, idx) => (
+                      <span
+                        key={idx}
+                        className="px-3 py-1.5 bg-green-100 text-green-800 text-xs font-semibold rounded-md border border-green-200"
+                      >
+                        {portfolio.trim()}
+                      </span>
+                    ))}
+                  </div>
                 </div>
+              )}
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-white border border-blue-100 rounded-lg p-3 text-center">
-                    <div className="text-xs font-bold text-blue-600 mb-1">Total Count</div>
-                    <div className="text-2xl font-bold text-blue-600">{details.totalCount}</div>
-                  </div>
-                  <div className="bg-white border border-red-100 rounded-lg p-3 text-center">
-                    <div className="text-xs font-bold text-red-600 mb-1">Active Issues</div>
-                    <div className="text-2xl font-bold text-red-600">{details.activeIssues}</div>
-                  </div>
-                  <div className="bg-white border border-purple-100 rounded-lg p-3 text-center">
-                    <div className="text-xs font-bold text-purple-600 mb-1">Active Hours</div>
-                    <div className="text-2xl font-bold text-purple-600">{details.monitoringActiveHours}</div>
-                  </div>
-                  <div className="bg-white border border-green-100 rounded-lg p-3 text-center">
-                    <div className="text-xs font-bold text-green-600 mb-1">Missed Alerts</div>
-                    <div className="text-2xl font-bold text-green-600">{details.missedAlerts}</div>
-                  </div>
+              {/* Hourly Breakdown Chart */}
+              <div className="mt-4">
+                <h5 className="font-bold text-gray-700 text-sm mb-2">Hourly Breakdown</h5>
+                <div style={{ height: '200px' }}>
+                  <Bar
+                    data={{
+                      labels: Array.from({ length: 24 }, (_, i) => i.toString()),
+                      datasets: [
+                        {
+                          label: 'Portfolios',
+                          data: Array.from({ length: 24 }, (_, i) => user.hours[i]?.completionsCount || 0),
+                          backgroundColor: '#76AB3F',
+                          borderRadius: 2,
+                        },
+                        {
+                          label: 'Issues',
+                          data: Array.from({ length: 24 }, (_, i) => user.hours[i]?.issues.length || 0),
+                          backgroundColor: '#3B82F6',
+                          borderRadius: 2,
+                        },
+                        {
+                          label: 'Active Issues',
+                          data: Array.from({ length: 24 }, (_, i) => user.hours[i]?.activeIssues.length || 0),
+                          backgroundColor: '#EF4444',
+                          borderRadius: 2,
+                        }
+                      ]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      onClick: (event: any, elements: any[]) => {
+                        if (elements && elements.length > 0) {
+                          const clickedHour = elements[0].index
+                          setSelectedHour(clickedHour === selectedHour ? null : clickedHour)
+                        }
+                      },
+                      plugins: {
+                        legend: {
+                          position: 'bottom',
+                          labels: {
+                            boxWidth: 8,
+                            usePointStyle: true,
+                            pointStyle: 'rectRounded',
+                            font: { size: 10 }
+                          }
+                        },
+                        tooltip: {
+                          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                          titleColor: '#1f2937',
+                          bodyColor: '#4b5563',
+                          borderColor: '#e5e7eb',
+                          borderWidth: 1,
+                          padding: 8,
+                          displayColors: true,
+                          callbacks: {
+                            afterBody: (context: any) => {
+                              const dataIndex = context[0].dataIndex
+                              const portfolios = user.hours[dataIndex]?.portfolios || []
+                              if (portfolios.length > 0) {
+                                return '\nChecked: ' + portfolios.map(p => p.split(' (')[0]).join(', ')
+                              }
+                              return ''
+                            }
+                          }
+                        }
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                          grid: { color: '#f3f4f6' },
+                          ticks: { stepSize: 1, font: { size: 10 } },
+                          title: { display: true, text: 'Count', font: { size: 10 } }
+                        },
+                        x: {
+                          grid: { display: false },
+                          ticks: { font: { size: 10 } },
+                          title: { display: true, text: 'Hour', font: { size: 10 } }
+                        }
+                      }
+                    }}
+                  />
                 </div>
+                {selectedHour !== null && (
+                  <p className="text-xs text-gray-500 mt-2 text-center">
+                    Showing data for hour {selectedHour}:00. Click again to view all hours.
+                  </p>
+                )}
               </div>
 
               <div className="flex justify-end pt-2">
@@ -1547,3 +1666,4 @@ const UserPerformanceModal: React.FC<UserPerformanceModalProps> = ({
 }
 
 export default CoverageMatrix
+
