@@ -745,7 +745,7 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
             options={{
               responsive: true,
               maintainAspectRatio: false,
-              onClick: (event: any, elements: any[]) => {
+              onClick: (_event: unknown, elements: Array<{ index: number }>) => {
                 if (elements && elements.length > 0) {
                   const index = elements[0].index
                   const sortedUsers = analytics.perUserStats.sort((a, b) => b.portfoliosCount - a.portfoliosCount)
