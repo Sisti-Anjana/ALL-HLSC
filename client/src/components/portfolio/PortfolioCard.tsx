@@ -40,91 +40,91 @@ const PortfolioCard: React.FC<PortfolioCardProps> = ({ portfolio, onDelete, onEd
 
   return (
     <div
-      className={`bg-white rounded-lg shadow-md p-6 border-2 ${getBorderColor()} hover:shadow-xl transition-all duration-200 hover:scale-105 h-full flex flex-col`}
+      className={`bg-white rounded-lg shadow-sm p-2 border-2 ${getBorderColor()} hover:shadow-lg transition-all duration-200 hover:scale-[1.02] h-[150px] flex flex-col group overflow-hidden relative`}
     >
-      {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <h3 className="text-xl font-bold text-gray-900 mb-1">{portfolio.name}</h3>
+      {/* Header - REVERTED - NAME ONLY */}
+      <div className="flex items-start justify-between mb-1 h-12 overflow-hidden">
+        <div className="flex-1 min-w-0">
+          <h3 className="text-[14px] font-bold text-black leading-tight">
+            {portfolio.name}
+          </h3>
           {portfolio.subtitle && (
-            <p className="text-gray-600 text-sm flex items-center gap-1">
+            <p className="text-gray-600 text-[12px] font-medium truncate mt-0.5">
               🏷️ {portfolio.subtitle}
             </p>
           )}
         </div>
-        {getStatusBadge()}
+        <div className="flex-shrink-0 scale-75 transform origin-top-right translate-y-[-2px]">
+          {getStatusBadge()}
+        </div>
       </div>
 
-      {/* Site Range */}
-      {portfolio.site_range && (
-        <p className="text-gray-700 text-sm mb-4 flex items-center gap-1">
-          <span className="font-semibold">📍</span> {portfolio.site_range}
-        </p>
+      {/* Y/H Badge - Top Right Corner - RESTORED BLUE-600 "Y 14" */}
+      {(portfolio.all_sites_checked === 'Yes' || portfolio.all_sites_checked === 'No') && (
+        <div className="absolute top-1 right-1 bg-blue-600 text-white p-0 rounded-sm shadow-sm z-30 border border-blue-500/10">
+          <span className="text-[12px] font-black leading-none block px-1.5 py-1">
+            {portfolio.all_sites_checked_hour !== undefined && portfolio.all_sites_checked_hour !== null
+              ? `H ${portfolio.all_sites_checked_hour}`
+              : `Y ${portfolio.all_sites_checked_date ? '0' : '0'}`}
+          </span>
+        </div>
       )}
 
-      {/* Status Info */}
-      <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+      {/* Hover Site Range Overlay - RESTORED HOVER ONLY */}
+      {portfolio.site_range && (
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute inset-0 bg-white/95 flex items-center justify-center p-2 z-20 text-center pointer-events-none border-b">
+          <p className="text-blue-700 text-xs font-bold">
+            📍 {portfolio.site_range}
+          </p>
+        </div>
+      )}
+
+      {/* Status Info - Ultra condensed */}
+      <div className="mb-1 p-1 bg-gray-50 rounded border border-gray-100 text-[10px] leading-tight">
         {portfolio.is_locked ? (
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-gray-900">🔒 Locked by {portfolio.locked_by || 'User'}</p>
+          <div className="flex justify-between items-center text-orange-600">
+            <span className="font-bold truncate max-w-[80px]">🔒 {portfolio.locked_by || 'Locked'}</span>
             {portfolio.locked_at && (
-              <p className="text-xs text-gray-500">
-                ⏱️ {Math.floor((Date.now() - new Date(portfolio.locked_at).getTime()) / 60000)} mins left
-              </p>
+              <span>⏱️{Math.floor((Date.now() - new Date(portfolio.locked_at).getTime()) / 60000)}m</span>
             )}
           </div>
-        ) : portfolio.all_sites_checked ? (
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-gray-900">
-              Status: {portfolio.all_sites_checked === 'Yes' ? '✅ All Sites Checked' : '❌ Issues Found'}
-            </p>
-            {portfolio.all_sites_checked_hour !== undefined && (
-              <p className="text-xs text-gray-500">⏰ Hour: {portfolio.all_sites_checked_hour}</p>
-            )}
-            {portfolio.all_sites_checked_by && (
-              <p className="text-xs text-gray-500">👤 {portfolio.all_sites_checked_by}</p>
-            )}
-            {portfolio.all_sites_checked_date && (
-              <p className="text-xs text-gray-500">
-                Last: {formatTime(new Date(portfolio.all_sites_checked_date))}
-              </p>
-            )}
+        ) : (portfolio.all_sites_checked === 'Yes' || portfolio.all_sites_checked === 'No') ? (
+          <div className="flex items-center gap-2">
+            <span className={portfolio.all_sites_checked === 'Yes' ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}>
+              {portfolio.all_sites_checked === 'Yes' ? '✅ PASS' : '❌ ISSUE'}
+            </span>
+            <span className="text-gray-400 truncate flex-1 text-[9px]">{portfolio.all_sites_checked_by}</span>
           </div>
         ) : (
-          <p className="text-sm text-gray-500">⏳ Not checked yet</p>
+          <span className="text-yellow-600 italic font-medium">⏳ Pending Check</span>
         )}
       </div>
 
-      {/* Actions */}
-      <div className="mt-auto pt-4 border-t border-gray-200 space-y-2">
-        {portfolio.is_locked ? (
-          <button
-            disabled
-            className="w-full px-4 py-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed text-sm font-medium"
-          >
-            Waiting...
-          </button>
-        ) : (
-          <button
-            onClick={() => onLogIssue?.(portfolio.id)}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold shadow-sm"
-          >
-            ➕ Log Issue
-          </button>
-        )}
-        <div className="flex gap-2">
+      {/* Actions - Tightened */}
+      <div className="mt-auto pt-1 flex flex-col gap-1 text-[10px]">
+        <button
+          disabled={portfolio.is_locked}
+          onClick={() => !portfolio.is_locked && onLogIssue?.(portfolio.id)}
+          className={`w-full py-0.5 rounded transition-colors font-bold ${portfolio.is_locked
+            ? 'bg-gray-50 text-gray-300'
+            : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+        >
+          {portfolio.is_locked ? 'LOCKED' : '➕ LOG'}
+        </button>
+        <div className="flex gap-1">
           <Link
             to={`/portfolios/${portfolio.id}`}
-            className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-center text-sm font-medium"
+            className="flex-1 py-0.5 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 text-center font-bold"
           >
-            View
+            VIEW
           </Link>
           {onEdit && (
             <button
               onClick={() => onEdit(portfolio)}
-              className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+              className="flex-1 py-0.5 bg-gray-50 text-gray-600 rounded hover:bg-gray-100 font-bold border border-gray-100"
             >
-              Edit
+              EDIT
             </button>
           )}
         </div>

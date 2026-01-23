@@ -10,8 +10,12 @@ import Badge from '../common/Badge'
 import EmptyState from '../common/EmptyState'
 import Spinner from '../common/Spinner'
 import Button from '../common/Button'
+import { useTenant } from '../../context/TenantContext'
 
 const IssueList: React.FC = () => {
+  const { selectedTenant } = useTenant()
+  const isReadOnly = selectedTenant?.status === 'suspended' || selectedTenant?.status === 'inactive'
+
   const [showModal, setShowModal] = useState(false)
   const [filters, setFilters] = useState<IssueFilters>({})
   const [formData, setFormData] = useState<CreateIssueData>({
@@ -174,14 +178,29 @@ const IssueList: React.FC = () => {
             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
-            onClick={() => setShowModal(true)}
-            className="ml-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            onClick={() => {
+              if (isReadOnly) return
+              setShowModal(true)
+            }}
+            disabled={isReadOnly}
+            className={`ml-auto px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${isReadOnly ? 'bg-gray-400 cursor-not-allowed opacity-60 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
           >
             <span>+</span>
-            <span>Log Issue</span>
+            <span>{isReadOnly ? 'Disabled' : 'Log Issue'}</span>
           </button>
         </div>
       </div>
+
+      {isReadOnly && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 flex items-center gap-3">
+          <span className="text-xl">🚫</span>
+          <div>
+            <p className="font-bold">Client is {selectedTenant?.status}</p>
+            <p className="text-sm">You are in read-only mode. Adding new issues or deleting existing ones is disabled.</p>
+          </div>
+        </div>
+      )}
 
       {/* Issues Table */}
       {issues && issues.length === 0 ? (
@@ -229,8 +248,13 @@ const IssueList: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <button
-                      onClick={() => handleDelete(issue.id)}
-                      className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
+                      onClick={() => {
+                        if (isReadOnly) return
+                        handleDelete(issue.id)
+                      }}
+                      disabled={isReadOnly}
+                      className={`px-3 py-1 text-white rounded transition-colors text-sm ${isReadOnly ? 'bg-gray-400 cursor-not-allowed opacity-60' : 'bg-red-600 hover:bg-red-700'
+                        }`}
                     >
                       Delete
                     </button>

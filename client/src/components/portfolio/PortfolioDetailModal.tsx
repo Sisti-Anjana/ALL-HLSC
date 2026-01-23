@@ -7,6 +7,7 @@ import { portfolioService } from '../../services/portfolioService'
 import { adminService, PortfolioLock } from '../../services/adminService'
 import { useAuth } from '../../context/AuthContext'
 import { issueService } from '../../services/issueService'
+import { useTenant } from '../../context/TenantContext'
 import { Portfolio } from '../../types/portfolio.types'
 import { Issue } from '../../types/issue.types'
 import toast from 'react-hot-toast'
@@ -29,6 +30,9 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { user } = useAuth()
+  const { selectedTenant } = useTenant()
+  const isReadOnly = selectedTenant?.status === 'suspended' || selectedTenant?.status === 'inactive'
+
   const [allSitesChecked, setAllSitesChecked] = useState<'Yes' | 'No' | null>(null)
   const [sitesCheckedDetails, setSitesCheckedDetails] = useState('')
   const [unlockReason, setUnlockReason] = useState('')
@@ -459,20 +463,24 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
+                if (isReadOnly) {
+                  toast.error(`Cannot work on portfolios while client is ${selectedTenant?.status}`)
+                  return
+                }
                 if (!hasIssuesByCurrentUser) {
                   toast.error('Please log at least one issue before marking sites as checked.')
                   return
                 }
                 handleAllSitesChecked('Yes')
               }}
-              disabled={!hasIssuesByCurrentUser}
-              className={`flex-1 px-5 py-3 rounded-lg font-medium transition-colors border-2 ${!hasIssuesByCurrentUser
+              disabled={!hasIssuesByCurrentUser || isReadOnly}
+              className={`flex-1 px-5 py-3 rounded-lg font-medium transition-colors border-2 ${(!hasIssuesByCurrentUser || isReadOnly)
                 ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed pointer-events-none'
                 : allSitesChecked === 'Yes'
                   ? 'bg-white border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
-              aria-disabled={!hasIssuesByCurrentUser}
+              aria-disabled={!hasIssuesByCurrentUser || isReadOnly}
             >
               Yes
             </button>
@@ -480,20 +488,24 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
+                if (isReadOnly) {
+                  toast.error(`Cannot work on portfolios while client is ${selectedTenant?.status}`)
+                  return
+                }
                 if (!hasIssuesByCurrentUser) {
                   toast.error('Please log at least one issue before marking sites as checked.')
                   return
                 }
                 handleAllSitesChecked('No')
               }}
-              disabled={!hasIssuesByCurrentUser}
-              className={`flex-1 px-5 py-3 rounded-lg font-medium transition-colors border-2 ${!hasIssuesByCurrentUser
+              disabled={!hasIssuesByCurrentUser || isReadOnly}
+              className={`flex-1 px-5 py-3 rounded-lg font-medium transition-colors border-2 ${(!hasIssuesByCurrentUser || isReadOnly)
                 ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed pointer-events-none'
                 : allSitesChecked === 'No'
                   ? 'bg-yellow-400 border-yellow-500 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
-              aria-disabled={!hasIssuesByCurrentUser}
+              aria-disabled={!hasIssuesByCurrentUser || isReadOnly}
             >
               No
             </button>
@@ -553,20 +565,26 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
 
           {/* Log New Issue Button */}
           <button
-            onClick={handleLogNewIssue}
-            disabled={!!(isLockedByAnyone && !isLockedByMe) || hasOtherLock}
-            className={`w-full flex items-center justify-between px-5 py-3 rounded-lg transition-colors shadow-sm ${(isLockedByAnyone && !isLockedByMe) || hasOtherLock
-              ? 'bg-gray-400 cursor-not-allowed opacity-60'
+            onClick={() => {
+              if (isReadOnly) {
+                toast.error(`Cannot work on portfolios while client is ${selectedTenant?.status}`)
+                return
+              }
+              handleLogNewIssue()
+            }}
+            disabled={!!(isLockedByAnyone && !isLockedByMe) || hasOtherLock || isReadOnly}
+            className={`w-full flex items-center justify-between px-5 py-3 rounded-lg transition-colors shadow-sm ${(isLockedByAnyone && !isLockedByMe) || hasOtherLock || isReadOnly
+              ? 'bg-gray-400 cursor-not-allowed opacity-60 text-white'
               : ''
               }`}
-            style={(isLockedByAnyone && !isLockedByMe) || hasOtherLock ? {} : { backgroundColor: '#76ab3f', color: 'white' }}
+            style={(isLockedByAnyone && !isLockedByMe) || hasOtherLock || isReadOnly ? {} : { backgroundColor: '#76ab3f', color: 'white' }}
             onMouseEnter={(e) => {
-              if (!((isLockedByAnyone && !isLockedByMe) || hasOtherLock)) {
+              if (!((isLockedByAnyone && !isLockedByMe) || hasOtherLock || isReadOnly)) {
                 e.currentTarget.style.opacity = '0.9'
               }
             }}
             onMouseLeave={(e) => {
-              if (!((isLockedByAnyone && !isLockedByMe) || hasOtherLock)) {
+              if (!((isLockedByAnyone && !isLockedByMe) || hasOtherLock || isReadOnly)) {
                 e.currentTarget.style.opacity = '1'
               }
             }}
@@ -577,18 +595,22 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
               </svg>
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-base truncate">
-                  {hasOtherLock
-                    ? `Finish "${userOtherLock?.portfolio?.name || 'other lock'}"${userOtherLock?.tenant?.name ? ` in "${userOtherLock.tenant.name}"` : ''} (Hour ${userOtherLock?.issue_hour}) first`
-                    : isLockedByAnyone && !isLockedByMe
-                      ? `Locked by ${lockInfo?.monitored_by?.split('@')[0] || 'another user'}`
-                      : 'Log New Issue'}
+                  {isReadOnly
+                    ? `Client ${selectedTenant?.status}`
+                    : hasOtherLock
+                      ? `Finish "${userOtherLock?.portfolio?.name || 'other lock'}"${userOtherLock?.tenant?.name ? ` in "${userOtherLock.tenant.name}"` : ''} (Hour ${userOtherLock?.issue_hour}) first`
+                      : isLockedByAnyone && !isLockedByMe
+                        ? `Locked by ${lockInfo?.monitored_by?.split('@')[0] || 'another user'}`
+                        : 'Log New Issue'}
                 </div>
                 <div className="text-sm truncate" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
-                  {hasOtherLock
-                    ? `Close your current lock before starting a new one.`
-                    : isLockedByAnyone && !isLockedByMe
-                      ? 'Only the user who locked it can log issues'
-                      : 'Report a new issue for this portfolio'}
+                  {isReadOnly
+                    ? 'Work is disabled. View-only mode.'
+                    : hasOtherLock
+                      ? `Close your current lock before starting a new one.`
+                      : isLockedByAnyone && !isLockedByMe
+                        ? 'Only the user who locked it can log issues'
+                        : 'Report a new issue for this portfolio'}
                 </div>
               </div>
             </div>

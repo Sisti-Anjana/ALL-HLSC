@@ -52,9 +52,8 @@ export const tenantIsolation = async (
       req.tenantId = req.user.tenantId
     }
 
-    // Verify tenant status (allow read‑only GET for inactive/suspended tenants)
-    // SKIP this check for super_admin so they can reactivate/manage suspended tenants
-    if (req.tenantId && req.user.role !== 'super_admin') {
+    // Verify tenant status
+    if (req.tenantId) {
       const { data: tenant, error } = await supabase
         .from('tenants')
         .select('status')
@@ -69,14 +68,22 @@ export const tenantIsolation = async (
       }
 
       if (tenant.status !== 'active') {
-        // Allow safe read‑only operations (GET) for inactive tenants
+        // Allow safe read‑only operations (GET) for all
         if (req.method === 'GET') {
-          // Continue to next middleware/handler – data can be read
+          // Continue – data can be read
         } else {
-          return res.status(403).json({
-            success: false,
-            error: `Access denied. This tenant is currently ${tenant.status}.`,
-          })
+          // Block non-GET requests for non-active tenants
+          // EXCEPTION: Let Super Admin modify the TENANT itself (to reactivate it)
+          const isTenantManagement = req.baseUrl.includes('/admin') && req.path.includes('/tenants')
+
+          if (req.user.role === 'super_admin' && isTenantManagement) {
+            // Allow super admin to manage the tenant (e.g., reactivate)
+          } else {
+            return res.status(403).json({
+              success: false,
+              error: `Access denied. This client is currently ${tenant.status}. Work is disabled until reactivated.`,
+            })
+          }
         }
       }
     }

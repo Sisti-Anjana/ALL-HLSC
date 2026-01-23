@@ -10,6 +10,7 @@ import { Issue } from '../../types/issue.types'
 import { User } from '../../types/user.types'
 import PortfolioDetailModal from '../portfolio/PortfolioDetailModal'
 import { useAuth } from '../../context/AuthContext'
+import { useTenant } from '../../context/TenantContext'
 import toast from 'react-hot-toast'
 import { getESTTime, getESTHour, getESTDateString, formatESTTime, getESTDaysDiff } from '../../utils/timezone'
 
@@ -24,6 +25,9 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
 }) => {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { selectedTenant } = useTenant()
+  const isReadOnly = selectedTenant?.status === 'suspended' || selectedTenant?.status === 'inactive'
+
   const queryClient = useQueryClient()
   const [lastUpdated, setLastUpdated] = useState(new Date())
   const [searchQuery, setSearchQuery] = useState('')
@@ -415,8 +419,15 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
             <span className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">🔍</span>
           </div>
           <Button
-            onClick={() => navigate('/issues?action=log')}
-            className="w-full sm:w-auto"
+            onClick={() => {
+              if (isReadOnly) {
+                toast.error(`Cannot log issues while client is ${selectedTenant?.status}`)
+                return
+              }
+              navigate('/issues?action=log')
+            }}
+            disabled={isReadOnly}
+            className={`w-full sm:w-auto ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <span className="hidden sm:inline">+ Log New Issue</span>
             <span className="sm:hidden">+ Log Issue</span>
@@ -435,20 +446,20 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
             // Normalize portfolio ID to string for comparison - handle both number and string IDs
             const portfolioIdString = String(portfolio.id || '').trim()
             const portfolioIdNumber = typeof portfolio.id === 'number' ? portfolio.id : parseInt(portfolioIdString, 10)
-            
+
             // Check for ANY active lock for this portfolio, regardless of hour
             // Try both string and number comparison to handle type mismatches
             const activeLock = (locks || []).find(l => {
               const lockPortfolioId = String(l.portfolio_id || '').trim()
-              const lockPortfolioIdNumber = typeof l.portfolio_id === 'number' 
-                ? l.portfolio_id 
+              const lockPortfolioIdNumber = typeof l.portfolio_id === 'number'
+                ? l.portfolio_id
                 : parseInt(lockPortfolioId, 10)
-              
+
               // Try multiple comparison methods
               const stringMatch = lockPortfolioId.toLowerCase() === portfolioIdString.toLowerCase()
               const numberMatch = !isNaN(portfolioIdNumber) && !isNaN(lockPortfolioIdNumber) && portfolioIdNumber === lockPortfolioIdNumber
               const matches = stringMatch || numberMatch
-              
+
               if (matches) {
                 console.log('🔒 QuickPortfolioReference - Found lock match:', {
                   portfolioId: portfolioIdString,
@@ -464,7 +475,7 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
               return matches
             })
             const isLocked = !!activeLock
-            
+
             // Debug log for "BESS & AES Trimark" specifically
             if (portfolio.name && portfolio.name.toLowerCase().includes('bess')) {
               console.log('🔍 QuickPortfolioReference - BESS portfolio lock check:', {
@@ -497,14 +508,15 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
             return (
               <div
                 key={portfolio.id}
-                className={`${bgColor} rounded-lg p-2.5 cursor-pointer transition-all duration-300 ease-in-out relative shadow-md ${isLocked
-                  ? 'border-[6px] border-purple-600'
-                  : `border-2 ${borderColor}`
-                  } hover:shadow-2xl hover:scale-110 hover:-translate-y-1 hover:z-10`}
+                className={`${bgColor} rounded-md ${isReadOnly ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'} transition-all duration-500 ease-in-out relative border ${isLocked ? 'border-purple-500 ring-1 ring-purple-200' : borderColor} ${isReadOnly ? '' : 'hover:shadow-sm hover:scale-[1.02]'} flex items-stretch h-14 overflow-hidden`}
                 style={{
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
                 }}
                 onClick={() => {
+                  if (isReadOnly) {
+                    toast.error(`Cannot work on portfolios while client is ${selectedTenant?.status}`)
+                    return
+                  }
                   setSelectedPortfolioId(portfolio.id)
                   // Don't open sidebar directly - open modal first
                 }}
@@ -529,29 +541,31 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
                   setTooltipPosition(null)
                 }}
               >
-                {/* Y/H Badge - Top Right */}
-                <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded-md flex items-center gap-1 shadow-sm">
-                  <span className="text-xs font-bold">
-                    {portfolio.yValue.startsWith('H') ? 'H' : 'Y'}
-                  </span>
-                  <span className="text-sm font-bold">
-                    {portfolio.yValue.replace(/^[YH]/, '')}
-                  </span>
-                </div>
-
-                {/* Portfolio Name with Site Range */}
-                <div className="pr-16 pt-1">
-                  <h3 className="font-bold text-gray-900 text-base leading-tight">
+                {/* Content Section - REVERTED - NAME ONLY */}
+                <div className="flex-1 pl-3 py-1 flex flex-col justify-center min-w-0 pr-14">
+                  <h3 className="font-bold text-black text-[14px] leading-tight truncate">
+                    {isLocked && <span className="mr-1 text-[11px]">🔒</span>}
                     {portfolio.name}
-                    {portfolio.siteRange && (
-                      <span className="text-gray-600 font-normal text-sm"> ({portfolio.siteRange})</span>
-                    )}
                   </h3>
+                  {portfolio.subtitle && (
+                    <p className="text-[12px] text-gray-700 font-medium truncate mt-0.5">
+                      {portfolio.subtitle}
+                    </p>
+                  )}
                 </div>
 
-                {/* Subtitle */}
-                {portfolio.subtitle && (
-                  <p className="text-xs text-gray-700 font-medium mt-1">{portfolio.subtitle}</p>
+                {/* Y/H Badge - Top Right Corner - REFINED SIZE */}
+                <div className="absolute top-1.5 right-1.5 bg-blue-600 text-white p-0 rounded-sm shadow-sm z-10 border border-blue-500/10">
+                  <span className="text-[10.5px] font-black leading-none block px-1 py-0.5">
+                    {portfolio.yValue.charAt(0)} {portfolio.yValue.slice(1)}
+                  </span>
+                </div>
+
+                {/* Hover Site Range Overlay - RESTORED HOVER ONLY */}
+                {portfolio.siteRange && (
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute inset-0 bg-white/95 flex items-center justify-center p-2 z-20 text-center pointer-events-none border-x border-blue-100">
+                    <span className="text-blue-700 font-bold text-xs">📍 {portfolio.siteRange}</span>
+                  </div>
                 )}
               </div>
             )

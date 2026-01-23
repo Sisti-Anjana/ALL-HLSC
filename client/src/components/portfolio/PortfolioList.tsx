@@ -9,8 +9,14 @@ import EmptyState from '../common/EmptyState'
 import Spinner from '../common/Spinner'
 import Button from '../common/Button'
 import { useDebounce } from '../../hooks/useDebounce'
+import { useTenant } from '../../context/TenantContext'
 
 const PortfolioList: React.FC = () => {
+  const { selectedTenant } = useTenant()
+  const isSuspended = selectedTenant?.status === 'suspended'
+  const isInactive = selectedTenant?.status === 'inactive'
+  const isReadOnly = isSuspended || isInactive
+
   const [showModal, setShowModal] = useState(false)
   const [editingPortfolio, setEditingPortfolio] = useState<Portfolio | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -68,16 +74,16 @@ const PortfolioList: React.FC = () => {
 
   // Filter portfolios
   const filteredPortfolios = portfolios?.filter((p) => {
-    const matchesSearch = !debouncedSearch || 
+    const matchesSearch = !debouncedSearch ||
       p.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
       p.subtitle?.toLowerCase().includes(debouncedSearch.toLowerCase())
-    
+
     const matchesStatus = statusFilter === 'all' ||
       (statusFilter === 'checked' && p.all_sites_checked === 'Yes') ||
       (statusFilter === 'issues' && p.all_sites_checked === 'No') ||
       (statusFilter === 'pending' && !p.all_sites_checked) ||
       (statusFilter === 'locked' && p.is_locked)
-    
+
     return matchesSearch && matchesStatus
   }) || []
 
@@ -98,6 +104,20 @@ const PortfolioList: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Suspension Warning */}
+      {isReadOnly && (
+        <div className={`p-4 rounded-lg flex items-center gap-3 border shadow-sm ${isSuspended ? 'bg-red-50 border-red-200 text-red-800' : 'bg-gray-50 border-gray-200 text-gray-800'
+          }`}>
+          <span className="text-xl">{isSuspended ? '🚫' : '⚠️'}</span>
+          <div>
+            <p className="font-bold">Client is {selectedTenant?.status}</p>
+            <p className="text-sm opacity-90">
+              This account is currently in read-only mode. You can view existing data, but adding or modifying portfolios is disabled until the account is reactivated.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -110,26 +130,27 @@ const PortfolioList: React.FC = () => {
           <div className="flex items-center gap-2 bg-white rounded-lg border border-gray-300 p-1">
             <button
               onClick={() => setViewMode('grid')}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
-              }`}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+                }`}
             >
               ■■ Grid
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
-              }`}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+                }`}
             >
               ≡ List
             </button>
           </div>
           <Button
             onClick={() => {
+              if (isReadOnly) return
               setEditingPortfolio(null)
               setShowModal(true)
             }}
+            disabled={isReadOnly}
+            className={isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}
           >
             + New
           </Button>
@@ -190,7 +211,7 @@ const PortfolioList: React.FC = () => {
         <EmptyState
           icon="📁"
           title="No portfolios found"
-          description={searchQuery || statusFilter !== 'all' 
+          description={searchQuery || statusFilter !== 'all'
             ? 'Try adjusting your search or filters'
             : 'Create your first portfolio to start tracking issues'}
           action={{
@@ -200,7 +221,7 @@ const PortfolioList: React.FC = () => {
         />
       ) : (
         <>
-          <div className={viewMode === 'grid' 
+          <div className={viewMode === 'grid'
             ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
             : 'space-y-4'
           }>
@@ -248,11 +269,10 @@ const PortfolioList: React.FC = () => {
                       <button
                         key={page}
                         onClick={() => setCurrentPage(page)}
-                        className={`px-3 py-1 rounded text-sm ${
-                          currentPage === page
+                        className={`px-3 py-1 rounded text-sm ${currentPage === page
                             ? 'bg-blue-600 text-white'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
+                          }`}
                       >
                         {page}
                       </button>

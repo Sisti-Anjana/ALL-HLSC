@@ -10,7 +10,12 @@ import Badge from '../common/Badge'
 import EmptyState from '../common/EmptyState'
 import Spinner from '../common/Spinner'
 
+import { useTenant } from '../../context/TenantContext'
+
 const UserManagement: React.FC = () => {
+  const { selectedTenant } = useTenant()
+  const isReadOnly = selectedTenant?.status === 'suspended' || selectedTenant?.status === 'inactive'
+
   const [showModal, setShowModal] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [formData, setFormData] = useState<CreateUserData>({
@@ -91,14 +96,24 @@ const UserManagement: React.FC = () => {
         </div>
         <Button
           onClick={() => {
+            if (isReadOnly) return
             setEditingUser(null)
             setFormData({ email: '', password: '', fullName: '', role: 'user' })
             setShowModal(true)
           }}
+          disabled={isReadOnly}
+          className={isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}
         >
-          + Add User
+          {isReadOnly ? 'Add Disabled' : '+ Add User'}
         </Button>
       </div>
+
+      {isReadOnly && (
+        <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600 flex items-center gap-2 italic">
+          <span>ℹ️</span>
+          <span>User management is disabled because the client is currently {selectedTenant?.status}.</span>
+        </div>
+      )}
 
       {users && users.length === 0 ? (
         <EmptyState
@@ -165,6 +180,7 @@ const UserManagement: React.FC = () => {
                         size="sm"
                         variant={isInvalidName ? "primary" : "secondary"}
                         onClick={() => {
+                          if (isReadOnly) return
                           setEditingUser(user)
                           // If name is invalid, suggest a better name - preserve casing after first letter
                           const suggestedFullName = isInvalidName
@@ -178,6 +194,8 @@ const UserManagement: React.FC = () => {
                           })
                           setShowModal(true)
                         }}
+                        disabled={isReadOnly}
+                        className={isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}
                       >
                         {isInvalidName ? 'Fix Name' : 'Edit'}
                       </Button>
@@ -185,10 +203,13 @@ const UserManagement: React.FC = () => {
                         size="sm"
                         variant="danger"
                         onClick={() => {
+                          if (isReadOnly) return
                           if (window.confirm('Are you sure you want to delete this user?')) {
                             deleteMutation.mutate(user.id)
                           }
                         }}
+                        disabled={isReadOnly}
+                        className={isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}
                       >
                         Delete
                       </Button>
