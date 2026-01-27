@@ -591,9 +591,10 @@ const CoverageMatrix: React.FC = () => {
   }
 
   const handleCellMouseLeave = () => {
+    // Increase delay to 500ms to give more time to move to the tooltip
     hoverTimeoutRef.current = setTimeout(() => {
       setHoveredCell(null)
-    }, 300)
+    }, 500)
   }
 
   // Add handlers for the tooltip itself to keep it open when hovered
@@ -605,7 +606,12 @@ const CoverageMatrix: React.FC = () => {
   }
 
   const handleTooltipMouseLeave = () => {
-    setHoveredCell(null)
+    // Do NOT set to null immediately - use the same timeout logic
+    // This prevents the tooltip from flickering or closing if the user
+    // accidentally moves the mouse off it for a split second while scrolling.
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHoveredCell(null)
+    }, 500)
   }
 
   const handleQuickRange = (range: 'today' | 'yesterday' | 'week' | 'month') => {
