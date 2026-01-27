@@ -401,7 +401,7 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
           })}
           {/* Add Lock Legend */}
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <div className="w-3 h-3 sm:w-4 sm:h-4 rounded border-[3px] border-purple-600 bg-white"></div>
+            <div className="w-3 h-3 sm:w-4 sm:h-4 rounded border-[4px] border-purple-600 bg-white"></div>
             <span className="text-xs text-gray-600">Locked</span>
           </div>
         </div>
@@ -508,7 +508,7 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
             return (
               <div
                 key={portfolio.id}
-                className={`${bgColor} rounded-md ${isReadOnly ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'} transition-all duration-500 ease-in-out relative border ${isLocked ? 'border-purple-500 ring-1 ring-purple-200' : borderColor} ${isReadOnly ? '' : 'hover:shadow-sm hover:scale-[1.02]'} flex items-stretch h-14 overflow-hidden`}
+                className={`${bgColor} rounded-md ${isReadOnly ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'} transition-all duration-500 ease-in-out relative border ${isLocked ? 'border-[3.5px] border-purple-600 ring-2 ring-purple-200' : borderColor} ${isReadOnly ? '' : 'hover:shadow-sm hover:scale-[1.02]'} flex items-stretch h-14 overflow-hidden`}
                 style={{
                   transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
                 }}

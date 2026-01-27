@@ -142,6 +142,42 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
       })
       return portfolioService.lock(portfolioId, currentHour)
     },
+    onMutate: async () => {
+      const currentHour = hour !== undefined && hour !== null ? hour : new Date().getHours()
+
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: ['portfolio-locks'] })
+      await queryClient.cancelQueries({ queryKey: ['locks'] })
+
+      // Snapshot the previous value
+      const previousLocks = queryClient.getQueryData(['portfolio-locks'])
+      const previousLocksList = queryClient.getQueryData(['locks'])
+
+      // Optimistically update to the new value
+      if (portfolioId && user?.email) {
+        const optimisticLock = {
+          id: 'optimistic-' + Date.now(),
+          portfolio_id: portfolioId,
+          monitored_by: user.email,
+          issue_hour: currentHour,
+          reserved_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 3600000).toISOString(),
+          // Metadata to help UI distinguish optimistic state if needed
+          isOptimistic: true
+        }
+
+        queryClient.setQueryData(['portfolio-locks'], (old: any) => {
+          return Array.isArray(old) ? [...old, optimisticLock] : [optimisticLock]
+        })
+
+        queryClient.setQueryData(['locks'], (old: any) => {
+          return Array.isArray(old) ? [...old, optimisticLock] : [optimisticLock]
+        })
+      }
+
+      // Return a context object with the snapshotted value
+      return { previousLocks, previousLocksList }
+    },
     onSuccess: async (data) => {
       console.log('✅ Lock mutation - SUCCESS', {
         responseData: data,
@@ -149,48 +185,21 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
         hour,
       })
 
-      // Immediately invalidate all related queries
-      console.log('🔄 Lock mutation - Invalidating queries...')
-      queryClient.invalidateQueries({ queryKey: ['portfolio-activity'] })
-      queryClient.invalidateQueries({ queryKey: ['portfolio-locks'] })
+      // Immediately invalidate all related queries - but rely on onSettled for final sync
       queryClient.invalidateQueries({ queryKey: ['locks'] })
 
-      // Force immediate refetch for active queries - don't await, fire and forget for speed
-      console.log('🔄 Lock mutation - Refetching queries...')
-      queryClient.refetchQueries({
-        queryKey: ['portfolio-locks'],
-        type: 'active', // Only refetch active queries
-      })
-      queryClient.refetchQueries({
-        queryKey: ['locks'],
-        type: 'active',
-      })
-      queryClient.refetchQueries({
-        queryKey: ['portfolio-activity'],
-        type: 'active',
-      })
-
-      // Also manually trigger multiple refetches with delays to ensure UI updates
-      setTimeout(() => {
-        console.log('🔄 Lock mutation - Delayed refetch after 200ms...')
-        queryClient.refetchQueries({ queryKey: ['portfolio-locks'], type: 'active' })
-      }, 200)
-
-      setTimeout(() => {
-        console.log('🔄 Lock mutation - Delayed refetch after 500ms...')
-        queryClient.refetchQueries({ queryKey: ['portfolio-locks'], type: 'active' })
-      }, 500)
-
-      setTimeout(() => {
-        console.log('🔄 Lock mutation - Delayed refetch after 1000ms...')
-        queryClient.refetchQueries({ queryKey: ['portfolio-locks'], type: 'active' })
-        console.log('✅ Lock mutation - All delayed refetches completed')
-      }, 1000)
-
-      console.log('✅ Lock mutation - All queries updated, showing success toast')
+      console.log('✅ Lock mutation - Optimistic success confirmed by server')
       toast.success('Portfolio locked successfully')
     },
-    onError: (error: any) => {
+    onError: (error: any, _variables, context: any) => {
+      // Rollback to previous state on error
+      if (context?.previousLocks) {
+        queryClient.setQueryData(['portfolio-locks'], context.previousLocks)
+      }
+      if (context?.previousLocksList) {
+        queryClient.setQueryData(['locks'], context.previousLocksList)
+      }
+
       const errorMessage = error.response?.data?.error || error.message || 'Failed to lock portfolio'
 
       console.error('❌ Lock mutation - ERROR', {
@@ -204,13 +213,18 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
 
       // Check if error is about a stale lock (portfolio not found)
       if (errorMessage.includes('not found in database')) {
-        // Stale lock detected - show helpful message and suggest going to Active Locks
-        toast.error('Found a stale lock for a deleted portfolio. Please go to Admin Panel → Active Locks to clean it up, or try again in a moment.', {
+        toast.error('Found a stale lock for a deleted portfolio. Please go to Admin Panel → Active Locks to clean it up.', {
           duration: 6000
         })
       } else {
         toast.error(errorMessage)
       }
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure we are in sync with the server
+      queryClient.invalidateQueries({ queryKey: ['portfolio-locks'] })
+      queryClient.invalidateQueries({ queryKey: ['locks'] })
+      queryClient.invalidateQueries({ queryKey: ['portfolio-activity'] })
     },
   })
 

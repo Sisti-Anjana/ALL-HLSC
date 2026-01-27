@@ -117,20 +117,25 @@ export const portfolioService = {
 
     const sessionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}` // Generate unique session ID
 
-    // First, clean up expired locks for this tenant and user (Fire and forget - don't await to improve speed)
-    await supabase
-      .from('hour_reservations')
-      .delete()
-      .eq('tenant_id', tenantId)
-      .eq('monitored_by', userEmail)
-      .lt('expires_at', new Date().toISOString())
+    // Parallelize cleanup and initial check to save time
+    const [existingUserLocksResponse] = await Promise.all([
+      // 0. PRE-CHECK: Ensure user doesn't already have an active lock system-wide
+      supabase
+        .from('hour_reservations')
+        .select('portfolio_id, tenant_id, issue_hour, tenant:tenants(name)')
+        .eq('monitored_by', userEmail)
+        .gt('expires_at', new Date().toISOString()),
 
-    // 0. PRE-CHECK: Ensure user doesn't already have an active lock system-wide
-    const { data: existingUserLocks, error: existingUserLocksError } = await supabase
-      .from('hour_reservations')
-      .select('portfolio_id, tenant_id, issue_hour, tenant:tenants(name)')
-      .eq('monitored_by', userEmail)
-      .gt('expires_at', new Date().toISOString())
+      // First, clean up expired locks for this tenant and user (Fire and forget - improve speed)
+      supabase
+        .from('hour_reservations')
+        .delete()
+        .eq('tenant_id', tenantId)
+        .eq('monitored_by', userEmail)
+        .lt('expires_at', new Date().toISOString())
+    ])
+
+    const { data: existingUserLocks, error: existingUserLocksError } = existingUserLocksResponse
 
     if (existingUserLocksError) {
       console.error('Error checking user existing locks:', existingUserLocksError)
@@ -214,20 +219,21 @@ export const portfolioService = {
 
     // SUCCESS: Reset all_sites_checked status to 'No' when a new lock is acquired
     // This ensures consistency if it was previously marked as 'Yes'
-    try {
-      await supabase
-        .from('portfolios')
-        .update({
-          all_sites_checked: 'No',
-          all_sites_checked_date: null,
-          all_sites_checked_hour: null
-        })
-        .eq('tenant_id', tenantId)
-        .eq('portfolio_id', portfolioId)
-    } catch (updateError) {
-      console.error('Failed to reset all_sites_checked status during lock:', updateError)
-      // Don't fail the lock if this secondary update fails
-    }
+    // Fire and forget - don't wait for this secondary update to improve performance
+    supabase
+      .from('portfolios')
+      .update({
+        all_sites_checked: 'No',
+        all_sites_checked_date: null,
+        all_sites_checked_hour: null
+      })
+      .eq('tenant_id', tenantId)
+      .eq('portfolio_id', portfolioId)
+      .then(({ error: updateError }) => {
+        if (updateError) {
+          console.error('Failed to reset all_sites_checked status during lock:', updateError)
+        }
+      })
 
     return data
   },

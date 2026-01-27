@@ -46,26 +46,11 @@ const CoverageMatrix: React.FC = () => {
   const [hourFilter, setHourFilter] = useState<string>('all')
   const [issueFilter, setIssueFilter] = useState<'all' | 'active'>('all')
   const [fromDate, setFromDate] = useState(() => {
-    // Try to get from localStorage first for cross-page consistency
-    const saved = localStorage.getItem('hlsc_filter_fromDate')
-    if (saved) return saved
-    // Default to today
-    const today = new Date()
-    return today.toISOString().split('T')[0]
+    return new Date().toISOString().split('T')[0]
   })
   const [toDate, setToDate] = useState(() => {
-    // Try to get from localStorage first
-    const saved = localStorage.getItem('hlsc_filter_toDate')
-    if (saved) return saved
-    const today = new Date()
-    return today.toISOString().split('T')[0]
+    return new Date().toISOString().split('T')[0]
   })
-
-  // Save filters to localStorage when they change
-  useEffect(() => {
-    localStorage.setItem('hlsc_filter_fromDate', fromDate)
-    localStorage.setItem('hlsc_filter_toDate', toDate)
-  }, [fromDate, toDate])
   const [showCharts, setShowCharts] = useState(true)
   const [selectedUser, setSelectedUser] = useState<UserMatrixData | null>(null)
   const [showDebug, setShowDebug] = useState(false)
@@ -74,6 +59,7 @@ const CoverageMatrix: React.FC = () => {
     hour: number
     position: { top: number; left: number }
   } | null>(null)
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Fetch portfolios
   const { data: portfolios = [] } = useQuery<Portfolio[]>({
@@ -588,6 +574,11 @@ const CoverageMatrix: React.FC = () => {
     userId: string,
     hour: number
   ) => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
+    }
+
     const rect = e.currentTarget.getBoundingClientRect()
     setHoveredCell({
       userId,
@@ -600,6 +591,20 @@ const CoverageMatrix: React.FC = () => {
   }
 
   const handleCellMouseLeave = () => {
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHoveredCell(null)
+    }, 300)
+  }
+
+  // Add handlers for the tooltip itself to keep it open when hovered
+  const handleTooltipMouseEnter = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
+    }
+  }
+
+  const handleTooltipMouseLeave = () => {
     setHoveredCell(null)
   }
 
@@ -1270,13 +1275,15 @@ const CoverageMatrix: React.FC = () => {
       {
         hoveredCell && cellInfo && (
           <div
-            className="fixed z-[9999] w-80 bg-blue-900 text-white text-xs rounded-lg shadow-xl p-4 pointer-events-none"
+            className="fixed z-[9999] w-80 bg-blue-900 text-white text-xs rounded-lg shadow-xl p-4 pointer-events-auto"
             style={{
               top: `${hoveredCell.position.top}px`,
               left: `${hoveredCell.position.left}px`,
               transform: 'translate(-50%, -100%)',
               marginTop: '-10px',
             }}
+            onMouseEnter={handleTooltipMouseEnter}
+            onMouseLeave={handleTooltipMouseLeave}
           >
             <div className="font-bold text-sm mb-2 pb-2 border-b border-blue-700">
               {cellInfo.userName} - Hour {cellInfo.hour}:00
@@ -1290,7 +1297,7 @@ const CoverageMatrix: React.FC = () => {
               <div className="font-bold text-green-300 mb-1">
                 Total Portfolios Monitored ({cellInfo.portfolioCount}):
               </div>
-              <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1 select-none custom-scrollbar">
+              <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1 select-auto custom-scrollbar">
                 {cellInfo.portfolios.length > 0 ? (
                   cellInfo.portfolios.map((portfolio, idx) => (
                     <div key={idx} className="text-white pl-2 py-1 text-sm font-bold transition-all hover:bg-white/5 rounded">

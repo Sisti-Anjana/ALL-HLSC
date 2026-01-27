@@ -39,17 +39,14 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
   endDate,
 }) => {
   const { user: currentUser } = useAuth()
-  const [selectedRange, setSelectedRange] = useState<'today' | 'yesterday' | 'week' | 'custom'>(() => {
-    const savedFrom = localStorage.getItem('hlsc_filter_fromDate')
-    const savedTo = localStorage.getItem('hlsc_filter_toDate')
-    if (savedFrom && savedTo) return 'custom'
-    return dateRange
-  })
+  const [selectedRange, setSelectedRange] = useState<'today' | 'yesterday' | 'week' | 'custom'>(
+    dateRange
+  )
   const [customStartDate, setCustomStartDate] = useState(() => {
-    return localStorage.getItem('hlsc_filter_fromDate') || startDate || ''
+    return startDate || ''
   })
   const [customEndDate, setCustomEndDate] = useState(() => {
-    return localStorage.getItem('hlsc_filter_toDate') || endDate || ''
+    return endDate || ''
   })
   const [selectedPerformer, setSelectedPerformer] = useState<{
     user: any
@@ -61,13 +58,7 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
 
   const chartRef = useRef<any>(null)
 
-  // Save filters to localStorage when they change
-  useEffect(() => {
-    if (selectedRange === 'custom') {
-      localStorage.setItem('hlsc_filter_fromDate', customStartDate)
-      localStorage.setItem('hlsc_filter_toDate', customEndDate)
-    }
-  }, [customStartDate, customEndDate, selectedRange])
+  // localStorage persistence removed to allow "Today" default everywhere
 
   // Fetch portfolios
   const { data: portfolios = [] } = useQuery<Portfolio[]>({
