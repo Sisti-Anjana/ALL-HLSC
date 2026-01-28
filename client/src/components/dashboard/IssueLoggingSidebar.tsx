@@ -79,7 +79,8 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
     )
   }, [isOpen, portfolioId, locks, currentHour])
 
-  // Refs to track previous values for auto-save
+  // Refs to track previous values for auto-save and auto-locking
+  const lastLockedRef = useRef<{ portfolioId: string; hour: number } | null>(null)
   const prevPortfolioIdRef = useRef<string | null>(portfolioId)
   const prevHourRef = useRef<number | undefined>(hour)
   const currentFormStateRef = useRef({
@@ -374,24 +375,20 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
         queryClient.refetchQueries({ queryKey: ['locks'] }),
         queryClient.refetchQueries({ queryKey: ['portfolio-activity'] }),
       ])
+
+      // CLOSE SIDEBAR ON SUCCESSFUL COMPLETION
+      // This prevents "auto-locking" if the user leaves the sidebar open during hour rollovers
+      if (variables.allSitesChecked === 'Yes') {
+        onClose()
+      }
     },
     onError: (error: any) => {
       toast.error(error.message || error.response?.data?.error || 'Failed to update portfolio status')
     },
   })
 
-  // Lock portfolio when sidebar opens - don't wait for locks to load
+  // Lock portfolio when sidebar opens
   useEffect(() => {
-    console.log('🔒 IssueLoggingSidebar - useEffect triggered:', {
-      isOpen,
-      portfolioId,
-      userEmail: user?.email,
-      hour,
-      locksLoading,
-      locksCount: locks.length,
-      lockMutationPending: lockMutation.isPending,
-    })
-
     if (isOpen && portfolioId && user?.email) {
       // SKIP AUTO-LOCK FOR SUPER ADMIN
       if (user.role === 'super_admin') {
@@ -400,6 +397,14 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
       }
 
       const currentHour = hour !== undefined && hour !== null ? hour : getESTHour()
+
+      // CRITICAL FIX: Only auto-lock if we haven't locked this specific portfolio+hour combination yet
+      // This prevents "auto-locking" when the hour rolls over while the sidebar is open
+      if (lastLockedRef.current?.portfolioId === portfolioId && lastLockedRef.current?.hour === currentHour) {
+        console.log('✅ IssueLoggingSidebar - Already locked this portfolio+hour combo, skipping redundant lock')
+        return
+      }
+
       console.log('🔒 IssueLoggingSidebar - Conditions met, checking locks...', {
         currentHour,
         locksLoading,
@@ -408,14 +413,6 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
 
       // Only check existing locks if they've loaded, but don't wait for them
       if (!locksLoading && locks.length > 0) {
-        console.log('🔒 IssueLoggingSidebar - Locks loaded, checking for existing lock...', {
-          locks: locks.map(l => ({
-            portfolio_id: l.portfolio_id,
-            hour: l.issue_hour,
-            monitored_by: l.monitored_by,
-          })),
-        })
-
         // Check if portfolio is already locked by current user for this hour
         const existingLockForThisPortfolio = locks.find(
           (lock) =>
@@ -426,7 +423,8 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
 
         if (existingLockForThisPortfolio) {
           console.log('✅ IssueLoggingSidebar - Portfolio already locked by current user, skipping lock')
-          // Already locked by current user - no need to lock again
+          // Update ref so we don't try again
+          lastLockedRef.current = { portfolioId, hour: currentHour }
           return
         }
 
@@ -440,19 +438,16 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
 
         if (lockBySomeoneElse) {
           console.log('⚠️ IssueLoggingSidebar - Portfolio locked by someone else:', lockBySomeoneElse.monitored_by)
-          // Portfolio is locked by someone else - show error but still try (server will handle it)
           const otherUserEmail = lockBySomeoneElse.monitored_by
           const otherUserName = users.find(u => u.email === otherUserEmail)?.full_name || otherUserEmail?.split('@')[0] || 'another user'
           toast.error(`This portfolio is locked by ${otherUserName} for hour ${currentHour}. Only they can log issues.`, {
             duration: 5000
           })
-          // Don't proceed with lock if someone else has it
           return
         }
       }
 
       // Lock the portfolio with the current hour immediately when sidebar opens
-      // Server will handle validation and return proper error if user has another lock
       if (currentHour >= 0 && currentHour <= 23) {
         // Only lock if mutation is not already pending
         if (!lockMutation.isPending) {
@@ -461,6 +456,8 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
             currentHour,
             userEmail: user.email,
           })
+          // Update ref BEFORE calling mutate to avoid race conditions
+          lastLockedRef.current = { portfolioId, hour: currentHour }
           lockMutation.mutate()
         } else {
           console.log('⏳ IssueLoggingSidebar - Lock mutation already pending, skipping')
@@ -469,14 +466,10 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
         console.error('❌ IssueLoggingSidebar - Invalid hour:', currentHour)
         toast.error('Invalid hour value. Please try again.')
       }
-    } else {
-      console.log('⏸️ IssueLoggingSidebar - Conditions not met, not locking:', {
-        isOpen,
-        hasPortfolioId: !!portfolioId,
-        hasUserEmail: !!user?.email,
-      })
+    } else if (!isOpen) {
+      // Clear ref when sidebar closes so it can re-lock on next open
+      lastLockedRef.current = null
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, portfolioId, hour, user?.email])
 
   // Sync sites checked state with portfolio data

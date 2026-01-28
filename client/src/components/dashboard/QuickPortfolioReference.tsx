@@ -173,22 +173,22 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
   })
 
   // Fetch locked portfolios - needs more frequent updates for real-time lock status
-  const { data: locks = [], error: locksError, isLoading: locksLoading } = useQuery<PortfolioLock[]>({
-    queryKey: ['portfolio-locks'],
+  const { data: locksData, error: locksError, isLoading: locksLoading } = useQuery<PortfolioLock[]>({
+    queryKey: ['portfolio-locks', selectedHour],
     queryFn: async () => {
       console.log('🔄 QuickPortfolioReference - Fetching locks...')
       const result = await adminService.getLocks()
-      const currentHour = getESTHour()
+      const currentHour = selectedHour !== undefined ? selectedHour : getESTHour()
 
-      // Proactively filter out any locks that don't match the current EST hour
-      // This ensures the UI remains clean during the minute the hour changes
-      const filteredResult = result.filter(l => Number(l.issue_hour) === currentHour)
+      // Proactively filter out any locks that don't match the hour we are viewing
+      // This ensures the UI remains clean during hour changes or when viewing historical hours
+      const filteredResult = result.filter((l: PortfolioLock) => Number(l.issue_hour) === currentHour)
 
       console.log('✅ QuickPortfolioReference - Locks fetched and filtered:', {
         totalFetched: result.length,
         showingCount: filteredResult.length,
         currentHour,
-        locks: filteredResult.map(l => ({
+        locks: filteredResult.map((l: PortfolioLock) => ({
           portfolio_id: l.portfolio_id,
           hour: l.issue_hour,
           monitored_by: l.monitored_by,
@@ -196,21 +196,23 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
       })
       return filteredResult
     },
-    refetchInterval: 2000, // Refresh every 2 seconds for faster updates
-    retry: 2, // Retry up to 2 times on failure
-    retryDelay: 1000, // Wait 1 second between retries
-    staleTime: 0, // Always consider data stale to ensure fresh locks
-    refetchOnMount: true, // Always refetch when component mounts
-    refetchOnWindowFocus: true, // Refetch when window regains focus
-    gcTime: 0, // Don't cache - always fetch fresh data
+    refetchInterval: 2000,
+    retry: 2,
+    retryDelay: 1000,
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    gcTime: 0,
   })
+
+  const locks = locksData || []
 
   // Debug: Log when locks change
   useEffect(() => {
     console.log('🔒 QuickPortfolioReference - Locks state changed:', {
       locksCount: locks.length,
       locksLoading,
-      locks: locks.map(l => ({
+      locks: locks.map((l: PortfolioLock) => ({
         portfolio_id: l.portfolio_id,
         portfolio_id_type: typeof l.portfolio_id,
         hour: l.issue_hour,
@@ -456,6 +458,7 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
 
             // Check for ANY active lock for this portfolio, regardless of hour
             // Try both string and number comparison to handle type mismatches
+            // The locks array is already filtered by selectedHour/currentHour in the queryFn above
             const activeLock = (locks || []).find(l => {
               const lockPortfolioId = String(l.portfolio_id || '').trim()
               const lockPortfolioIdNumber = typeof l.portfolio_id === 'number'
@@ -465,21 +468,7 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
               // Try multiple comparison methods
               const stringMatch = lockPortfolioId.toLowerCase() === portfolioIdString.toLowerCase()
               const numberMatch = !isNaN(portfolioIdNumber) && !isNaN(lockPortfolioIdNumber) && portfolioIdNumber === lockPortfolioIdNumber
-              const matches = stringMatch || numberMatch
-
-              if (matches) {
-                console.log('🔒 QuickPortfolioReference - Found lock match:', {
-                  portfolioId: portfolioIdString,
-                  portfolioIdNumber,
-                  lockPortfolioId,
-                  lockPortfolioIdNumber,
-                  portfolioName: portfolio.name,
-                  hour: l.issue_hour,
-                  monitored_by: l.monitored_by,
-                  matchType: stringMatch ? 'string' : 'number',
-                })
-              }
-              return matches
+              return stringMatch || numberMatch
             })
             const isLocked = !!activeLock
 
