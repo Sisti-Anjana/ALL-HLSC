@@ -219,15 +219,20 @@ export const issueService = {
 
   update: async (tenantId: string, issueId: string, issueData: any) => {
     // Map monitored_by from array to string if needed
-    const mappedData = {
+    // Map monitored_by from array to string if needed
+    const mappedData: any = {
       ...issueData,
-      monitored_by: Array.isArray(issueData.monitored_by)
-        ? issueData.monitored_by[0] || ''
-        : (issueData.monitored_by || ''),
       missed_by: Array.isArray(issueData.missed_by) && issueData.missed_by.length > 0
         ? issueData.missed_by
         : null,
       severity: issueData.severity ? issueData.severity.toLowerCase() : undefined,
+    }
+
+    // Handle monitored_by specifically - DO NOT overwrite if not provided
+    if (issueData.monitored_by !== undefined) {
+      mappedData.monitored_by = Array.isArray(issueData.monitored_by)
+        ? issueData.monitored_by[0] || ''
+        : (issueData.monitored_by || '')
     }
 
     // Remove null/undefined fields
