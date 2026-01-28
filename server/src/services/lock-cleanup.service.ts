@@ -38,10 +38,6 @@ export class LockCleanupService {
     /**
      * Performs the actual database cleanup
      * Deletes all reservations where expires_at is in the past
-     */
-    /**
-     * Performs the actual database cleanup
-     * Deletes all reservations where expires_at is in the past
      * Now public to allow "Lazy Cleanup" triggering (e.g. from API calls)
      */
     public static async cleanup() {
@@ -52,18 +48,28 @@ export class LockCleanupService {
 
             // 1. Delete by expiration timestamp (standard)
             // Locks expire exactly 1 hour after creation, so we only need to check expires_at
-            const { count: deletedCount, error: timeError } = await supabase
+            const { count: timeDeleted, error: timeError } = await supabase
                 .from('hour_reservations')
                 .delete({ count: 'exact' })
                 .lt('expires_at', nowIso)
 
-            if (timeError) {
-                console.error('❌ Error during time-based lock cleanup:', timeError.message)
+            // 2. FORCE DELETE locks from previous hours
+            // If it's currently Hour 7, any lock for Hour 6 or earlier is INVALID immediately
+            // regardless of its "expires_at" time.
+            const { count: hourDeleted, error: hourError } = await supabase
+                .from('hour_reservations')
+                .delete({ count: 'exact' })
+                .lt('issue_hour', currentHour)
+
+            if (timeError || hourError) {
+                console.error('❌ Error during lock cleanup:', timeError?.message || hourError?.message)
             }
 
+            const totalDeleted = (timeDeleted || 0) + (hourDeleted || 0)
+
             // Log cleanup results
-            if (deletedCount && deletedCount > 0) {
-                console.log(`🧹 [LOCK_CLEANUP] Automatically removed ${deletedCount} expired locks (expired after 1 hour) at ${now.toLocaleTimeString()}`)
+            if (totalDeleted > 0) {
+                console.log(`🧹 [LOCK_CLEANUP] Automatically removed ${totalDeleted} expired locks (${timeDeleted || 0} expired, ${hourDeleted || 0} past hour) at ${now.toLocaleTimeString()}`)
             } else if (Math.random() > 0.98) {
                 console.log(`⏱️ [LOCK_CLEANUP] Service active. Checking for expired locks every 30 seconds. Current Hour: ${currentHour}:00`)
             }

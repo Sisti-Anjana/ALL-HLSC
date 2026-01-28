@@ -76,6 +76,7 @@ const IssueEditModal: React.FC<IssueEditModalProps> = ({ isOpen, onClose, issue,
             severity: (issuePresent === 'yes' ? 'high' : 'low').toLowerCase() as any,
             missed_by: (issuePresent === 'yes' && missedBy) ? [missedBy] : undefined,
             notes: combinedNotes || undefined,
+            monitored_by: issue.monitored_by ? (Array.isArray(issue.monitored_by) ? issue.monitored_by : [issue.monitored_by]) : undefined
         }
 
         updateMutation.mutate({ id: issue.id, data })

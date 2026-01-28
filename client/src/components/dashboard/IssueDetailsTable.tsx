@@ -621,7 +621,21 @@ const IssueDetailsTable: React.FC = () => {
                             ? monitor[0]
                             : monitor as any as string
 
-                          if (authorEmail?.toLowerCase() !== user.email.toLowerCase()) return null
+                          if (!authorEmail) return null
+
+                          const userEmail = user.email.toLowerCase()
+                          const authorEmailLower = authorEmail.toLowerCase()
+                          const username = userEmail.split('@')[0]
+
+                          // Allow edit if:
+                          // 1. Exact email match
+                          // 2. Author is just the username (legacy data)
+                          // 3. Author email starts with username (sub-match)
+                          const isMatch = authorEmailLower === userEmail ||
+                            authorEmailLower === username ||
+                            userEmail.startsWith(authorEmailLower)
+
+                          if (!isMatch) return null
 
                           return (
                             <button
