@@ -623,9 +623,20 @@ const IssueDetailsTable: React.FC = () => {
 
                           if (!authorEmail) return null
 
-                          const userEmail = user.email.toLowerCase()
-                          const authorEmailLower = authorEmail.toLowerCase()
+                          const userEmail = user.email.toLowerCase().trim()
+                          const authorEmailLower = authorEmail.toLowerCase().trim()
                           const username = userEmail.split('@')[0]
+
+                          // Debug logs to troubleshoot edit permission issues
+                          console.log('Permission Check:', {
+                            userEmail,
+                            username,
+                            authorEmail: authorEmailLower,
+                            matchExact: authorEmailLower === userEmail,
+                            matchUsername: authorEmailLower === username,
+                            matchStartsWith: userEmail.startsWith(authorEmailLower),
+                            rawAuthor: authorEmail
+                          })
 
                           // Allow edit if:
                           // 1. Exact email match
