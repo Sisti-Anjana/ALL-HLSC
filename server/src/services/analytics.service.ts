@@ -295,18 +295,20 @@ export const analyticsService = {
   getHourlyCoverageWithDateRange: async (tenantId: string | null, startDate?: string, endDate?: string) => {
     if (!tenantId || tenantId === 'null' || tenantId.trim() === '') {
       return Array.from({ length: 24 }, (_, hour) => ({
-        hour, coverage: 0, portfoliosChecked: 0, totalPortfolios: 0, totalIssues: 0,
+        hour, coverage: 0, portfoliosChecked: 0, totalPortfolios: 0, totalIssues: 0, checkedPortfolioNames: []
       }))
     }
 
-    // 1. Get total portfolios count for this tenant
-    const { count: totalPortfoliosCount, error: portfoliosError } = await supabase
+    // 1. Get total portfolios count and names for this tenant
+    const { data: allPortfolios, error: portfoliosError } = await supabase
       .from('portfolios')
-      .select('*', { count: 'exact', head: true })
+      .select('portfolio_id, name')
       .eq('tenant_id', tenantId)
 
-    if (portfoliosError) throw new Error(`Failed to fetch portfolios count: ${portfoliosError.message}`)
-    const total = totalPortfoliosCount || 1
+    if (portfoliosError) throw new Error(`Failed to fetch portfolios: ${portfoliosError.message}`)
+
+    const total = allPortfolios?.length || 1
+    const portfolioMap = new Map((allPortfolios || []).map(p => [p.portfolio_id, p.name]))
 
     // 2. Prepare date filters in UTC based on EST boundaries
     let queryStart: string
@@ -363,13 +365,15 @@ export const analyticsService = {
         }
       })
 
-      // NOTE: We no longer add portfolios from issues here to ensure ONLY 
-      // "Really Checked" portfolios are counted in the coverage %
-
-
       const portfoliosChecked = uniquePortfolios.size
       const coverage = Math.round((portfoliosChecked / total) * 100 * 10) / 10
       const totalIssues = (issues || []).filter(i => i.issue_hour === hour).length
+
+      // Get names for checked portfolios
+      const checkedPortfolioNames = Array.from(uniquePortfolios)
+        .map(id => portfolioMap.get(id))
+        .filter((name): name is string => !!name)
+        .sort((a, b) => a.localeCompare(b))
 
       return {
         hour,
@@ -377,6 +381,7 @@ export const analyticsService = {
         portfoliosChecked,
         totalIssues,
         totalPortfolios: total,
+        checkedPortfolioNames
       }
     })
 

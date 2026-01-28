@@ -15,6 +15,7 @@ export interface HourlyCoverage {
   portfoliosChecked: number // Number of unique portfolios checked
   totalIssues: number // Total issues logged in this hour
   totalPortfolios: number // Total portfolios available
+  checkedPortfolioNames?: string[] // Names of portfolios checked in this hour
 }
 
 export interface IssuesOverTime {

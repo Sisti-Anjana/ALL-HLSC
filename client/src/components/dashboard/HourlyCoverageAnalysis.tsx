@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import Card from '../common/Card'
 import { Bar } from 'react-chartjs-2'
+import Modal from '../common/Modal'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -24,12 +25,18 @@ const HourlyCoverageAnalysis: React.FC = () => {
   const [coverageData, setCoverageData] = useState<HourlyCoverage[]>([])
   const [loading, setLoading] = useState(true)
 
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedHourDetails, setSelectedHourDetails] = useState<{
+    hour: number;
+    portfolios: string[];
+  } | null>(null)
+
   const fetchHourlyCoverage = async (start?: string, end?: string) => {
     try {
       setLoading(true)
       const data = await analyticsService.getHourlyCoverageWithDateRange(start, end)
       console.log('Hourly coverage data received:', data)
-      console.log('Hour 5 data:', data.find(item => item.hour === 5))
       setCoverageData(data)
     } catch (error: any) {
       console.error('Failed to fetch hourly coverage:', error)
@@ -80,6 +87,7 @@ const HourlyCoverageAnalysis: React.FC = () => {
         portfoliosChecked: 0,
         totalPortfolios: totalPortfolios,
         totalIssues: 0,
+        checkedPortfolioNames: [],
         isFuture: true
       }
     }
@@ -90,6 +98,7 @@ const HourlyCoverageAnalysis: React.FC = () => {
       portfoliosChecked: 0,
       totalPortfolios: totalPortfolios,
       totalIssues: 0,
+      checkedPortfolioNames: []
     }
   })
 
@@ -112,6 +121,21 @@ const HourlyCoverageAnalysis: React.FC = () => {
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    onClick: (event: any, elements: any) => {
+      // Logic for double-click is slightly different but we can use simple click + check if element exists
+      if (elements.length > 0) {
+        const dataIndex = elements[0].index
+        const data = hourlyData[dataIndex]
+
+        if (data && data.portfoliosChecked > 0) {
+          setSelectedHourDetails({
+            hour: data.hour,
+            portfolios: data.checkedPortfolioNames || []
+          })
+          setIsModalOpen(true)
+        }
+      }
+    },
     plugins: {
       legend: {
         display: false,
@@ -141,6 +165,9 @@ const HourlyCoverageAnalysis: React.FC = () => {
         shadowBlur: 12,
         shadowColor: 'rgba(0, 0, 0, 0.15)',
         callbacks: {
+          afterBody: (context: any) => {
+            return '\nDouble-click to see portfolios'
+          },
           label: (context: any) => {
             const dataIndex = context.dataIndex
             const data = hourlyData[dataIndex]
@@ -197,7 +224,7 @@ const HourlyCoverageAnalysis: React.FC = () => {
     setSelectedRange(range)
     const today = new Date()
     if (range === 'today') {
-      const todayStr = today.toISOString().split('T')[0]
+      const todayStr = getESTDateString()
       setStartDate(todayStr)
       setEndDate(todayStr)
       fetchHourlyCoverage(todayStr, todayStr)
@@ -205,7 +232,7 @@ const HourlyCoverageAnalysis: React.FC = () => {
       const weekAgo = new Date(today)
       weekAgo.setDate(today.getDate() - 7)
       const weekAgoStr = weekAgo.toISOString().split('T')[0]
-      const todayStr = today.toISOString().split('T')[0]
+      const todayStr = getESTDateString()
       setStartDate(weekAgoStr)
       setEndDate(todayStr)
       fetchHourlyCoverage(weekAgoStr, todayStr)
@@ -213,7 +240,7 @@ const HourlyCoverageAnalysis: React.FC = () => {
       const monthAgo = new Date(today)
       monthAgo.setMonth(today.getMonth() - 1)
       const monthAgoStr = monthAgo.toISOString().split('T')[0]
-      const todayStr = today.toISOString().split('T')[0]
+      const todayStr = getESTDateString()
       setStartDate(monthAgoStr)
       setEndDate(todayStr)
       fetchHourlyCoverage(monthAgoStr, todayStr)
@@ -320,10 +347,51 @@ const HourlyCoverageAnalysis: React.FC = () => {
               </div>
             </div>
           ) : (
-            <Bar data={chartData} options={chartOptions} />
+            <Bar
+              data={chartData}
+              options={chartOptions}
+            />
           )}
         </div>
       </div>
+
+      {/* Portfolio Detail Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={selectedHourDetails ? `Portfolios Checked at ${selectedHourDetails.hour}:00` : 'Portfolios Checked'}
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            The following portfolios were marked as checked during this hour.
+          </p>
+          <div className="max-h-[60vh] overflow-y-auto pr-2">
+            {selectedHourDetails && selectedHourDetails.portfolios.length > 0 ? (
+              <ul className="divide-y divide-gray-100 border border-gray-100 rounded-lg overflow-hidden">
+                {selectedHourDetails.portfolios.map((name, index) => (
+                  <li key={index} className="px-4 py-3 bg-white hover:bg-gray-50 flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-[#76ab3f]"></div>
+                    <span className="text-sm font-medium text-gray-900">{name}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-200 text-gray-500 text-sm">
+                No portfolios recorded for this hour.
+              </div>
+            )}
+          </div>
+          <div className="pt-4 border-t border-gray-100">
+            <button
+              onClick={() => setIsModalOpen(false)}
+              className="w-full py-2.5 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </Modal>
     </Card >
   )
 }
