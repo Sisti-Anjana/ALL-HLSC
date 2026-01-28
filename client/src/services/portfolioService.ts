@@ -32,8 +32,8 @@ export const portfolioService = {
     return response.data.data
   },
 
-  unlock: async (id: string, reason?: string): Promise<void> => {
-    await api.post(`/portfolios/${id}/unlock`, { reason })
+  unlock: async (id: string, issueHour?: number, reason?: string): Promise<void> => {
+    await api.post(`/portfolios/${id}/unlock`, { issueHour, reason })
   },
 
   updateAllSitesChecked: async (

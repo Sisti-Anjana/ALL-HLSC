@@ -351,7 +351,8 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
       // Auto-unlock if marked as completed
       if (variables.allSitesChecked === 'Yes' && portfolioId) {
         try {
-          await portfolioService.unlock(portfolioId, 'All sites checked completed')
+          const hourToUnlock = hour !== undefined && hour !== null ? hour : getESTHour()
+          await portfolioService.unlock(portfolioId, hourToUnlock, 'All sites checked completed')
           toast.success('Portfolio status updated and unlocked successfully')
         } catch (error) {
           console.error('Failed to auto-unlock:', error)

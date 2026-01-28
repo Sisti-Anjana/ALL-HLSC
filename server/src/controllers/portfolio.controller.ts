@@ -122,14 +122,17 @@ export const portfolioController = {
   unlock: async (req: AuthRequest, res: Response) => {
     try {
       const reason = req.body?.reason || ''
+      const issueHour = req.body?.issueHour !== undefined ? parseInt(String(req.body.issueHour)) : undefined
+
       if (!req.tenantId) {
         return res.status(400).json({ success: false, error: 'Please select a client first' })
       }
       if (!req.user?.email) {
         return res.status(400).json({ success: false, error: 'User not authenticated' })
       }
-      await portfolioService.unlock(req.tenantId, req.params.id, req.user.email)
-      console.log('Portfolio unlocked by user', { user: req.user.email, portfolioId: req.params.id, reason })
+
+      await portfolioService.unlock(req.tenantId, req.params.id, req.user.email, issueHour)
+      console.log('Portfolio unlocked by user', { user: req.user.email, portfolioId: req.params.id, issueHour, reason })
       res.json({ success: true, message: 'Portfolio unlocked successfully' })
     } catch (error: any) {
       res.status(400).json({ success: false, error: error.message })
@@ -202,9 +205,10 @@ export const portfolioController = {
       // AUTOMATIC UNLOCK: If "Yes" is selected, release any active lock for this portfolio
       if (req.body.allSitesChecked === 'Yes' && req.user?.email) {
         try {
-          // Attempt to unlock the portfolio - this is optional but recommended
-          await portfolioService.unlock(req.tenantId, req.params.id, req.user.email)
-          console.log(`Successfully auto-unlocked portfolio ${req.params.id} after marking as checked`)
+          // Attempt to unlock the portfolio for the specific hour if provided
+          const checkedHour = req.body.hour !== undefined ? parseInt(String(req.body.hour)) : undefined
+          await portfolioService.unlock(req.tenantId, req.params.id, req.user.email, checkedHour)
+          console.log(`Successfully auto-unlocked portfolio ${req.params.id} for hour ${checkedHour} after marking as checked`)
         } catch (unlockError: any) {
           // If unlock fails (e.g. no lock exists), just log it and continue
           // No need to fail the entire request since the check status was already saved

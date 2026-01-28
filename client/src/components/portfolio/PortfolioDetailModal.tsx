@@ -297,7 +297,7 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
   const unlockMutation = useMutation({
     mutationFn: () => {
       if (!portfolioId) return Promise.resolve()
-      return portfolioService.unlock(portfolioId, unlockReason || 'User unlocked without reason')
+      return portfolioService.unlock(portfolioId, workingHour, unlockReason || 'User unlocked without reason')
     },
     onSuccess: async () => {
       // Immediately invalidate and refetch to update UI instantly

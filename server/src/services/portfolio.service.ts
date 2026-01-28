@@ -238,35 +238,49 @@ export const portfolioService = {
     return data
   },
 
-  unlock: async (tenantId: string, portfolioId: string, userEmail: string) => {
+  unlock: async (tenantId: string, portfolioId: string, userEmail: string, issueHour?: number) => {
     // Check if portfolio is locked and by whom
-    const { data: existingLock, error: lockCheckError } = await supabase
+    const query = supabase
       .from('hour_reservations')
-      .select('monitored_by')
+      .select('monitored_by, issue_hour')
       .eq('tenant_id', tenantId)
       .eq('portfolio_id', portfolioId)
       .gt('expires_at', new Date().toISOString())
-      .limit(1)
-      .single()
 
-    if (lockCheckError && lockCheckError.code !== 'PGRST116') { // PGRST116 = no rows returned
+    if (issueHour !== undefined && issueHour !== null) {
+      query.eq('issue_hour', issueHour)
+    }
+
+    const { data: locks, error: lockCheckError } = await query
+
+    if (lockCheckError) {
       console.error('Error checking lock:', lockCheckError)
       throw new Error(`Failed to check lock status: ${lockCheckError.message}`)
     }
 
+    const existingLock = locks && locks.length > 0 ? locks[0] : null
+
     if (!existingLock) {
-      throw new Error('Portfolio is not currently locked')
+      throw new Error(issueHour !== undefined ? `Portfolio is not currently locked for Hour ${issueHour}` : 'Portfolio is not currently locked')
     }
 
     // Only the user who locked it can unlock it
     if (existingLock.monitored_by?.toLowerCase() !== userEmail.toLowerCase()) {
       throw new Error(`Only the user who locked this portfolio (${existingLock.monitored_by}) can unlock it`)
     }
-    const { error } = await supabase
+
+    const deleteQuery = supabase
       .from('hour_reservations')
       .delete()
       .eq('tenant_id', tenantId)
       .eq('portfolio_id', portfolioId)
+      .eq('monitored_by', userEmail)
+
+    if (issueHour !== undefined && issueHour !== null) {
+      deleteQuery.eq('issue_hour', issueHour)
+    }
+
+    const { error } = await deleteQuery
 
     if (error) throw new Error(`Failed to unlock portfolio: ${error.message}`)
     return { success: true }

@@ -178,16 +178,23 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
     queryFn: async () => {
       console.log('🔄 QuickPortfolioReference - Fetching locks...')
       const result = await adminService.getLocks()
-      console.log('✅ QuickPortfolioReference - Locks fetched:', {
-        count: result.length,
-        locks: result.map(l => ({
+      const currentHour = getESTHour()
+
+      // Proactively filter out any locks that don't match the current EST hour
+      // This ensures the UI remains clean during the minute the hour changes
+      const filteredResult = result.filter(l => Number(l.issue_hour) === currentHour)
+
+      console.log('✅ QuickPortfolioReference - Locks fetched and filtered:', {
+        totalFetched: result.length,
+        showingCount: filteredResult.length,
+        currentHour,
+        locks: filteredResult.map(l => ({
           portfolio_id: l.portfolio_id,
-          portfolio_id_type: typeof l.portfolio_id,
           hour: l.issue_hour,
           monitored_by: l.monitored_by,
         })),
       })
-      return result
+      return filteredResult
     },
     refetchInterval: 2000, // Refresh every 2 seconds for faster updates
     retry: 2, // Retry up to 2 times on failure
