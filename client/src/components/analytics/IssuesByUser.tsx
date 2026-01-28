@@ -9,6 +9,7 @@ import Card from '../common/Card'
 import Button from '../common/Button'
 import toast from 'react-hot-toast'
 import IssueExportButtons from '../common/IssueExportButtons'
+import { getESTDateString } from '../../utils/timezone'
 
 const IssuesByUser: React.FC = () => {
   const { user: currentUser } = useAuth()
@@ -27,16 +28,8 @@ const IssuesByUser: React.FC = () => {
   const [showMissedAlertsOnly, setShowMissedAlertsOnly] = useState(false)
   const [searchMissedBy, setSearchMissedBy] = useState('')
   const [searchMonitoredBy, setSearchMonitoredBy] = useState('')
-  const [fromDate, setFromDate] = useState(() => {
-    // Default to today
-    const today = new Date()
-    return today.toISOString().split('T')[0]
-  })
-  const [toDate, setToDate] = useState(() => {
-    // Default to today
-    const today = new Date()
-    return today.toISOString().split('T')[0]
-  })
+  const [fromDate, setFromDate] = useState(() => getESTDateString())
+  const [toDate, setToDate] = useState(() => getESTDateString())
 
   // Fetch users
   const { data: users = [] } = useQuery<User[]>({
@@ -175,12 +168,15 @@ const IssuesByUser: React.FC = () => {
     // Global search
     if (globalSearch) {
       const searchLower = globalSearch.toLowerCase()
-      filtered = filtered.filter(
-        (issue) =>
-          issue.portfolio?.name?.toLowerCase().includes(searchLower) ||
-          issue.description?.toLowerCase().includes(searchLower) ||
-          issue.notes?.toLowerCase().includes(searchLower)
-      )
+      filtered = filtered.filter((issue) => {
+        const portfolioMatch = issue.portfolio?.name?.toLowerCase().includes(searchLower)
+        const descMatch = issue.description?.toLowerCase().includes(searchLower)
+        const notesMatch = issue.notes?.toLowerCase().includes(searchLower)
+        const monitoredByMatch = issue.monitored_by?.some(email => email.toLowerCase().includes(searchLower))
+        const missedByMatch = issue.missed_by?.some(email => email.toLowerCase().includes(searchLower))
+
+        return portfolioMatch || descMatch || notesMatch || monitoredByMatch || missedByMatch
+      })
     }
 
     // Issue filter
@@ -211,9 +207,11 @@ const IssuesByUser: React.FC = () => {
       )
     }
 
-    // Date range
+    // Date range - EST AWARE
     if (fromDate) {
-      const start = new Date(fromDate)
+      // Treat input YYYY-MM-DD as EST, so start is 05:00 UTC (or 04:00 DST)
+      // Simple approximate fix for EST (UTC-5)
+      const start = new Date(`${fromDate}T05:00:00.000Z`)
       filtered = filtered.filter((issue) => {
         const issueDate = new Date(issue.created_at)
         return issueDate >= start
@@ -221,11 +219,19 @@ const IssuesByUser: React.FC = () => {
     }
 
     if (toDate) {
-      const end = new Date(toDate)
-      end.setHours(23, 59, 59, 999)
+      // Treat input YYYY-MM-DD as EST, so end is 04:59:59 UTC Next Day (covering full late shift)
+      // We add 1 day to toDate string, then set to 05:00:00Z minus 1ms? 
+      // Simpler: `${toDate}T23:59:59` is EST. Convert to UTC implies adding 5 hours => Next Day 04:59 UTC
+      const end = new Date(`${toDate}T23:59:59.999`) // Browser treats T-time as local? No, standard is tricky.
+      // Robust way: Create UTC date for 05:00 on NEXT day
+      const d = new Date(toDate)
+      d.setDate(d.getDate() + 1)
+      const nextDayStr = d.toISOString().split('T')[0]
+      const endT = new Date(`${nextDayStr}T04:59:59.999Z`) // 23:59 EST is roughly 04:59 UTC next day
+
       filtered = filtered.filter((issue) => {
         const issueDate = new Date(issue.created_at)
-        return issueDate <= end
+        return issueDate <= endT
       })
     }
 
@@ -268,27 +274,31 @@ const IssuesByUser: React.FC = () => {
   }
 
   const handleQuickRange = (range: 'today' | 'yesterday' | 'week' | 'month') => {
-    const today = new Date()
-    const formatDate = (date: Date) => date.toISOString().split('T')[0]
+    // Use EST Date String as the source of truth for "Today"
+    const todayStr = getESTDateString()
+    const today = new Date(todayStr + 'T12:00:00') // Use noon to avoid timezone shift on day subtraction
 
     if (range === 'today') {
-      setFromDate(formatDate(today))
-      setToDate(formatDate(today))
+      setFromDate(todayStr)
+      setToDate(todayStr)
     } else if (range === 'yesterday') {
       const yesterday = new Date(today)
-      yesterday.setDate(yesterday.getDate() - 1)
-      setFromDate(formatDate(yesterday))
-      setToDate(formatDate(yesterday))
+      yesterday.setDate(today.getDate() - 1)
+      const yesterdayStr = yesterday.toISOString().split('T')[0]
+      setFromDate(yesterdayStr)
+      setToDate(yesterdayStr)
     } else if (range === 'week') {
       const weekAgo = new Date(today)
       weekAgo.setDate(today.getDate() - 7)
-      setFromDate(formatDate(weekAgo))
-      setToDate(formatDate(today))
+      const weekAgoStr = weekAgo.toISOString().split('T')[0]
+      setFromDate(weekAgoStr)
+      setToDate(todayStr)
     } else if (range === 'month') {
       const monthAgo = new Date(today)
       monthAgo.setMonth(today.getMonth() - 1)
-      setFromDate(formatDate(monthAgo))
-      setToDate(formatDate(today))
+      const monthAgoStr = monthAgo.toISOString().split('T')[0]
+      setFromDate(monthAgoStr)
+      setToDate(todayStr)
     }
   }
 
@@ -563,14 +573,14 @@ const IssuesByUser: React.FC = () => {
                     <div key={hourData.hour} className="text-center">
                       <div
                         className={`h-12 rounded-md transition-all cursor-pointer hover:opacity-80 ${hourData.count === 0
-                            ? 'bg-gray-100'
-                            : hourData.count >= 5
-                              ? 'bg-green-500'
-                              : hourData.count >= 3
-                                ? 'bg-green-400'
-                                : hourData.count >= 1
-                                  ? 'bg-green-300'
-                                  : 'bg-gray-100'
+                          ? 'bg-gray-100'
+                          : hourData.count >= 5
+                            ? 'bg-green-500'
+                            : hourData.count >= 3
+                              ? 'bg-green-400'
+                              : hourData.count >= 1
+                                ? 'bg-green-300'
+                                : 'bg-gray-100'
                           }`}
                         title={`Hour ${hourData.hour}: ${hourData.count} checks${hourData.foundIssues > 0 ? `, ${hourData.foundIssues} issues found` : ''
                           }`}
@@ -689,8 +699,8 @@ const IssuesByUser: React.FC = () => {
             <button
               onClick={() => handleQuickRange('today')}
               className={`px-3 py-1.5 text-sm rounded-md transition-all ${fromDate === new Date().toISOString().split('T')[0] && toDate === new Date().toISOString().split('T')[0]
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
             >
               Today
@@ -698,8 +708,8 @@ const IssuesByUser: React.FC = () => {
             <button
               onClick={() => handleQuickRange('yesterday')}
               className={`px-3 py-1.5 text-sm rounded-md transition-all ${fromDate && toDate && fromDate === toDate && fromDate !== new Date().toISOString().split('T')[0]
-                  ? 'bg-purple-100 text-purple-700'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-purple-100 text-purple-700'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
             >
               Yesterday
