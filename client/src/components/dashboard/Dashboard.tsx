@@ -1,13 +1,27 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import QuickPortfolioReference from './QuickPortfolioReference'
 import HourlyCoverageAnalysis from './HourlyCoverageAnalysis'
 import IssueDetailsTable from './IssueDetailsTable'
 import IssueLoggingSidebar from './IssueLoggingSidebar'
 
+import { getESTHour } from '../../utils/timezone'
+
 const Dashboard: React.FC = () => {
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<string | null>(null)
-  const [selectedHour, setSelectedHour] = useState<number>(new Date().getHours())
+  const [selectedHour, setSelectedHour] = useState<number>(getESTHour())
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const freshHour = getESTHour()
+      if (freshHour !== selectedHour) {
+        setSelectedHour(freshHour)
+      }
+    }, 1000) // Update every 1 second
+    return () => clearInterval(timer)
+  }, [selectedHour])
+
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
 
   const handlePortfolioSelected = (portfolioId: string, hour: number) => {
     console.log('Dashboard: Portfolio selected:', { portfolioId, hour })

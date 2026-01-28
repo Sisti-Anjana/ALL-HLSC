@@ -12,10 +12,16 @@ interface IssueFormProps {
     caseNumber: string
     setCaseNumber: (value: string) => void
     issueDescription: string
+    notes: string
+    setNotes: (value: string) => void
     missedAlertsBy: string
     users: User[]
     handleAddIssue: () => void
+    handleUpdateIssue: () => void
+    onCancelEdit: () => void
+    editingIssueId: string | null
     createMutation: UseMutationResult<any, any, any, unknown>
+    updateMutation: UseMutationResult<any, any, any, unknown>
     lockMutation: UseMutationResult<any, any, void, unknown>
     lockForThisPortfolio: PortfolioLock | undefined
     user: any
@@ -30,19 +36,28 @@ const IssueForm: React.FC<IssueFormProps> = ({
     caseNumber,
     setCaseNumber,
     issueDescription,
+    notes,
+    setNotes,
     missedAlertsBy,
     users,
     handleAddIssue,
+    handleUpdateIssue,
+    onCancelEdit,
+    editingIssueId,
     createMutation,
+    updateMutation,
     lockMutation,
     lockForThisPortfolio,
     user,
     monitoredByName,
 }) => {
     return (
-        <div className="space-y-4">
-            <h4 className="font-semibold text-gray-900">Add issue for this hour:</h4>
+        <div className="space-y-4" id="issue-form-container">
+            <h4 className="font-semibold text-gray-900">
+                {editingIssueId ? 'Edit issue:' : 'Add issue for this hour:'}
+            </h4>
 
+            {/* ... other fields remain same ... */}
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Issue Present</label>
                 <div className="flex gap-2">
@@ -103,6 +118,17 @@ const IssueForm: React.FC<IssueFormProps> = ({
             </div>
 
             <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Note</label>
+                <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Add additional notes here..."
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+            </div>
+
+            <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Issues Missed By (optional)</label>
                 <select
                     value={missedAlertsBy}
@@ -125,29 +151,51 @@ const IssueForm: React.FC<IssueFormProps> = ({
                 </select>
             </div>
 
-            <Button
-                onClick={() => {
-                    if (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() === user?.email?.toLowerCase()) {
-                        handleAddIssue()
-                    } else {
-                        lockMutation.mutate()
-                    }
-                }}
-                disabled={createMutation.isPending || lockMutation.isPending || (!lockForThisPortfolio && (user?.role === 'super_admin')) || (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase())}
-                className="w-full"
-                style={{
-                    backgroundColor: (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase())
-                        ? '#9ca3af'
-                        : !lockForThisPortfolio
-                            ? '#3b82f6' // Blue for "Lock to Add"
-                            : '#76ab3f' // Green for "Add Issue"
-                }}
-            >
-                {createMutation.isPending ? 'Adding...' :
-                    lockMutation.isPending ? 'Locking...' :
-                        (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase()) ? 'Locked by another user' :
-                            !lockForThisPortfolio ? 'Lock Portfolio to Add Issue' : 'Add Issue'}
-            </Button>
+            <div className="flex gap-2">
+                {editingIssueId ? (
+                    <>
+                        <Button
+                            onClick={handleUpdateIssue}
+                            disabled={updateMutation.isPending}
+                            className="flex-1"
+                            style={{ backgroundColor: '#76ab3f' }}
+                        >
+                            {updateMutation.isPending ? 'Updating...' : 'Update Issue'}
+                        </Button>
+                        <Button
+                            onClick={onCancelEdit}
+                            variant="secondary"
+                            className="flex-1"
+                        >
+                            Cancel
+                        </Button>
+                    </>
+                ) : (
+                    <Button
+                        onClick={() => {
+                            if (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() === user?.email?.toLowerCase()) {
+                                handleAddIssue()
+                            } else {
+                                lockMutation.mutate()
+                            }
+                        }}
+                        disabled={createMutation.isPending || lockMutation.isPending || (!lockForThisPortfolio && (user?.role === 'super_admin')) || (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase())}
+                        className="w-full"
+                        style={{
+                            backgroundColor: (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase())
+                                ? '#9ca3af'
+                                : !lockForThisPortfolio
+                                    ? '#3b82f6' // Blue for "Lock to Add"
+                                    : '#76ab3f' // Green for "Add Issue"
+                        }}
+                    >
+                        {createMutation.isPending ? 'Adding...' :
+                            lockMutation.isPending ? 'Locking...' :
+                                (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase()) ? 'Locked by another user' :
+                                    !lockForThisPortfolio ? 'Lock Portfolio to Add Issue' : 'Add Issue'}
+                    </Button>
+                )}
+            </div>
 
             {lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase() && (
                 <p className="text-[10px] text-center text-red-600 font-medium">

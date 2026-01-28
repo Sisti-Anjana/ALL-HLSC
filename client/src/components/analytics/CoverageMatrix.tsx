@@ -1586,12 +1586,6 @@ const UserPerformanceModal: React.FC<UserPerformanceModalProps> = ({
                           borderRadius: 2,
                         },
                         {
-                          label: 'Issues',
-                          data: Array.from({ length: 24 }, (_, i) => user.hours[i]?.issues.length || 0),
-                          backgroundColor: '#3B82F6',
-                          borderRadius: 2,
-                        },
-                        {
                           label: 'Active Issues',
                           data: Array.from({ length: 24 }, (_, i) => user.hours[i]?.activeIssues.length || 0),
                           backgroundColor: '#EF4444',

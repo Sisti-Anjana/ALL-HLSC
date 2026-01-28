@@ -1,4 +1,5 @@
 import { supabase } from '../config/database.config'
+import { getESTHour, getESTDateString, getESTHourFromDate, getESTDayBoundariesInUTC } from '../utils/timezone.util'
 
 export const analyticsService = {
   getDashboardStats: async (tenantId: string | null) => {
@@ -146,13 +147,14 @@ export const analyticsService = {
   },
 
   getCoverageMatrix: async (tenantId: string | null) => {
-    // Super admin without selected tenant should return empty data
     if (!tenantId || tenantId === 'null' || tenantId.trim() === '') {
-      return {
-        portfolios: [],
-        matrix: {},
-      }
+      return { portfolios: [], matrix: {} }
     }
+
+    const todayDate = getESTDateString()
+    const { start: startOfToday } = getESTDayBoundariesInUTC(todayDate)
+
+    // 1. Fetch all portfolios
     const { data: portfolios, error: portfoliosError } = await supabase
       .from('portfolios')
       .select('portfolio_id, name')
@@ -160,27 +162,47 @@ export const analyticsService = {
 
     if (portfoliosError) throw new Error(`Failed to fetch portfolios: ${portfoliosError.message}`)
 
-    const { data: issues, error: issuesError } = await supabase
-      .from('issues')
-      .select('portfolio_id, issue_hour')
+    // 2. Fetch all check events for today from portfolio_completions
+    const { data: completions, error: completionsError } = await supabase
+      .from('portfolio_completions')
+      .select('related_portfolio_id, monitored_by, created_at, metadata')
       .eq('tenant_id', tenantId)
+      .eq('action_type', 'PORTFOLIO_CHECKED')
+      .gte('created_at', startOfToday)
 
-    if (issuesError) throw new Error(`Failed to fetch issues: ${issuesError.message}`)
+    if (completionsError) throw new Error(`Failed to fetch completions: ${completionsError.message}`)
 
-    const matrix: { [key: string]: { [key: number]: number } } = {}
-    portfolios?.forEach(portfolio => {
-      matrix[portfolio.portfolio_id] = {}
-      for (let hour = 0; hour < 24; hour++) {
-        matrix[portfolio.portfolio_id][hour] = 0
+    // 3. Build the Matrix
+    // Structure: { [userId]: { [hour]: Set<portfolioId> } }
+    const userHourlyPortfolios: { [key: string]: { [key: number]: Set<string> } } = {}
+
+    completions?.forEach(c => {
+      const userId = c.monitored_by
+      if (!userId) return
+
+      let logHour = getESTHourFromDate(c.created_at)
+      if (c.metadata) {
+        try {
+          const meta = typeof c.metadata === 'string' ? JSON.parse(c.metadata) : c.metadata
+          if (meta.hour !== undefined) logHour = parseInt(meta.hour)
+        } catch (e) { }
+      }
+
+      if (!userHourlyPortfolios[userId]) userHourlyPortfolios[userId] = {}
+      if (!userHourlyPortfolios[userId][logHour]) userHourlyPortfolios[userId][logHour] = new Set()
+
+      if (c.related_portfolio_id) {
+        userHourlyPortfolios[userId][logHour].add(c.related_portfolio_id)
       }
     })
 
-    issues?.forEach(issue => {
-      if (issue.issue_hour !== null && issue.issue_hour >= 0 && issue.issue_hour < 24) {
-        if (matrix[issue.portfolio_id]) {
-          matrix[issue.portfolio_id][issue.issue_hour]++
-        }
-      }
+    // 4. Convert sets to counts for frontend compatibility
+    const matrix: { [key: string]: { [key: number]: number } } = {}
+    Object.entries(userHourlyPortfolios).forEach(([userId, hours]) => {
+      matrix[userId] = {}
+      Object.entries(hours).forEach(([hour, portfolioSet]) => {
+        matrix[userId][parseInt(hour)] = portfolioSet.size
+      })
     })
 
     return {
@@ -255,7 +277,7 @@ export const analyticsService = {
           yValue: 'Y0',
           yValueNumber: 0,
           status: 'no-activity' as const,
-          lastUpdated: portfolio.all_sites_checked_date 
+          lastUpdated: portfolio.all_sites_checked_date
             ? new Date(portfolio.all_sites_checked_date + 'T00:00:00')
             : (portfolioIssues.length > 0 ? new Date(portfolioIssues[0].created_at) : null),
           hoursSinceLastActivity: null,
@@ -271,104 +293,92 @@ export const analyticsService = {
   },
 
   getHourlyCoverageWithDateRange: async (tenantId: string | null, startDate?: string, endDate?: string) => {
-    // Super admin without selected tenant should return empty data
     if (!tenantId || tenantId === 'null' || tenantId.trim() === '') {
       return Array.from({ length: 24 }, (_, hour) => ({
-        hour,
-        coverage: 0,
-        portfoliosChecked: 0,
-        totalPortfolios: 0,
-        totalIssues: 0,
+        hour, coverage: 0, portfoliosChecked: 0, totalPortfolios: 0, totalIssues: 0,
       }))
     }
 
-    // Get total portfolios count
-    const { count: totalPortfolios, error: portfoliosError } = await supabase
+    // 1. Get total portfolios count for this tenant
+    const { count: totalPortfoliosCount, error: portfoliosError } = await supabase
       .from('portfolios')
       .select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
 
-    if (portfoliosError) {
-      throw new Error(`Failed to fetch portfolios count: ${portfoliosError.message}`)
+    if (portfoliosError) throw new Error(`Failed to fetch portfolios count: ${portfoliosError.message}`)
+    const total = totalPortfoliosCount || 1
+
+    // 2. Prepare date filters in UTC based on EST boundaries
+    let queryStart: string
+    let queryEnd: string
+
+    if (startDate && endDate) {
+      const { start } = getESTDayBoundariesInUTC(startDate)
+      const { end } = getESTDayBoundariesInUTC(endDate)
+      queryStart = start
+      queryEnd = end
+    } else {
+      const today = getESTDateString()
+      const { start, end } = getESTDayBoundariesInUTC(today)
+      queryStart = start
+      queryEnd = end
     }
 
-    const totalPortfoliosCount = totalPortfolios || 1 // Avoid division by zero
-
-    // Get portfolios that were checked (all_sites_checked = 'Yes') with their check hour and date
-    let query = supabase
-      .from('portfolios')
-      .select('all_sites_checked_hour, all_sites_checked_date, portfolio_id')
+    // 3. Fetch check events from completions/logs
+    const { data: completions, error: completionsError } = await supabase
+      .from('portfolio_completions')
+      .select('related_portfolio_id, metadata, created_at')
       .eq('tenant_id', tenantId)
-      .eq('all_sites_checked', 'Yes')
-      .not('all_sites_checked_hour', 'is', null)
-      .not('all_sites_checked_date', 'is', null)
+      .eq('action_type', 'PORTFOLIO_CHECKED')
+      .gte('created_at', queryStart)
+      .lte('created_at', queryEnd)
 
-    if (startDate) {
-      // Convert startDate to date string (YYYY-MM-DD)
-      const startDateStr = new Date(startDate).toISOString().split('T')[0]
-      query = query.gte('all_sites_checked_date', startDateStr)
-    }
-    if (endDate) {
-      // Convert endDate to date string (YYYY-MM-DD)
-      const endDateStr = new Date(endDate).toISOString().split('T')[0]
-      query = query.lte('all_sites_checked_date', endDateStr)
-    }
+    if (completionsError) throw new Error(`Failed to fetch completions: ${completionsError.message}`)
 
-    const { data: portfolioData, error } = await query
-
-    if (error) throw new Error(`Failed to fetch hourly coverage: ${error.message}`)
-
-    console.log('Hourly coverage data from portfolios:', portfolioData?.length || 0, 'portfolios checked')
-
-    // Also fetch issues for the date range to show in tooltip
-    let issuesQuery = supabase
+    // 4. Fetch issues for the same period
+    const { data: issues, error: issuesError } = await supabase
       .from('issues')
-      .select('issue_hour, portfolio_id, created_at')
+      .select('portfolio_id, issue_hour, created_at')
       .eq('tenant_id', tenantId)
+      .gte('created_at', queryStart)
+      .lte('created_at', queryEnd)
 
-    if (startDate) {
-      issuesQuery = issuesQuery.gte('created_at', new Date(startDate).toISOString())
-    }
-    if (endDate) {
-      const endDateTime = new Date(endDate)
-      endDateTime.setHours(23, 59, 59, 999) // End of day
-      issuesQuery = issuesQuery.lte('created_at', endDateTime.toISOString())
-    }
+    if (issuesError) throw new Error(`Failed to fetch issues: ${issuesError.message}`)
 
-    const { data: issuesData } = await issuesQuery
-
-    // Calculate coverage by hour based on portfolios checked in each hour
+    // 5. Calculate coverage by hour
     const hourlyData = Array.from({ length: 24 }, (_, hour) => {
-      // Filter portfolios checked in this specific hour
-      const hourPortfolios = (portfolioData || []).filter(
-        portfolio => portfolio.all_sites_checked_hour === hour && portfolio.portfolio_id
-      )
+      const uniquePortfolios = new Set<string>()
 
-      // Get unique portfolios for this hour
-      const uniquePortfolios = new Set(hourPortfolios.map(p => p.portfolio_id))
+      // Add portfolios from completions (checked events)
+      completions?.forEach(c => {
+        let logHour = getESTHourFromDate(c.created_at)
+        if (c.metadata) {
+          try {
+            const meta = typeof c.metadata === 'string' ? JSON.parse(c.metadata) : c.metadata
+            if (meta.hour !== undefined) logHour = parseInt(meta.hour)
+          } catch (e) { }
+        }
+        if (logHour === hour && c.related_portfolio_id) {
+          uniquePortfolios.add(c.related_portfolio_id)
+        }
+      })
+
+      // NOTE: We no longer add portfolios from issues here to ensure ONLY 
+      // "Really Checked" portfolios are counted in the coverage %
+
+
       const portfoliosChecked = uniquePortfolios.size
-
-      // Calculate coverage percentage
-      const coverage = totalPortfoliosCount > 0
-        ? Math.round((portfoliosChecked / totalPortfoliosCount) * 100 * 10) / 10
-        : 0
-
-      // Count total issues for this hour (for tooltip display)
-      const hourIssues = (issuesData || []).filter(
-        issue => issue.issue_hour === hour && issue.portfolio_id
-      )
-      const totalIssues = hourIssues.length
+      const coverage = Math.round((portfoliosChecked / total) * 100 * 10) / 10
+      const totalIssues = (issues || []).filter(i => i.issue_hour === hour).length
 
       return {
         hour,
         coverage,
         portfoliosChecked,
         totalIssues,
-        totalPortfolios: totalPortfoliosCount,
+        totalPortfolios: total,
       }
     })
-
-    console.log('Hourly coverage result (sample hours 0-6):', hourlyData.slice(0, 7).map(d => ({ hour: d.hour, coverage: d.coverage, portfoliosChecked: d.portfoliosChecked })))
 
     return hourlyData
   },

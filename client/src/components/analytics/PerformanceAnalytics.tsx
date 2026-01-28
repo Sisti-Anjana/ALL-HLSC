@@ -285,19 +285,15 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
       return true
     })
 
-    // Track portfolio completions to avoid double-counting between logs and portfolios table
+    // Track unique portfolios per user to avoid double counting
+    const userUniquePortfolios: { [key: string]: Set<string> } = {}
     let totalPortfoliosCheckedCount = 0
-    const completionKeys = new Set<string>()
     const userHoursMap: { [key: string]: Set<number> } = {}
-
-    // Track total unique portfolios checked globally (for dashboard stats)
-    const uniquePortfoliosCheckedSet = new Set<string>()
 
     // Record each log event to the appropriate user
     portfolioActivityLogs.forEach(log => {
       const monitoredBy = (log.admin_name || 'Unknown').toLowerCase()
       const portfolioId = log.related_portfolio_id
-      const logDate = new Date(log.created_at).toISOString().split('T')[0]
       let meta = log.metadata
       if (typeof meta === 'string') {
         try { meta = JSON.parse(meta) } catch (e) { console.warn('Failed to parse metadata', e) }
@@ -305,10 +301,7 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
       const logHour = meta?.hour ?? new Date(log.created_at).getHours()
 
       if (portfolioId) {
-        totalPortfoliosCheckedCount++
-
         if (!userStatsMap[monitoredBy]) {
-          // Initialize user if they haven't logged any issues but have completions
           const foundUser = users.find(u => u.email?.toLowerCase() === monitoredBy)
           let displayName = monitoredBy.split('@')[0]
           if (foundUser?.full_name) displayName = foundUser.full_name
@@ -326,86 +319,72 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
           }
         }
 
+        if (!userUniquePortfolios[monitoredBy]) {
+          userUniquePortfolios[monitoredBy] = new Set()
+        }
+        userUniquePortfolios[monitoredBy].add(portfolioId)
+
         const userEmailVal = userStatsMap[monitoredBy].user
         if (!userStatsMap[userEmailVal].hourlyBreakdown[logHour]) {
           userStatsMap[userEmailVal].hourlyBreakdown[logHour] = { portfolios: 0, issues: 0, issuesYes: 0, portfolioNames: [] }
         }
         userStatsMap[userEmailVal].hourlyBreakdown[logHour].portfolios++
 
-        // Add portfolio name to hourly breakdown for chart tooltips
         const portfolioData = portfolios.find(p => p.id === portfolioId)
         if (portfolioData) {
           const siteRangeStr = portfolioData.site_range ? ` (${portfolioData.site_range})` : ''
           const fullName = `${portfolioData.name}${siteRangeStr}`
-
           userStatsMap[userEmailVal].hourlyBreakdown[logHour].portfolioNames.push(fullName)
-          userStatsMap[monitoredBy].portfolios.push(fullName)
+          if (!userStatsMap[monitoredBy].portfolios.includes(fullName)) {
+            userStatsMap[monitoredBy].portfolios.push(fullName)
+          }
         }
 
-        // Increment portfoliosCount for every log entry (cumulative)
-        userStatsMap[monitoredBy].portfoliosCount++
-
-        // Also ensure hours count includes log hours
         if (!userHoursMap[monitoredBy]) userHoursMap[monitoredBy] = new Set()
         userHoursMap[monitoredBy].add(logHour)
-
-        // Track key to prevent double-counting with portfolios table fallback
-        const key = `${portfolioId}_${logDate}_${logHour}_${monitoredBy}`
-        completionKeys.add(key)
       }
     })
 
-    // FALLBACK: Process portfolios table for existing/one-off completions not yet in logs
+    // FALLBACK: Process portfolios table
     portfolios.forEach((portfolio) => {
-      // Only count portfolios that have been completed (all_sites_checked = 'Yes')
       if (portfolio.all_sites_checked !== 'Yes' || !portfolio.all_sites_checked_date || !portfolio.all_sites_checked_by) {
         return
       }
 
       const checkedDateStr = portfolio.all_sites_checked_date
       const normalizedCheckedDate = checkedDateStr.split('T')[0]
-
-      // Date range filtering
       let isInRange = true
       const todayStr = today.toISOString().split('T')[0]
 
-      if (selectedRange === 'today') {
-        isInRange = normalizedCheckedDate === todayStr
-      } else if (selectedRange === 'yesterday') {
+      if (selectedRange === 'today') isInRange = normalizedCheckedDate === todayStr
+      else if (selectedRange === 'yesterday') {
         const yesterday = new Date(today)
         yesterday.setDate(yesterday.getDate() - 1)
-        const yesterdayStr = yesterday.toISOString().split('T')[0]
-        isInRange = normalizedCheckedDate === yesterdayStr
-      } else if (selectedRange === 'week') {
+        isInRange = normalizedCheckedDate === yesterday.toISOString().split('T')[0]
+      }
+      else if (selectedRange === 'week') {
         const weekAgo = new Date(today)
         weekAgo.setDate(today.getDate() - 7)
         isInRange = new Date(checkedDateStr) >= weekAgo
-      } else if (selectedRange === 'custom' && customStartDate && customEndDate) {
+      }
+      else if (selectedRange === 'custom' && customStartDate && customEndDate) {
         isInRange = normalizedCheckedDate >= customStartDate && normalizedCheckedDate <= customEndDate
       }
 
       if (!isInRange) return
 
-      // Find user
       let checkedByUser = users.find((u) => u.id === portfolio.all_sites_checked_by)
-      let userEmail = checkedByUser?.email
-
-      // If not in our user list (like a Super Admin), check if it's the current user
-      if (!checkedByUser && currentUser && currentUser.userId === portfolio.all_sites_checked_by) {
-        userEmail = currentUser.email
-      }
+      let userEmail = checkedByUser?.email || (currentUser?.userId === portfolio.all_sites_checked_by ? currentUser.email : null)
 
       if (!userEmail) return
-
       const userEmailLower = userEmail.toLowerCase()
       const completionHour = portfolio.all_sites_checked_hour ?? 0
-      const portfolioId = portfolio.id
 
-      // Check if this completion was already counted from logs
-      const key = `${portfolioId}_${normalizedCheckedDate}_${completionHour}_${userEmailLower}`
-      if (completionKeys.has(key)) return // Already counted from logs
+      if (!userUniquePortfolios[userEmailLower]) {
+        userUniquePortfolios[userEmailLower] = new Set()
+      }
+      userUniquePortfolios[userEmailLower].add(portfolio.id)
 
-      // Not in logs, so count it from the portfolios table fallback
       if (!userStatsMap[userEmailLower]) {
         userStatsMap[userEmailLower] = {
           user: userEmailLower,
@@ -428,17 +407,21 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
       }
       userStatsMap[userEmailLower].hourlyBreakdown[completionHour].portfolios++
       userStatsMap[userEmailLower].hourlyBreakdown[completionHour].portfolioNames.push(portfolioFullName)
-
-      userStatsMap[userEmailLower].portfoliosCount++
-
-      // Add portfolio details
-      userStatsMap[userEmailLower].portfolios.push(portfolioFullName)
-
-      totalPortfoliosCheckedCount++
+      if (!userStatsMap[userEmailLower].portfolios.includes(portfolioFullName)) {
+        userStatsMap[userEmailLower].portfolios.push(portfolioFullName)
+      }
 
       if (!userHoursMap[userEmailLower]) userHoursMap[userEmailLower] = new Set()
       userHoursMap[userEmailLower].add(completionHour)
     })
+
+    // Calculate total checked portfolios and update userStatsMap with unique counts
+    const globalUniquePortfolios = new Set<string>()
+    Object.keys(userUniquePortfolios).forEach(user => {
+      userStatsMap[user].portfoliosCount = userUniquePortfolios[user].size
+      userUniquePortfolios[user].forEach(pid => globalUniquePortfolios.add(pid))
+    })
+    totalPortfoliosCheckedCount = globalUniquePortfolios.size
 
     // Calculate hours from issues (for hoursCount)
     // Only count issues from valid, active users
@@ -1014,149 +997,78 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
         size="lg"
       >
         {selectedPerformer && (
-          <div className="space-y-3">
+          <div className="space-y-4 pt-2">
             {/* User Rank Card */}
-            <div className="flex items-center gap-3 bg-white border border-gray-100 rounded-xl p-2 shadow-sm">
-              <div className="flex items-center justify-center w-12 h-12 bg-amber-400 rounded-lg text-white text-xl font-bold shadow-sm shrink-0">
+            <div className="flex items-center gap-4 bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+              <div className="flex items-center justify-center w-14 h-14 bg-amber-400 rounded-xl text-white text-2xl font-bold shadow-sm shrink-0">
                 {selectedPerformer.rank}
               </div>
               <div>
-                <h4 className="text-base font-bold text-gray-900">{selectedPerformer.user.displayName || selectedPerformer.user.user}</h4>
-                <p className="text-sm text-gray-500 font-medium">Rank #{selectedPerformer.rank} in this category</p>
+                <h4 className="text-xl font-bold text-gray-900">{selectedPerformer.user.displayName || selectedPerformer.user.user}</h4>
+                <p className="text-sm text-gray-500 font-medium whitespace-nowrap">Rank #{selectedPerformer.rank} in this category</p>
               </div>
             </div>
 
             {/* Category Information */}
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-1 h-4 bg-[#76ab3f] rounded-full"></div>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-1.5 h-5 bg-[#76ab3f] rounded-full"></div>
                 <h5 className="font-bold text-gray-700 text-sm">Category Information</h5>
               </div>
-              <div className="bg-gray-50 rounded-lg p-2 border border-gray-100 space-y-1">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500 font-medium">Category</span>
-                  <span className="text-sm font-bold text-gray-800">{selectedPerformer.category}</span>
+              <div className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm">
+                <div className="px-4 py-2 border-b border-gray-50 flex justify-between items-center text-[13px]">
+                  <span className="text-gray-500 font-medium">Category</span>
+                  <span className="text-gray-800 font-bold">{selectedPerformer.category}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500 font-medium">Metric</span>
-                  <span className="text-sm font-bold text-gray-800">{selectedPerformer.metric}</span>
+                <div className="px-4 py-2 border-b border-gray-50 flex justify-between items-center text-[13px]">
+                  <span className="text-gray-500 font-medium">Metric</span>
+                  <span className="text-gray-800 font-bold">{selectedPerformer.metric}</span>
                 </div>
-                <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                  <span className="text-sm text-gray-500 font-medium">Achieved Value</span>
-                  <span className="text-2xl font-bold text-[#76ab3f]">{selectedPerformer.value}</span>
+                <div className="px-4 py-3 flex justify-between items-center">
+                  <span className="text-gray-500 font-medium text-[13px]">Achieved Value</span>
+                  <span className="text-3xl font-extrabold text-[#76ab3f]">{selectedPerformer.value}</span>
                 </div>
-              </div>
-            </div>
-
-            {/* Hourly Breakdown Chart */}
-            <div className="mt-4">
-              <h5 className="font-bold text-gray-700 text-sm mb-2">Hourly Breakdown</h5>
-              <div style={{ height: '200px' }}>
-                <Bar
-                  data={{
-                    labels: Array.from({ length: 24 }, (_, i) => i.toString()),
-                    datasets: [
-                      {
-                        label: 'Portfolios',
-                        data: Array.from({ length: 24 }, (_, i) => selectedPerformer.user.hourlyBreakdown[i]?.portfolios || 0),
-                        backgroundColor: '#76AB3F',
-                        borderRadius: 2,
-                      },
-                      {
-                        label: 'Issues',
-                        data: Array.from({ length: 24 }, (_, i) => selectedPerformer.user.hourlyBreakdown[i]?.issues || 0),
-                        backgroundColor: '#3B82F6',
-                        borderRadius: 2,
-                      },
-                      {
-                        label: 'Active Issues',
-                        data: Array.from({ length: 24 }, (_, i) => selectedPerformer.user.hourlyBreakdown[i]?.issuesYes || 0),
-                        backgroundColor: '#EF4444',
-                        borderRadius: 2,
-                      }
-                    ]
-                  }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: {
-                        position: 'bottom',
-                        labels: {
-                          boxWidth: 8,
-                          usePointStyle: true,
-                          pointStyle: 'rectRounded',
-                          font: { size: 10 }
-                        }
-                      },
-                      tooltip: {
-                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                        titleColor: '#1f2937',
-                        bodyColor: '#4b5563',
-                        borderColor: '#e5e7eb',
-                        borderWidth: 1,
-                        padding: 8,
-                        displayColors: true,
-                        callbacks: {
-                          afterBody: (context: any) => {
-                            const dataIndex = context[0].dataIndex
-                            const portfolios = selectedPerformer.user.hourlyBreakdown[dataIndex]?.portfolioNames || []
-                            if (portfolios.length > 0) {
-                              return '\nChecked: ' + portfolios.join(', ')
-                            }
-                            return ''
-                          }
-                        }
-                      }
-                    },
-                    scales: {
-                      y: {
-                        beginAtZero: true,
-                        grid: { color: '#f3f4f6' },
-                        ticks: { stepSize: 1, font: { size: 10 } }
-                      },
-                      x: {
-                        grid: { display: false },
-                        ticks: { font: { size: 10 } },
-                        title: { display: true, text: 'Hour', font: { size: 10 } }
-                      }
-                    }
-                  }}
-                />
               </div>
             </div>
 
             {/* Why they're in the top list */}
-            <div className="bg-blue-50 border border-blue-100 rounded-lg p-2">
-              <h5 className="text-blue-800 font-bold text-sm mb-1">Why they're in the top list</h5>
-              <p className="text-blue-700 text-xs leading-relaxed">
-                {selectedPerformer.user.displayName || selectedPerformer.user.user} achieved <span className="font-bold">{selectedPerformer.user.portfoliosCount} total portfolios monitored</span>, ranking them <span className="font-bold">#{selectedPerformer.rank}</span> among all team members in the "Most Total Portfolios Monitored" category.
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+              <h5 className="text-blue-800 font-bold text-[13px] mb-1.5">Why they're in the top list</h5>
+              <p className="text-blue-700 text-sm leading-relaxed font-medium">
+                <span className="font-bold">{selectedPerformer.user.displayName || selectedPerformer.user.user}</span> achieved <span className="font-bold">{selectedPerformer.value} {selectedPerformer.metric.toLowerCase()}</span>, ranking them <span className="font-bold">#{selectedPerformer.rank}</span> among all team members in the "{selectedPerformer.category}" category.
               </p>
             </div>
 
             {/* Complete Performance Metrics */}
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-1 h-4 bg-[#76ab3f] rounded-full"></div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1.5 h-5 bg-[#76ab3f] rounded-full"></div>
                 <h5 className="font-bold text-gray-700 text-sm">Complete Performance Metrics</h5>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-white border border-blue-100 rounded-lg p-2 text-center">
-                  <div className="text-xs font-bold text-blue-600 mb-1">Total Count</div>
-                  <div className="text-2xl font-bold text-blue-600">{selectedPerformer.user.issues}</div>
+              <div className="grid grid-cols-2 gap-3">
+                {/* 1. Total Count */}
+                <div className="bg-white border border-blue-100 rounded-xl p-4 shadow-sm">
+                  <div className="text-[11px] font-bold text-blue-600 uppercase tracking-wider mb-1">Total Count</div>
+                  <div className="text-2xl font-extrabold text-blue-700">{selectedPerformer.user.issues}</div>
                 </div>
-                <div className="bg-white border border-red-100 rounded-lg p-2 text-center">
-                  <div className="text-xs font-bold text-red-600 mb-1">Active Issues</div>
-                  <div className="text-2xl font-bold text-red-600">{selectedPerformer.user.issuesYes}</div>
+
+                {/* 2. Active Issues */}
+                <div className="bg-white border border-red-100 rounded-xl p-4 shadow-sm">
+                  <div className="text-[11px] font-bold text-red-600 uppercase tracking-wider mb-1">Active Issues</div>
+                  <div className="text-2xl font-extrabold text-red-700">{selectedPerformer.user.issuesYes}</div>
                 </div>
-                <div className="bg-white border border-purple-100 rounded-lg p-2 text-center">
-                  <div className="text-xs font-bold text-purple-600 mb-1">Active Hours</div>
-                  <div className="text-2xl font-bold text-purple-600">{selectedPerformer.user.hoursCount}</div>
+
+                {/* 3. Active Hours */}
+                <div className="bg-white border border-purple-100 rounded-xl p-4 shadow-sm">
+                  <div className="text-[11px] font-bold text-purple-600 uppercase tracking-wider mb-1">Active Hours</div>
+                  <div className="text-2xl font-extrabold text-purple-700">{selectedPerformer.user.hoursCount}</div>
                 </div>
-                <div className="bg-white border border-green-100 rounded-lg p-2 text-center">
-                  <div className="text-xs font-bold text-green-600 mb-1">Missed Alerts</div>
-                  <div className="text-2xl font-bold text-green-600">{selectedPerformer.user.missedAlerts || 0}</div>
+
+                {/* 4. Missed Alerts */}
+                <div className="bg-white border border-green-100 rounded-xl p-4 shadow-sm">
+                  <div className="text-[11px] font-bold text-green-600 uppercase tracking-wider mb-1">Missed Alerts</div>
+                  <div className="text-2xl font-extrabold text-green-700">{selectedPerformer.user.missedAlerts || 0}</div>
                 </div>
               </div>
             </div>
@@ -1165,7 +1077,7 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
             <div className="flex justify-end pt-2">
               <button
                 onClick={() => setSelectedPerformer(null)}
-                className="px-6 py-2 font-semibold text-white rounded-lg shadow-sm hover:shadow-md transition-shadow text-sm"
+                className="px-8 py-2.5 font-bold text-white rounded-xl shadow-sm hover:shadow-md transition-all text-sm"
                 style={{ backgroundColor: '#76ab3f' }}
               >
                 Close

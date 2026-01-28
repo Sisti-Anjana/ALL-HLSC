@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext'
 import Input from '../common/Input'
 import Button from '../common/Button'
 import Modal from '../common/Modal'
+import { getESTHour } from '../../utils/timezone'
 
 interface IssueFormProps {
   isOpen: boolean
@@ -18,23 +19,23 @@ interface IssueFormProps {
   defaultPortfolioId?: string
 }
 
-const IssueForm: React.FC<IssueFormProps> = ({ 
-  isOpen, 
-  onClose, 
-  onSubmit, 
-  portfolios, 
+const IssueForm: React.FC<IssueFormProps> = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  portfolios,
   isLoading,
-  defaultPortfolioId 
+  defaultPortfolioId
 }) => {
   const { user } = useAuth()
   const [formData, setFormData] = useState<CreateIssueData>({
     portfolio_id: defaultPortfolioId || '',
     site_name: '',
-    issue_hour: new Date().getHours(),
+    issue_hour: getESTHour(),
     description: '',
     severity: 'Medium',
     status: 'open',
-    monitored_by: [],
+    monitored_by: user?.email ? [user.email] : [], // Initialize with current user if available
     missed_by: [],
   })
 
@@ -50,11 +51,11 @@ const IssueForm: React.FC<IssueFormProps> = ({
       setFormData({
         portfolio_id: defaultPortfolioId || '',
         site_name: '',
-        issue_hour: new Date().getHours(),
+        issue_hour: getESTHour(),
         description: '',
         severity: 'Medium',
         status: 'open',
-        monitored_by: [],
+        monitored_by: user?.email ? [user.email] : [], // Reset with current user if available
         missed_by: [],
       })
     } else if (defaultPortfolioId) {
@@ -140,7 +141,7 @@ const IssueForm: React.FC<IssueFormProps> = ({
               >
                 {Array.from({ length: 24 }, (_, i) => (
                   <option key={i} value={i}>
-                    🕐 {i} {i === new Date().getHours() ? '(Current)' : ''}
+                    🕐 {i} {i === getESTHour() ? '(Current)' : ''}
                   </option>
                 ))}
               </select>
@@ -180,17 +181,15 @@ const IssueForm: React.FC<IssueFormProps> = ({
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             rows={6}
             maxLength={maxDescriptionLength}
-            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base ${
-              descriptionLength > maxDescriptionLength * 0.9
-                ? 'border-red-300'
-                : 'border-gray-300'
-            }`}
+            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base ${descriptionLength > maxDescriptionLength * 0.9
+              ? 'border-red-300'
+              : 'border-gray-300'
+              }`}
             placeholder="Describe the issue..."
             required
           />
-          <p className={`text-xs mt-1 ${
-            descriptionLength > maxDescriptionLength * 0.9 ? 'text-red-600' : 'text-gray-500'
-          }`}>
+          <p className={`text-xs mt-1 ${descriptionLength > maxDescriptionLength * 0.9 ? 'text-red-600' : 'text-gray-500'
+            }`}>
             {descriptionLength} / {maxDescriptionLength} characters
           </p>
         </div>
@@ -202,9 +201,9 @@ const IssueForm: React.FC<IssueFormProps> = ({
           </label>
           <select
             value={formData.monitored_by?.[0] || ''}
-            onChange={(e) => setFormData({ 
-              ...formData, 
-              monitored_by: e.target.value ? [e.target.value] : [] 
+            onChange={(e) => setFormData({
+              ...formData,
+              monitored_by: e.target.value ? [e.target.value] : []
             })}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
             required
@@ -276,9 +275,9 @@ const IssueForm: React.FC<IssueFormProps> = ({
           <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
             Cancel
           </Button>
-          <Button 
-            type="submit" 
-            isLoading={isLoading} 
+          <Button
+            type="submit"
+            isLoading={isLoading}
             className="flex-1"
             disabled={!formData.portfolio_id || !formData.site_name || !formData.description}
           >

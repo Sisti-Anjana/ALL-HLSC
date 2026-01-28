@@ -35,8 +35,10 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
   const [caseNumber, setCaseNumber] = useState('')
   const [issueDescription, setIssueDescription] = useState('')
   const [missedAlertsBy, setMissedAlertsBy] = useState<string>('')
+  const [notes, setNotes] = useState('')
   const [allSitesChecked, setAllSitesChecked] = useState<'Yes' | 'No' | null>(null)
   const [sitesCheckedDetails, setSitesCheckedDetails] = useState('')
+  const [editingIssueId, setEditingIssueId] = useState<string | null>(null)
 
   // Fetch portfolio details
   const { data: portfolio } = useQuery<Portfolio>({
@@ -84,6 +86,7 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
     issuePresent,
     issueDescription,
     caseNumber,
+    notes,
     missedAlertsBy,
     portfolioId,
     hour,
@@ -98,6 +101,7 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
       issuePresent,
       issueDescription,
       caseNumber,
+      notes,
       missedAlertsBy,
       portfolioId,
       hour,
@@ -105,7 +109,84 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
         ? lockForThisPortfolio.monitored_by
         : (user?.email || '')
     }
-  }, [issuePresent, issueDescription, caseNumber, missedAlertsBy, portfolioId, hour, lockForThisPortfolio, user?.email])
+  }, [issuePresent, issueDescription, caseNumber, notes, missedAlertsBy, portfolioId, hour, lockForThisPortfolio, user?.email])
+
+  const resetForm = () => {
+    setIssuePresent('')
+    setCaseNumber('')
+    setIssueDescription('')
+    setMissedAlertsBy('')
+    setNotes('')
+    setEditingIssueId(null)
+  }
+
+  const handleEditClick = (issue: Issue) => {
+    setEditingIssueId(issue.id)
+    setIssuePresent(issue.description && issue.description.toLowerCase() !== 'no issue' ? 'yes' : 'no')
+    setIssueDescription(issue.description || '')
+
+    // Parse combined notes field
+    const rawNotes = issue.notes || ''
+    const caseMatch = rawNotes.match(/Case #: ([^\n|]*)/)
+    const caseVal = caseMatch ? caseMatch[1].trim() : ''
+    // Remove "Case #: ..." and "(Auto-saved)" from the notes
+    const cleanNotes = rawNotes
+      .replace(/Case #: [^\n|]*/, '')
+      .replace(/\(Auto-saved\)/, '')
+      .trim()
+
+    setCaseNumber(caseVal)
+    setNotes(cleanNotes)
+
+    setMissedAlertsBy(Array.isArray(issue.missed_by) && issue.missed_by.length > 0 ? issue.missed_by[0] : '')
+
+    // Scroll to form
+    const formElement = document.getElementById('issue-form-container')
+    if (formElement) {
+      formElement.scrollIntoView({ behavior: 'smooth' })
+    }
+  }
+
+  // Update issue mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => issueService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['issues', portfolioId, hour] })
+      queryClient.invalidateQueries({ queryKey: ['issues'] })
+      queryClient.invalidateQueries({ queryKey: ['portfolio-activity'] })
+      toast.success('Issue updated successfully')
+      resetForm()
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to update issue')
+    },
+  })
+
+  const handleUpdateIssue = () => {
+    if (!editingIssueId) return
+
+    // Validation
+    if (issuePresent === 'yes' && (!issueDescription.trim() || issueDescription === 'No issue')) {
+      toast.error('Please provide issue details when issue is present')
+      return
+    }
+
+    // Combine Case # and Notes
+    let combinedNotes = ''
+    if (caseNumber.trim()) combinedNotes += `Case #: ${caseNumber.trim()}`
+    if (notes.trim()) {
+      combinedNotes += combinedNotes ? ` | ${notes.trim()}` : notes.trim()
+    }
+
+    const issueData: any = {
+      description: issuePresent === 'no' ? 'No issue' : issueDescription.trim(),
+      severity: (issuePresent === 'yes' ? 'high' : 'low').toLowerCase(),
+      missed_by: (issuePresent === 'yes' && missedAlertsBy) ? [missedAlertsBy] : null,
+      notes: combinedNotes || null,
+    }
+
+    updateMutation.mutate({ id: editingIssueId, data: issueData })
+  }
 
 
   // Check if at least one issue at this hour was logged by current user
@@ -130,7 +211,7 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
         console.error('❌ Lock mutation - Missing portfolioId', { portfolioId })
         return Promise.reject(new Error('Portfolio ID is required'))
       }
-      const currentHour = hour !== undefined && hour !== null ? hour : new Date().getHours()
+      const currentHour = hour !== undefined && hour !== null ? hour : getESTHour()
       if (currentHour < 0 || currentHour > 23) {
         console.error('❌ Lock mutation - Invalid hour', { hour: currentHour })
         return Promise.reject(new Error('Valid hour (0-23) is required'))
@@ -143,7 +224,7 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
       return portfolioService.lock(portfolioId, currentHour)
     },
     onMutate: async () => {
-      const currentHour = hour !== undefined && hour !== null ? hour : new Date().getHours()
+      const currentHour = hour !== undefined && hour !== null ? hour : getESTHour()
 
       // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
       await queryClient.cancelQueries({ queryKey: ['portfolio-locks'] })
@@ -310,7 +391,7 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
         return
       }
 
-      const currentHour = hour !== undefined && hour !== null ? hour : new Date().getHours()
+      const currentHour = hour !== undefined && hour !== null ? hour : getESTHour()
       console.log('🔒 IssueLoggingSidebar - Conditions met, checking locks...', {
         currentHour,
         locksLoading,
@@ -502,9 +583,7 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
       return
     }
 
-    // Determine monitored_by: use lock's monitored_by if portfolio is locked, otherwise use current user
-    // This ensures issues are created with the same monitored_by as the lock (matching the tooltip)
-    // Always fallback to current user if lock is not found
+    // Determine monitored_by
     const monitoredByEmail = (lockForThisPortfolio?.monitored_by && lockForThisPortfolio.monitored_by.trim())
       ? lockForThisPortfolio.monitored_by
       : (user?.email || '')
@@ -514,18 +593,24 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
       return
     }
 
-    // Prepare issue data - map to database schema
-    // Map to database schema - monitored_by is VARCHAR(255) (string), missed_by is TEXT[] (array)
+    // Combine Case # and Notes
+    let combinedNotes = ''
+    if (caseNumber.trim()) combinedNotes += `Case #: ${caseNumber.trim()}`
+    if (notes.trim()) {
+      combinedNotes += combinedNotes ? ` | ${notes.trim()}` : notes.trim()
+    }
+
+    // Prepare issue data
     const issueData: any = {
       portfolio_id: portfolioId,
       site_name: '',
       issue_hour: currentHour,
       description: issuePresent === 'no' ? 'No issue' : issueDescription.trim(),
-      severity: (issuePresent === 'yes' ? 'high' : 'low').toLowerCase(), // Database uses lowercase
+      severity: (issuePresent === 'yes' ? 'high' : 'low').toLowerCase(),
       status: 'open',
-      monitored_by: monitoredByEmail, // Use lock's monitored_by if locked, otherwise current user
-      missed_by: (issuePresent === 'yes' && missedAlertsBy) ? [missedAlertsBy] : null, // Array for missed_by, null if empty
-      notes: caseNumber ? `Case #: ${caseNumber}` : null,
+      monitored_by: monitoredByEmail,
+      missed_by: (issuePresent === 'yes' && missedAlertsBy) ? [missedAlertsBy] : null,
+      notes: combinedNotes || null,
     }
 
     // Remove null/undefined fields
@@ -630,10 +715,16 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
           caseNumber={caseNumber}
           setCaseNumber={setCaseNumber}
           issueDescription={issueDescription}
+          notes={notes}
+          setNotes={setNotes}
           missedAlertsBy={missedAlertsBy}
           users={users}
           handleAddIssue={handleAddIssue}
+          handleUpdateIssue={handleUpdateIssue}
+          onCancelEdit={resetForm}
+          editingIssueId={editingIssueId}
           createMutation={createMutation}
+          updateMutation={updateMutation}
           lockMutation={lockMutation}
           lockForThisPortfolio={lockForThisPortfolio}
           user={user}
@@ -651,6 +742,9 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
         <IssueList
           issues={issues}
           formatDateTime={formatDateTime}
+          onEditClick={handleEditClick}
+          editingIssueId={editingIssueId}
+          currentUserEmail={user?.email}
         />
       </div>
 

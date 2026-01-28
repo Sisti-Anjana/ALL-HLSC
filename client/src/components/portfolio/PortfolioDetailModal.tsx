@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Modal from '../common/Modal'
+import { getESTHour, getESTDateString } from '../../utils/timezone'
 // import Button from '../common/Button'
 import { portfolioService } from '../../services/portfolioService'
 import { adminService, PortfolioLock } from '../../services/adminService'
@@ -53,7 +54,7 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
     staleTime: 2000, // Consider data fresh for 2 seconds
   })
 
-  const currentHour = new Date().getHours()
+  const currentHour = getESTHour()
 
   // Get any active lock for this portfolio (to get the hour they were working on)
   const activeLockForPortfolio = useMemo(() => {
@@ -237,7 +238,7 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
       // This ensures we save the hour the user was actually working on (e.g., hour 5)
       const hourToSave = activeLockForPortfolio?.issue_hour !== undefined && activeLockForPortfolio?.issue_hour !== null
         ? activeLockForPortfolio.issue_hour
-        : now.getHours()
+        : getESTHour()
 
       console.log('Saving all_sites_checked with hour:', hourToSave, 'from activeLock:', activeLockForPortfolio?.issue_hour, 'current hour:', now.getHours())
 
@@ -395,7 +396,7 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
 
   const handleViewIssues = () => {
     onClose()
-    const currentHour = new Date().getHours()
+    const currentHour = getESTHour()
     navigate(`/issues?portfolio=${portfolioId}&hour=${currentHour}`)
   }
 

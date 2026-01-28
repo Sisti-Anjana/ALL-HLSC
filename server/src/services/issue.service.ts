@@ -1,4 +1,5 @@
 import { supabase } from '../config/database.config'
+import { getESTHour, getESTDateString } from '../utils/timezone.util'
 
 export const issueService = {
   getAll: async (tenantId: string | null, filters?: any) => {
@@ -73,6 +74,13 @@ export const issueService = {
   },
 
   create: async (tenantId: string, issueData: any, userEmail?: string) => {
+    // ENFORCEMENT: Prevent logging for future hours
+    const currentESTHour = getESTHour()
+    if (issueData.issue_hour !== undefined && issueData.issue_hour > currentESTHour) {
+      console.error(`❌ Issue creation BLOCKED - Future hour attempted: ${issueData.issue_hour} while current EST is ${currentESTHour}`)
+      throw new Error(`You cannot log issues for a future hour (${issueData.issue_hour}:00). Current EST hour is ${currentESTHour}:00.`)
+    }
+
     // Check if portfolio is locked by another user for this hour
     if (issueData.portfolio_id && issueData.issue_hour !== undefined && userEmail) {
       const { data: existingLock, error: lockCheckError } = await supabase

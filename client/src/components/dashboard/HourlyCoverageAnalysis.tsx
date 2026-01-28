@@ -13,6 +13,7 @@ import {
 import { analyticsService } from '../../services/analyticsService'
 import { HourlyCoverage } from '../../types/analytics.types'
 import toast from 'react-hot-toast'
+import { getESTHour, getESTDateString } from '../../utils/timezone'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
@@ -39,11 +40,11 @@ const HourlyCoverageAnalysis: React.FC = () => {
   }
 
   useEffect(() => {
-    // Initialize with today's date
-    const today = new Date().toISOString().split('T')[0]
-    setStartDate(today)
-    setEndDate(today)
-    fetchHourlyCoverage(today, today)
+    // Initialize with today's date in EST
+    const todayStr = getESTDateString()
+    setStartDate(todayStr)
+    setEndDate(todayStr)
+    fetchHourlyCoverage(todayStr, todayStr)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -65,20 +66,31 @@ const HourlyCoverageAnalysis: React.FC = () => {
   }
 
   // Ensure we have data for all 24 hours, filling missing hours with 0
+  const currentESTHour = getESTHour()
+  const isViewingToday = startDate === getESTDateString() && endDate === getESTDateString()
+
   const hourlyData = Array.from({ length: 24 }, (_, hour) => {
     const existingData = coverageData.find(item => item.hour === hour)
-    const result = existingData || {
+
+    // IF viewing Today, mask future hours to 0 to avoid "random" data from different timezones
+    if (isViewingToday && hour > currentESTHour) {
+      return {
+        hour,
+        coverage: 0,
+        portfoliosChecked: 0,
+        totalPortfolios: totalPortfolios,
+        totalIssues: 0,
+        isFuture: true
+      }
+    }
+
+    return existingData || {
       hour,
       coverage: 0,
       portfoliosChecked: 0,
       totalPortfolios: totalPortfolios,
       totalIssues: 0,
     }
-    // Debug hour 5
-    if (hour === 5) {
-      console.log('Hour 5 chart data:', result, 'from coverageData:', existingData)
-    }
-    return result
   })
 
   // Debug: Log first few hours to verify data

@@ -14,6 +14,7 @@ import IssueExportButtons from '../common/IssueExportButtons'
 import ConfirmDialog from '../common/ConfirmDialog'
 import { useDebounce } from '../../hooks/useDebounce'
 import { getESTHour, getESTDateString, formatESTTime, formatESTDate } from '../../utils/timezone'
+import IssueEditModal from './IssueEditModal'
 
 const IssueDetailsTable: React.FC = () => {
   const { user } = useAuth()
@@ -71,6 +72,8 @@ const IssueDetailsTable: React.FC = () => {
   const [activeLock, setActiveLock] = useState<PortfolioLock | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [issueToDelete, setIssueToDelete] = useState<string | null>(null)
+  const [editingIssue, setEditingIssue] = useState<Issue | null>(null)
+  const [editModalOpen, setEditModalOpen] = useState(false)
 
   // Fetch portfolios
   const { data: portfolios = [] } = useQuery<Portfolio[]>({
@@ -98,7 +101,7 @@ const IssueDetailsTable: React.FC = () => {
       setActiveLock(null)
       return
     }
-    const currentHour = new Date().getHours()
+    const currentHour = getESTHour()
     const lock = locks.find(
       (l) =>
         l.monitored_by?.toLowerCase() === user.email.toLowerCase() &&
@@ -131,9 +134,8 @@ const IssueDetailsTable: React.FC = () => {
     }
   }, [activeLock, user?.email])
 
-  // Initialize dates on mount
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0]
+    const today = getESTDateString()
     setStartDate(today)
     setEndDate(today)
     handleQuickRange('today')
@@ -173,7 +175,17 @@ const IssueDetailsTable: React.FC = () => {
     const issueDate = new Date(issue.created_at).toISOString().split('T')[0]
     return issueDate >= startDate && issueDate <= endDate
   }).sort((a, b) => {
-    // Sort by newest first
+    // Sort by Date (YYYY-MM-DD) DESC
+    const dateA = new Date(a.created_at).toISOString().split('T')[0]
+    const dateB = new Date(b.created_at).toISOString().split('T')[0]
+    if (dateA !== dateB) return dateB.localeCompare(dateA)
+
+    // Then sort by Hour DESC
+    const hourA = a.issue_hour ?? 0
+    const hourB = b.issue_hour ?? 0
+    if (hourA !== hourB) return hourB - hourA
+
+    // Finally sort by full creation time DESC
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   })
 
@@ -187,7 +199,7 @@ const IssueDetailsTable: React.FC = () => {
       // Reset form
       setNewIssue({
         portfolio_id: '',
-        issue_hour: new Date().getHours(),
+        issue_hour: getESTHour(),
         description: '',
         monitored_by: user?.email ? [user.email] : [],
       })
@@ -229,6 +241,12 @@ const IssueDetailsTable: React.FC = () => {
 
   const handleLogTicket = () => {
     // Validation
+    const currentESTHour = getESTHour()
+    if (newIssue.issue_hour !== undefined && newIssue.issue_hour > currentESTHour) {
+      toast.error(`You cannot log issues for a future hour (${newIssue.issue_hour}:00). Current EST hour is ${currentESTHour}:00.`)
+      return
+    }
+
     if (!newIssue.portfolio_id) {
       toast.error('Please select a Portfolio')
       return
@@ -272,7 +290,7 @@ const IssueDetailsTable: React.FC = () => {
     const issueData: any = {
       portfolio_id: newIssue.portfolio_id!,
       site_name: '',
-      issue_hour: newIssue.issue_hour || new Date().getHours(),
+      issue_hour: newIssue.issue_hour || getESTHour(),
       description: issuePresent === 'no' ? 'No issue' : (newIssue.description || '').trim(),
       severity: (issuePresent === 'yes' ? 'high' : 'low').toLowerCase(), // Database uses lowercase
       status: 'open',
@@ -298,45 +316,50 @@ const IssueDetailsTable: React.FC = () => {
     setHourFilter('all')
     setIssueFilter('active')
     setSelectedPortfolio('all')
-    const today = new Date().toISOString().split('T')[0]
+    const today = getESTDateString()
     setStartDate(today)
     setEndDate(today)
     setQuickRange('today')
   }
 
   const handleQuickRange = (range: 'today' | 'yesterday' | 'week' | 'month' | 'all') => {
-    const today = new Date()
-    const yesterday = new Date(today)
-    yesterday.setDate(yesterday.getDate() - 1)
-    const weekStart = new Date(today)
-    weekStart.setDate(today.getDate() - today.getDay()) // Start of week (Sunday)
-    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+    const today = getESTDateString()
+    const todayObj = new Date(today)
+    const yesterday = new Date(todayObj)
+    yesterday.setDate(todayObj.getDate() - 1)
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`
+
+    const weekStart = new Date(todayObj)
+    weekStart.setDate(todayObj.getDate() - todayObj.getDay()) // Start of week (Sunday)
+    const weekStartStr = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`
+
+    const monthStart = new Date(todayObj.getFullYear(), todayObj.getMonth(), 1)
+    const monthStartStr = `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, '0')}-${String(monthStart.getDate()).padStart(2, '0')}`
 
     switch (range) {
       case 'today':
-        setStartDate(today.toISOString().split('T')[0])
-        setEndDate(today.toISOString().split('T')[0])
+        setStartDate(today)
+        setEndDate(today)
         setQuickRange('today')
         break
       case 'yesterday':
-        setStartDate(yesterday.toISOString().split('T')[0])
-        setEndDate(yesterday.toISOString().split('T')[0])
+        setStartDate(yesterdayStr)
+        setEndDate(yesterdayStr)
         setQuickRange('yesterday')
         break
       case 'week':
-        setStartDate(weekStart.toISOString().split('T')[0])
-        setEndDate(today.toISOString().split('T')[0])
+        setStartDate(weekStartStr)
+        setEndDate(today)
         setQuickRange('week')
         break
       case 'month':
-        setStartDate(monthStart.toISOString().split('T')[0])
-        setEndDate(today.toISOString().split('T')[0])
+        setStartDate(monthStartStr)
+        setEndDate(today)
         setQuickRange('month')
         break
       case 'all':
-        // Set to a very early date (e.g., 2020-01-01) to show all issues till today
         setStartDate('2020-01-01')
-        setEndDate(today.toISOString().split('T')[0])
+        setEndDate(today)
         setQuickRange('all')
         break
     }
@@ -565,7 +588,24 @@ const IssueDetailsTable: React.FC = () => {
                       )}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">
-                      {issue.description || 'N/A'}
+                      <div>
+                        {issue.description || 'N/A'}
+                        {(() => {
+                          const rawNotes = issue.notes || ''
+                          const cleanNote = rawNotes
+                            .replace(/Case #: [^\n|]*/, '')
+                            .replace(/\|/, '')
+                            .replace(/\(Auto-saved\)/, '')
+                            .trim()
+
+                          if (!cleanNote) return null
+                          return (
+                            <div className="mt-1 text-xs text-gray-500 italic bg-gray-50 p-1 rounded">
+                              Note: {cleanNote}
+                            </div>
+                          )
+                        })()}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">
                       {Array.isArray(issue.monitored_by) && issue.monitored_by.length > 0
@@ -573,16 +613,39 @@ const IssueDetailsTable: React.FC = () => {
                         : (issue.monitored_by || 'N/A')}
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => {
-                          setIssueToDelete(issue.id)
-                          setDeleteConfirmOpen(true)
-                        }}
-                        className="text-red-600 hover:text-red-800 hover:underline hover:font-semibold text-sm transition-all duration-200"
-                        aria-label={`Delete issue from ${issue.portfolio?.name || 'portfolio'}`}
-                      >
-                        Delete
-                      </button>
+                      <div className="flex items-center gap-3">
+                        {(() => {
+                          if (!user?.email) return null
+                          const monitor = issue.monitored_by
+                          const authorEmail = Array.isArray(monitor)
+                            ? monitor[0]
+                            : monitor as any as string
+
+                          if (authorEmail?.toLowerCase() !== user.email.toLowerCase()) return null
+
+                          return (
+                            <button
+                              onClick={() => {
+                                setEditingIssue(issue)
+                                setEditModalOpen(true)
+                              }}
+                              className="text-blue-600 hover:text-blue-800 hover:underline hover:font-semibold text-sm transition-all duration-200"
+                            >
+                              Edit
+                            </button>
+                          )
+                        })()}
+                        <button
+                          onClick={() => {
+                            setIssueToDelete(issue.id)
+                            setDeleteConfirmOpen(true)
+                          }}
+                          className="text-red-600 hover:text-red-800 hover:underline hover:font-semibold text-sm transition-all duration-200"
+                          aria-label={`Delete issue from ${issue.portfolio?.name || 'portfolio'}`}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -591,6 +654,32 @@ const IssueDetailsTable: React.FC = () => {
           </table>
         </div>
       </div>
+      <IssueEditModal
+        isOpen={editModalOpen}
+        onClose={() => {
+          setEditModalOpen(false)
+          setEditingIssue(null)
+        }}
+        issue={editingIssue}
+        users={users}
+      />
+
+      <ConfirmDialog
+        isOpen={deleteConfirmOpen}
+        onClose={() => {
+          setDeleteConfirmOpen(false)
+          setIssueToDelete(null)
+        }}
+        onConfirm={() => {
+          if (issueToDelete) {
+            deleteMutation.mutate(issueToDelete)
+          }
+          setDeleteConfirmOpen(false)
+          setIssueToDelete(null)
+        }}
+        title="Delete Issue"
+        message="Are you sure you want to delete this issue? This action cannot be undone."
+      />
     </div>
   )
 }

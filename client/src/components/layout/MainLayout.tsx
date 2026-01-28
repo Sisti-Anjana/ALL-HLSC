@@ -1,13 +1,25 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../context/AuthContext'
 import { useTenant } from '../../context/TenantContext'
 import toast from 'react-hot-toast'
 import ScrollToTop from '../common/ScrollToTop'
+import { getESTHour } from '../../utils/timezone'
 
 const MainLayout: React.FC = () => {
   const queryClient = useQueryClient()
+  const [currentHour, setCurrentHour] = useState(getESTHour())
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const freshHour = getESTHour()
+      setCurrentHour(freshHour)
+    }, 1000) // Update every 1 second
+    return () => clearInterval(timer)
+  }, [])
+
+
   const { user, logout, availableTenants, switchTenant } = useAuth()
   const { selectedTenantId, selectedTenant, setSelectedTenantId, tenants, isLoading: tenantsLoading } = useTenant()
   const location = useLocation()
@@ -25,13 +37,7 @@ const MainLayout: React.FC = () => {
     }
   }
 
-  const getCurrentHourEST = () => {
-    const now = new Date()
-    const estOffset = -5 // EST is UTC-5
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000)
-    const estTime = new Date(utc + (estOffset * 3600000))
-    return estTime.getHours()
-  }
+
 
   // Base navigation items available to all users
   const baseNavItems = [
@@ -180,9 +186,8 @@ const MainLayout: React.FC = () => {
                 <span className="sm:hidden">Out</span>
               </button>
 
-              {/* Current Hour - Hidden on small screens */}
               <div className="hidden md:block px-2 sm:px-3 py-1.5 sm:py-2 text-white rounded-lg font-semibold whitespace-nowrap text-xs sm:text-sm" style={{ backgroundColor: '#76ab3f' }}>
-                Hour {getCurrentHourEST()}
+                Hour {currentHour}
               </div>
 
               {/* Mobile Menu Toggle */}
