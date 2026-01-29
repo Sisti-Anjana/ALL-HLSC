@@ -179,7 +179,7 @@ const IssueForm: React.FC<IssueFormProps> = ({
                                 lockMutation.mutate()
                             }
                         }}
-                        disabled={createMutation.isPending || lockMutation.isPending || (!lockForThisPortfolio && (user?.role === 'super_admin')) || (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase())}
+                        disabled={createMutation.isPending || (lockMutation.isPending && (!lockForThisPortfolio || lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase())) || (!lockForThisPortfolio && (user?.role === 'super_admin')) || (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase())}
                         className="w-full"
                         style={{
                             backgroundColor: (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase())
@@ -190,9 +190,10 @@ const IssueForm: React.FC<IssueFormProps> = ({
                         }}
                     >
                         {createMutation.isPending ? 'Adding...' :
-                            lockMutation.isPending ? 'Locking...' :
-                                (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase()) ? 'Locked by another user' :
-                                    !lockForThisPortfolio ? 'Lock Portfolio to Add Issue' : 'Add Issue'}
+                            (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() === user?.email?.toLowerCase()) ? 'Add Issue' :
+                                lockMutation.isPending ? 'Locking...' :
+                                    (lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() !== user?.email?.toLowerCase()) ? 'Locked by another user' :
+                                        'Lock Portfolio to Add Issue'}
                     </Button>
                 )}
             </div>

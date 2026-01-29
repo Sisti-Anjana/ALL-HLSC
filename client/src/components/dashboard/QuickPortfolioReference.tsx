@@ -235,6 +235,25 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
     return () => unsubscribe()
   }, [queryClient])
 
+  // AUTO-REFRESH ON HOUR CHANGE (Clear stale locks immediately)
+  const [lastCheckedHour, setLastCheckedHour] = useState(getESTHour())
+  useEffect(() => {
+    // Check every 30 seconds if the hour has changed
+    const intervalId = setInterval(() => {
+      const currentHour = getESTHour()
+      if (currentHour !== lastCheckedHour) {
+        console.log('⏰ QuickPortfolioReference - Hour changed from', lastCheckedHour, 'to', currentHour, '- Clearing stale locks...')
+        setLastCheckedHour(currentHour)
+        // Force refetch and clear old data
+        queryClient.invalidateQueries({ queryKey: ['portfolio-locks'] })
+        queryClient.invalidateQueries({ queryKey: ['portfolio-activity'] })
+        queryClient.invalidateQueries({ queryKey: ['hourly-coverage'] })
+      }
+    }, 30000)
+
+    return () => clearInterval(intervalId)
+  }, [lastCheckedHour, queryClient])
+
   // Fetch all issues to get recent workers
   const { data: allIssues = [] } = useQuery<Issue[]>({
     queryKey: ['issues'],
@@ -452,23 +471,15 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
           </div>
         ) : (
           filteredPortfolios.map((portfolio) => {
-            // Normalize portfolio ID to string for comparison - handle both number and string IDs
+            // Normalize portfolio ID to string for comparison - handle both number and string IDs safely
+            // STRICT COMPARISON: Always compare as strings to avoid "123" matching "123-abc" via parseInt
             const portfolioIdString = String(portfolio.id || '').trim()
-            const portfolioIdNumber = typeof portfolio.id === 'number' ? portfolio.id : parseInt(portfolioIdString, 10)
 
             // Check for ANY active lock for this portfolio, regardless of hour
-            // Try both string and number comparison to handle type mismatches
-            // The locks array is already filtered by selectedHour/currentHour in the queryFn above
             const activeLock = (locks || []).find(l => {
               const lockPortfolioId = String(l.portfolio_id || '').trim()
-              const lockPortfolioIdNumber = typeof l.portfolio_id === 'number'
-                ? l.portfolio_id
-                : parseInt(lockPortfolioId, 10)
-
-              // Try multiple comparison methods
-              const stringMatch = lockPortfolioId.toLowerCase() === portfolioIdString.toLowerCase()
-              const numberMatch = !isNaN(portfolioIdNumber) && !isNaN(lockPortfolioIdNumber) && portfolioIdNumber === lockPortfolioIdNumber
-              return stringMatch || numberMatch
+              // Use case-insensitive string matching ONLY
+              return lockPortfolioId.toLowerCase() === portfolioIdString.toLowerCase()
             })
             const isLocked = !!activeLock
 
@@ -476,8 +487,6 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
             if (portfolio.name && portfolio.name.toLowerCase().includes('bess')) {
               console.log('🔍 QuickPortfolioReference - BESS portfolio lock check:', {
                 portfolioId: portfolioIdString,
-                portfolioIdNumber,
-                portfolioIdType: typeof portfolio.id,
                 portfolioName: portfolio.name,
                 locksCount: locks.length,
                 isLocked,

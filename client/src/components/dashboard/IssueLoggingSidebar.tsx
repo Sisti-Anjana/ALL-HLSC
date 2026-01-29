@@ -47,6 +47,29 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
     enabled: isOpen && !!portfolioId,
   })
 
+  // AUTO-CLOSE ON HOUR CHANGE
+  // Prevents "rolling over" the lock to the next hour if the user leaves the sidebar open
+  const [lastCheckedHourSidebar, setLastCheckedHourSidebar] = useState(getESTHour())
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const intervalId = setInterval(() => {
+      const currentRealHour = getESTHour()
+      if (currentRealHour !== lastCheckedHourSidebar) {
+        console.log('⏰ IssueLoggingSidebar - Hour changed from', lastCheckedHourSidebar, 'to', currentRealHour, '- Closing sidebar to prevent accidental lock roll-over')
+        setLastCheckedHourSidebar(currentRealHour)
+        onClose()
+        toast('Hour changed. Closing session for previous hour.', {
+          icon: '⏰',
+          duration: 5000
+        })
+      }
+    }, 30000)
+
+    return () => clearInterval(intervalId)
+  }, [isOpen, lastCheckedHourSidebar, onClose])
+
   // Fetch users for dropdowns
   const { data: users = [] } = useQuery<User[]>({
     queryKey: ['admin-users'],

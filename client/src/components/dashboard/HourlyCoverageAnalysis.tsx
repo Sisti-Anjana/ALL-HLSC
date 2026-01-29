@@ -16,7 +16,7 @@ import { HourlyCoverage } from '../../types/analytics.types'
 import toast from 'react-hot-toast'
 import { getESTHour, getESTDateString } from '../../utils/timezone'
 import { useTenant } from '../../context/TenantContext'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
@@ -49,6 +49,25 @@ const HourlyCoverageAnalysis: React.FC = () => {
       toast.error('Failed to load hourly coverage data')
     }
   }, [error])
+
+  // AUTO-REFRESH ON HOUR CHANGE
+  const queryClient = useQueryClient()
+  const [lastCheckedHour, setLastCheckedHour] = useState(getESTHour())
+
+  useEffect(() => {
+    // Check every 30 seconds if the hour has changed
+    const intervalId = setInterval(() => {
+      const currentHour = getESTHour()
+      if (currentHour !== lastCheckedHour) {
+        console.log('⏰ HourlyCoverageAnalysis - Hour changed from', lastCheckedHour, 'to', currentHour, '- Refreshing data...')
+        setLastCheckedHour(currentHour)
+        // Force refetch
+        queryClient.invalidateQueries({ queryKey: ['hourly-coverage'] })
+      }
+    }, 30000)
+
+    return () => clearInterval(intervalId)
+  }, [lastCheckedHour, queryClient])
 
   // Get total portfolios from first data point (all should have same total)
   const totalPortfolios = coverageData.length > 0 ? coverageData[0].totalPortfolios : 26

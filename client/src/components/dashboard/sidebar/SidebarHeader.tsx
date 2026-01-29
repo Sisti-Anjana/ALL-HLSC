@@ -1,6 +1,8 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { PortfolioLock } from '../../../services/adminService'
-import { UseMutationResult } from '@tanstack/react-query'
+import { portfolioService } from '../../../services/portfolioService'
+import { UseMutationResult, useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
 
 interface SidebarHeaderProps {
     displayName: string
@@ -21,6 +23,33 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
     lockForThisPortfolio,
     onClose,
 }) => {
+    const queryClient = useQueryClient()
+    const [isUnlocking, setIsUnlocking] = useState(false)
+
+    const handleUnlock = async () => {
+        if (!lockForThisPortfolio) return
+
+        const reason = window.prompt('Please enter a reason for unlocking this portfolio early:')
+        if (reason === null) return // Cancelled
+
+        try {
+            setIsUnlocking(true)
+            await portfolioService.unlock(lockForThisPortfolio.portfolio_id, hour, reason || 'Manual unlock')
+
+            toast.success('Portfolio unlocked successfully')
+
+            // Refresh data
+            queryClient.invalidateQueries({ queryKey: ['portfolio-locks'] })
+            queryClient.invalidateQueries({ queryKey: ['locks'] })
+            queryClient.invalidateQueries({ queryKey: ['portfolio-activity'] })
+        } catch (error: any) {
+            console.error('Failed to unlock:', error)
+            toast.error(error.message || 'Failed to unlock portfolio')
+        } finally {
+            setIsUnlocking(false)
+        }
+    }
+
     return (
         <div className="bg-gray-50 border-b border-gray-200 p-4">
             <div className="flex items-center justify-between mb-2">
@@ -45,15 +74,20 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
                         <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
                         👀 SUPER ADMIN VIEW
                     </span>
+                ) : lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() === user?.email?.toLowerCase() ? (
+                    <button
+                        onClick={handleUnlock}
+                        disabled={isUnlocking}
+                        className="flex items-center gap-1.5 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-full border border-green-200 hover:bg-green-200 hover:border-green-300 transition-all cursor-pointer group"
+                        title="Click to unlock early"
+                    >
+                        <span className="w-2 h-2 bg-green-500 rounded-full group-hover:animate-pulse"></span>
+                        {isUnlocking ? 'UNLOCKING...' : '🔒 LICENSED MONITORING (YOU) - CLICK TO UNLOCK'}
+                    </button>
                 ) : lockMutation.isPending ? (
                     <span className="flex items-center gap-1.5 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-bold rounded-full animate-pulse">
                         <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
                         SECURING LOCK...
-                    </span>
-                ) : lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() === user?.email?.toLowerCase() ? (
-                    <span className="flex items-center gap-1.5 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-full border border-green-200">
-                        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                        🔒 LICENSED MONITORING (LOCKED BY YOU)
                     </span>
                 ) : lockForThisPortfolio ? (
                     <span className="flex items-center gap-1.5 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-bold rounded-full border border-purple-200">
