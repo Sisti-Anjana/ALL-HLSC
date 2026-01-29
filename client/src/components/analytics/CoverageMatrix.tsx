@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bar, getElementAtEvent } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
@@ -22,6 +22,7 @@ import Card from '../common/Card'
 import Button from '../common/Button'
 import Modal from '../common/Modal'
 import toast from 'react-hot-toast'
+import { getESTHour } from '../../utils/timezone'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
@@ -101,6 +102,27 @@ const CoverageMatrix: React.FC = () => {
     queryKey: ['admin-logs'],
     queryFn: adminService.getLogs,
   })
+
+  // AUTO-REFRESH ON HOUR CHANGE
+  const queryClient = useQueryClient()
+  const [lastCheckedHour, setLastCheckedHour] = useState(getESTHour())
+
+  useEffect(() => {
+    // Check every 30 seconds if the hour has changed
+    const intervalId = setInterval(() => {
+      const currentHour = getESTHour()
+      if (currentHour !== lastCheckedHour) {
+        console.log('⏰ CoverageMatrix - Hour changed from', lastCheckedHour, 'to', currentHour, '- Refreshing data...')
+        setLastCheckedHour(currentHour)
+        // Force refetch of all relevant queries
+        queryClient.invalidateQueries({ queryKey: ['issues'] })
+        queryClient.invalidateQueries({ queryKey: ['admin-logs'] })
+        queryClient.invalidateQueries({ queryKey: ['portfolios'] })
+      }
+    }, 30000)
+
+    return () => clearInterval(intervalId)
+  }, [lastCheckedHour, queryClient])
 
   // Filter issues by date range
   const filteredIssues = useMemo(() => {

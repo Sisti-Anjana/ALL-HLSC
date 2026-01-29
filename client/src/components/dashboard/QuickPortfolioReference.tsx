@@ -108,27 +108,34 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
           })
 
           if (daysDiff === 0) {
-            // Checked today in EST - show the exact hour it was checked
-            yValue = `H${checkedHour}`
-            yValueNumber = checkedHour
-
             // Calculate hour difference in EST (handle day rollover)
             let hoursDiff = currentHourEST - checkedHour
             if (hoursDiff < 0) {
               hoursDiff = 24 + hoursDiff // Handle midnight rollover
             }
 
-            // Set status based on hours - green if checked in current hour (EST)
+            // CRITICAL FIX: Only show current hour if it was completed in the current hour
+            // Otherwise show the previous hour when it was last checked
             if (hoursDiff === 0) {
+              // Completed in current hour - show current hour
+              yValue = `H${checkedHour}`
+              yValueNumber = checkedHour
               status = 'updated' // Green - checked in current hour (EST)
-            } else if (hoursDiff === 1) {
-              status = '1h'
-            } else if (hoursDiff === 2) {
-              status = '2h'
-            } else if (hoursDiff === 3) {
-              status = '3h'
             } else {
-              status = 'no-activity'
+              // Not completed in current hour - show the hour it was last checked
+              yValue = `H${checkedHour}`
+              yValueNumber = checkedHour
+
+              // Set status based on hours since last check
+              if (hoursDiff === 1) {
+                status = '1h'
+              } else if (hoursDiff === 2) {
+                status = '2h'
+              } else if (hoursDiff === 3) {
+                status = '3h'
+              } else {
+                status = 'no-activity'
+              }
             }
 
             // Create date object for EST (use UTC methods to avoid timezone conversion)
