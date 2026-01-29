@@ -16,16 +16,15 @@ import { HourlyCoverage } from '../../types/analytics.types'
 import toast from 'react-hot-toast'
 import { getESTHour, getESTDateString } from '../../utils/timezone'
 import { useTenant } from '../../context/TenantContext'
+import { useQuery } from '@tanstack/react-query'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 const HourlyCoverageAnalysis: React.FC = () => {
   const { selectedTenantId } = useTenant()
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const [startDate, setStartDate] = useState(getESTDateString())
+  const [endDate, setEndDate] = useState(getESTDateString())
   const [selectedRange, setSelectedRange] = useState<'today' | 'week' | 'month'>('today')
-  const [coverageData, setCoverageData] = useState<HourlyCoverage[]>([])
-  const [loading, setLoading] = useState(true)
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -34,35 +33,22 @@ const HourlyCoverageAnalysis: React.FC = () => {
     portfolios: string[];
   } | null>(null)
 
-  const fetchHourlyCoverage = async (start?: string, end?: string) => {
-    try {
-      setLoading(true)
-      const data = await analyticsService.getHourlyCoverageWithDateRange(start, end)
-      console.log('Hourly coverage data received:', data)
-      setCoverageData(data)
-    } catch (error: any) {
+  // Use React Query for data fetching
+  const { data: coverageData = [], isLoading: loading, error } = useQuery<HourlyCoverage[]>({
+    queryKey: ['hourly-coverage', startDate, endDate, selectedTenantId],
+    queryFn: () => analyticsService.getHourlyCoverageWithDateRange(startDate, endDate),
+    enabled: !!startDate && !!endDate,
+    staleTime: 30000, // 30 seconds
+    refetchInterval: 120000, // 2 minutes auto-refresh
+  })
+
+  // Show error toast if fetching fails
+  useEffect(() => {
+    if (error) {
       console.error('Failed to fetch hourly coverage:', error)
       toast.error('Failed to load hourly coverage data')
-    } finally {
-      setLoading(false)
     }
-  }
-
-  useEffect(() => {
-    // Initialize with today's date in EST
-    const todayStr = getESTDateString()
-    setStartDate(todayStr)
-    setEndDate(todayStr)
-    fetchHourlyCoverage(todayStr, todayStr)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTenantId])
-
-  useEffect(() => {
-    if (startDate && endDate && !loading) {
-      fetchHourlyCoverage(startDate, endDate)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, endDate, selectedTenantId])
+  }, [error])
 
   // Get total portfolios from first data point (all should have same total)
   const totalPortfolios = coverageData.length > 0 ? coverageData[0].totalPortfolios : 26
@@ -229,7 +215,6 @@ const HourlyCoverageAnalysis: React.FC = () => {
       const todayStr = getESTDateString()
       setStartDate(todayStr)
       setEndDate(todayStr)
-      fetchHourlyCoverage(todayStr, todayStr)
     } else if (range === 'week') {
       const weekAgo = new Date(today)
       weekAgo.setDate(today.getDate() - 7)
@@ -237,7 +222,6 @@ const HourlyCoverageAnalysis: React.FC = () => {
       const todayStr = getESTDateString()
       setStartDate(weekAgoStr)
       setEndDate(todayStr)
-      fetchHourlyCoverage(weekAgoStr, todayStr)
     } else if (range === 'month') {
       const monthAgo = new Date(today)
       monthAgo.setMonth(today.getMonth() - 1)
@@ -245,7 +229,6 @@ const HourlyCoverageAnalysis: React.FC = () => {
       const todayStr = getESTDateString()
       setStartDate(monthAgoStr)
       setEndDate(todayStr)
-      fetchHourlyCoverage(monthAgoStr, todayStr)
     }
   }
 

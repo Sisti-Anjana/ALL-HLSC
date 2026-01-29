@@ -32,7 +32,7 @@ export const useTenant = () => {
 export const TenantProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth()
   const isSuperAdmin = user?.role === 'super_admin'
-  
+
   // Fetch all tenants for super admin
   const { data: tenants = [], isLoading } = useQuery({
     queryKey: ['tenants'],
@@ -46,7 +46,7 @@ export const TenantProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       // Regular users use their own tenant_id
       return user?.tenantId || null
     }
-    
+
     // Super admin: try to load from localStorage
     try {
       const stored = localStorage.getItem('selectedTenantId')
@@ -56,20 +56,21 @@ export const TenantProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   })
 
-  // Update localStorage when selected tenant changes
-  useEffect(() => {
-    if (isSuperAdmin) {
-      if (selectedTenantId && selectedTenantId.trim() !== '') {
-        localStorage.setItem('selectedTenantId', selectedTenantId)
-      } else {
-        localStorage.removeItem('selectedTenantId')
-      }
-    }
-  }, [selectedTenantId, isSuperAdmin])
 
   // Set selected tenant function
   const setSelectedTenantId = (tenantId: string | null) => {
     setSelectedTenantIdState(tenantId)
+
+    // SYNC LOCAL STORAGE IMMEDIATELY
+    // This is critical because the API interceptor reads from localStorage.
+    // Reactive effects (like data fetching) might trigger before useEffect runs.
+    if (isSuperAdmin) {
+      if (tenantId && tenantId.trim() !== '') {
+        localStorage.setItem('selectedTenantId', tenantId)
+      } else {
+        localStorage.removeItem('selectedTenantId')
+      }
+    }
   }
 
   // Find selected tenant object
