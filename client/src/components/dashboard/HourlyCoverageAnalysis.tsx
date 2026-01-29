@@ -15,10 +15,12 @@ import { analyticsService } from '../../services/analyticsService'
 import { HourlyCoverage } from '../../types/analytics.types'
 import toast from 'react-hot-toast'
 import { getESTHour, getESTDateString } from '../../utils/timezone'
+import { useTenant } from '../../context/TenantContext'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 const HourlyCoverageAnalysis: React.FC = () => {
+  const { selectedTenantId } = useTenant()
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [selectedRange, setSelectedRange] = useState<'today' | 'week' | 'month'>('today')
@@ -53,14 +55,14 @@ const HourlyCoverageAnalysis: React.FC = () => {
     setEndDate(todayStr)
     fetchHourlyCoverage(todayStr, todayStr)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [selectedTenantId])
 
   useEffect(() => {
     if (startDate && endDate && !loading) {
       fetchHourlyCoverage(startDate, endDate)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, endDate])
+  }, [startDate, endDate, selectedTenantId])
 
   // Get total portfolios from first data point (all should have same total)
   const totalPortfolios = coverageData.length > 0 ? coverageData[0].totalPortfolios : 26
