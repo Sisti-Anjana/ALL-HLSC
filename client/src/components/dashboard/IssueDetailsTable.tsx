@@ -660,16 +660,18 @@ const IssueDetailsTable: React.FC = () => {
                             </button>
                           )
                         })()}
-                        <button
-                          onClick={() => {
-                            setIssueToDelete(issue.id)
-                            setDeleteConfirmOpen(true)
-                          }}
-                          className="text-red-600 hover:text-red-800 hover:underline hover:font-semibold text-sm transition-all duration-200"
-                          aria-label={`Delete issue from ${issue.portfolio?.name || 'portfolio'}`}
-                        >
-                          Delete
-                        </button>
+                        {(user?.role === 'super_admin' || user?.role === 'tenant_admin') && (
+                          <button
+                            onClick={() => {
+                              setIssueToDelete(issue.id)
+                              setDeleteConfirmOpen(true)
+                            }}
+                            className="text-red-600 hover:text-red-800 hover:underline hover:font-semibold text-sm transition-all duration-200"
+                            aria-label={`Delete issue from ${issue.portfolio?.name || 'portfolio'}`}
+                          >
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
