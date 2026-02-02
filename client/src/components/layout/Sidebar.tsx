@@ -98,7 +98,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 {/* Logo Area */}
                 <div className={`h-24 flex items-center justify-center border-b border-gray-100 ${isCollapsed ? 'px-2' : 'px-4'}`}>
                     <img
-                        src="/navbar.png"
+                        src="/sidebar.png"
                         alt="AGS"
                         className={`transition-all duration-300 ${isCollapsed ? 'h-12 w-auto' : 'h-20 w-auto'}`}
                     />
