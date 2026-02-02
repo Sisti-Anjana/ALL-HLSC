@@ -40,7 +40,7 @@ const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({ isOpen, onClose, 
                     <div className="w-24 h-24 rounded-full border-2 border-[#87bb44] p-1 mb-4 flex items-center justify-center">
                         <div className="w-full h-full rounded-full bg-gray-50 flex items-center justify-center overflow-hidden">
                             <img
-                                src="/sidebar.jpg"
+                                src="/sidebar.png"
                                 alt="User Avatar"
                                 className="w-full h-full object-cover"
                             />
