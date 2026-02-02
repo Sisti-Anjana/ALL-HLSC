@@ -7,9 +7,18 @@ interface ModalProps {
   subtitle?: string
   children: React.ReactNode
   size?: 'sm' | 'md' | 'lg' | 'xl'
+  closeOnBackdropClick?: boolean
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, subtitle, children, size = 'md' }) => {
+const Modal: React.FC<ModalProps> = ({
+  isOpen,
+  onClose,
+  title,
+  subtitle,
+  children,
+  size = 'md',
+  closeOnBackdropClick = true
+}) => {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -33,13 +42,22 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, subtitle, childre
     xl: 'max-w-4xl',
   }
 
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (closeOnBackdropClick) {
+      onClose()
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 overflow-y-auto"
-      onClick={onClose}
+      onClick={handleBackdropClick}
     >
       <div className="flex items-center justify-center min-h-screen px-2 sm:px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={onClose}></div>
+        <div
+          className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
+          onClick={handleBackdropClick}
+        ></div>
 
         <div
           className={`inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle ${sizes[size]} w-full max-h-[90vh] overflow-y-auto`}

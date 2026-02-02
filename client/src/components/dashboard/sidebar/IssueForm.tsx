@@ -17,6 +17,7 @@ interface IssueFormProps {
     missedAlertsBy: string
     users: User[]
     handleAddIssue: () => void
+    handleNoIssueSubmit: () => void
     handleUpdateIssue: () => void
     onCancelEdit: () => void
     editingIssueId: string | null
@@ -41,6 +42,7 @@ const IssueForm: React.FC<IssueFormProps> = ({
     missedAlertsBy,
     users,
     handleAddIssue,
+    handleNoIssueSubmit,
     handleUpdateIssue,
     onCancelEdit,
     editingIssueId,
@@ -78,11 +80,7 @@ const IssueForm: React.FC<IssueFormProps> = ({
                     </button>
                     <button
                         type="button"
-                        onClick={() => {
-                            setIssuePresent('no')
-                            setIssueDescription('No issue')
-                            setMissedAlertsBy('') // Clear missed alerts when No is selected
-                        }}
+                        onClick={handleNoIssueSubmit}
                         className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${issuePresent === 'no'
                             ? 'bg-green-100 text-green-800 border-2 border-green-300'
                             : 'bg-white text-gray-700 border-2 border-gray-300 hover:bg-gray-50'

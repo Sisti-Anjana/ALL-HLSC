@@ -38,7 +38,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({ isOpen, onClose, onSubmit
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={portfolio ? 'Edit Portfolio' : 'Create Portfolio'} size="md">
+    <Modal isOpen={isOpen} onClose={onClose} title={portfolio ? 'Edit Portfolio' : 'Create Portfolio'} size="md" closeOnBackdropClick={false}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
           label="Portfolio Name"

@@ -380,7 +380,7 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
           toast.success('Portfolio status updated and unlocked successfully')
         } catch (error) {
           console.error('Failed to auto-unlock:', error)
-          toast.success('Portfolio status updated (unlock failed)')
+          toast.success('Portfolio status updated')
         }
       } else {
         toast.success('Portfolio status updated successfully')
@@ -590,6 +590,59 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
     onClose()
   }
 
+  const handleNoIssueSubmit = async () => {
+    if (!portfolioId) {
+      toast.error('Portfolio is required')
+      return
+    }
+
+    const submitNoIssue = () => {
+      // Combine Case # and Notes if any (though usually empty for No Issue)
+      let combinedNotes = ''
+      if (caseNumber.trim()) combinedNotes += `Case #: ${caseNumber.trim()}`
+      if (notes.trim()) {
+        combinedNotes += combinedNotes ? ` | ${notes.trim()}` : notes.trim()
+      }
+
+      const issueData: any = {
+        portfolio_id: portfolioId,
+        site_name: '',
+        issue_hour: currentHour,
+        description: 'No issue',
+        severity: 'low',
+        status: 'open',
+        monitored_by: user?.email || '',
+        missed_by: null,
+        notes: combinedNotes || null,
+      }
+
+      // Clean data
+      Object.keys(issueData).forEach(key => {
+        if (issueData[key] === null || issueData[key] === undefined) {
+          delete issueData[key]
+        }
+      })
+
+      createMutation.mutate(issueData)
+    }
+
+    // Check lock status
+    const isLockedByMe = lockForThisPortfolio && lockForThisPortfolio.monitored_by?.toLowerCase() === user?.email?.toLowerCase()
+
+    if (isLockedByMe) {
+      submitNoIssue()
+    } else {
+      // Try to lock then submit
+      try {
+        await lockMutation.mutateAsync()
+        submitNoIssue()
+      } catch (error) {
+        // Error handling is done in mutation callbacks
+        console.error("Failed to lock for No Issue submit", error)
+      }
+    }
+  }
+
   const handleAddIssue = () => {
     // Validation
     if (!portfolioId) {
@@ -732,6 +785,7 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
         </div>
 
         <IssueForm
+          handleNoIssueSubmit={handleNoIssueSubmit}
           issuePresent={issuePresent}
           setIssuePresent={setIssuePresent}
           setIssueDescription={setIssueDescription}

@@ -695,6 +695,7 @@ const ClientsTab: React.FC = () => {
           setEditingTenant(null)
         }}
         title={editingTenant ? 'Edit Client' : 'Create New Client'}
+        closeOnBackdropClick={false}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input

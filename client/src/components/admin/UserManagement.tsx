@@ -230,6 +230,7 @@ const UserManagement: React.FC = () => {
         }}
         title={editingUser ? 'Edit User' : 'Create User'}
         size="md"
+        closeOnBackdropClick={false}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
