@@ -11,8 +11,10 @@ import EmptyState from '../common/EmptyState'
 import Spinner from '../common/Spinner'
 import Button from '../common/Button'
 import { useTenant } from '../../context/TenantContext'
+import { useAuth } from '../../context/AuthContext'
 
 const IssueList: React.FC = () => {
+  const { user } = useAuth()
   const { selectedTenant } = useTenant()
   const isReadOnly = selectedTenant?.status === 'suspended' || selectedTenant?.status === 'inactive'
 
@@ -224,7 +226,9 @@ const IssueList: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">DESCRIPTION</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">SEVERITY</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">STATUS</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">ACTIONS</th>
+                {(user?.role === 'super_admin' || user?.role === 'tenant_admin') && (
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">ACTIONS</th>
+                )}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -246,19 +250,21 @@ const IssueList: React.FC = () => {
                       {issue.status || 'open'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <button
-                      onClick={() => {
-                        if (isReadOnly) return
-                        handleDelete(issue.id)
-                      }}
-                      disabled={isReadOnly}
-                      className={`px-3 py-1 text-white rounded transition-colors text-sm ${isReadOnly ? 'bg-gray-400 cursor-not-allowed opacity-60' : 'bg-red-600 hover:bg-red-700'
-                        }`}
-                    >
-                      Delete
-                    </button>
-                  </td>
+                  {(user?.role === 'super_admin' || user?.role === 'tenant_admin') && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <button
+                        onClick={() => {
+                          if (isReadOnly) return
+                          handleDelete(issue.id)
+                        }}
+                        disabled={isReadOnly}
+                        className={`px-3 py-1 text-white rounded transition-colors text-sm ${isReadOnly ? 'bg-gray-400 cursor-not-allowed opacity-60' : 'bg-red-600 hover:bg-red-700'
+                          }`}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
