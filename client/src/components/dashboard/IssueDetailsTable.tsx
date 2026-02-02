@@ -404,13 +404,13 @@ const IssueDetailsTable: React.FC = () => {
   return (
     <div className="space-y-6 w-full">
       {/* Search and Filters Section */}
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-card rounded-lg shadow-md p-6">
         <div className="space-y-6">
           {/* Main Filters Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             {/* Search Bar */}
             <div className="relative">
-              <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
@@ -418,7 +418,7 @@ const IssueDetailsTable: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search issues..."
-                className="w-full pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-3 py-2 text-sm border border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-green/50 bg-main text-primary"
               />
             </div>
 
@@ -426,11 +426,11 @@ const IssueDetailsTable: React.FC = () => {
             <select
               value={selectedPortfolio}
               onChange={(e) => setSelectedPortfolio(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium bg-white"
+              className="w-full px-3 py-2 text-sm border border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-green/50 font-medium bg-main text-primary"
             >
-              <option value="all">All Portfolios</option>
+              <option value="all" className="bg-card">All Portfolios</option>
               {portfolios.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
+                <option key={p.id} value={p.id} className="bg-card">{p.name}</option>
               ))}
             </select>
 
@@ -438,21 +438,21 @@ const IssueDetailsTable: React.FC = () => {
             <select
               value={issueFilter}
               onChange={(e) => setIssueFilter(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium bg-white"
+              className="w-full px-3 py-2 text-sm border border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-green/50 font-medium bg-main text-primary"
             >
-              <option value="active">Active Issues (Default)</option>
-              <option value="all">All Issues</option>
+              <option value="active" className="bg-card">Active Issues (Default)</option>
+              <option value="all" className="bg-card">All Issues</option>
             </select>
 
             {/* Hour Filter */}
             <select
               value={hourFilter}
               onChange={(e) => setHourFilter(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium bg-white"
+              className="w-full px-3 py-2 text-sm border border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-green/50 font-medium bg-main text-primary"
             >
-              <option value="all">All Hours</option>
+              <option value="all" className="bg-card">All Hours</option>
               {Array.from({ length: 24 }, (_, i) => (
-                <option key={i} value={i.toString()}>{i}:00</option>
+                <option key={i} value={i.toString()} className="bg-card">{i}:00</option>
               ))}
             </select>
 
@@ -462,7 +462,7 @@ const IssueDetailsTable: React.FC = () => {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-sm border border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-green/50 bg-main text-primary"
               />
             </div>
 
@@ -472,15 +472,15 @@ const IssueDetailsTable: React.FC = () => {
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-sm border border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-green/50 bg-main text-primary"
               />
             </div>
           </div>
 
           {/* Unified Action Row - Single line, equal distance */}
-          <div className="flex flex-wrap items-center justify-center gap-6 pt-4 border-t border-gray-100">
+          <div className="flex flex-wrap items-center justify-center gap-6 pt-4 border-t border-subtle">
             {/* Button Actions - Equal distance */}
-            <span className="text-sm font-semibold text-gray-700">Quick Range:</span>
+            <span className="text-sm font-semibold text-secondary">Quick Range:</span>
             <div className="flex items-center gap-2">
               {[
                 { id: 'today', label: 'Today' },
@@ -496,15 +496,15 @@ const IssueDetailsTable: React.FC = () => {
                     handleQuickRange(range.id as any)
                   }}
                   className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 ${quickRange === range.id
-                    ? 'bg-green-600 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                    ? 'bg-accent-green text-white shadow-md'
+                    : 'bg-main text-secondary hover:bg-subtle border border-subtle'
                     }`}
                 >
                   {range.label}
                 </button>
               ))}
             </div>
-            <div className="h-6 w-px bg-gray-200 mx-2 hidden sm:block"></div>
+            <div className="h-6 w-px bg-subtle mx-2 hidden sm:block"></div>
             <Button variant="secondary" size="sm" onClick={handleClearFilters}>
               Reset
             </Button>
@@ -518,27 +518,27 @@ const IssueDetailsTable: React.FC = () => {
       </div>
 
       {/* Issues Table */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-gray-900 tracking-tight">
+      <div className="bg-card rounded-lg shadow-md overflow-hidden border border-subtle">
+        <div className="px-6 py-4 border-b border-subtle flex items-center justify-between">
+          <h3 className="text-lg font-bold text-primary tracking-tight">
             Issue Results ({issues.length})
           </h3>
-          <p className="text-sm text-gray-600 font-medium">Showing newest first</p>
+          <p className="text-sm text-secondary font-medium">Showing newest first</p>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-subtle">
+            <thead className="bg-main">
               <tr>
-                <th className="px-4 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">DATE</th>
-                <th className="px-4 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">PORTFOLIO</th>
-                <th className="px-4 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">HOUR</th>
-                <th className="px-4 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">ISSUE</th>
-                <th className="px-4 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">DETAILS</th>
-                <th className="px-4 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">MONITORED BY</th>
-                <th className="px-4 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">ACTIONS</th>
+                <th className="px-4 py-3.5 text-left text-xs font-bold text-secondary uppercase tracking-wider">DATE</th>
+                <th className="px-4 py-3.5 text-left text-xs font-bold text-secondary uppercase tracking-wider">PORTFOLIO</th>
+                <th className="px-4 py-3.5 text-left text-xs font-bold text-secondary uppercase tracking-wider">HOUR</th>
+                <th className="px-4 py-3.5 text-left text-xs font-bold text-secondary uppercase tracking-wider">ISSUE</th>
+                <th className="px-4 py-3.5 text-left text-xs font-bold text-secondary uppercase tracking-wider">DETAILS</th>
+                <th className="px-4 py-3.5 text-left text-xs font-bold text-secondary uppercase tracking-wider">MONITORED BY</th>
+                <th className="px-4 py-3.5 text-left text-xs font-bold text-secondary uppercase tracking-wider">ACTIONS</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-card divide-y divide-subtle">
               {isLoading ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
@@ -547,10 +547,10 @@ const IssueDetailsTable: React.FC = () => {
                 </tr>
               ) : issues.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={7} className="px-4 py-8 text-center text-secondary">
                     <div className="space-y-2">
-                      <p className="font-medium">No issues found</p>
-                      <p className="text-sm text-gray-400">
+                      <p className="font-medium text-primary">No issues found</p>
+                      <p className="text-sm">
                         {issueFilter === 'active'
                           ? "No issues with 'Issue Present = Yes' found. Select 'All Issues' to see all issues, or try selecting a different portfolio or adjusting the date range."
                           : "No issues found. Try selecting a different portfolio or adjusting the date range."}
@@ -562,32 +562,32 @@ const IssueDetailsTable: React.FC = () => {
                 issues.map((issue) => (
                   <tr
                     key={issue.id}
-                    className="hover:bg-blue-50 hover:shadow-sm transition-all duration-200 cursor-pointer border-l-4 border-l-transparent hover:border-l-blue-500"
+                    className="hover:bg-main hover:shadow-sm transition-all duration-200 cursor-pointer border-l-4 border-l-transparent hover:border-l-accent-green"
                   >
-                    <td className="px-4 py-3 text-sm text-gray-900">
+                    <td className="px-4 py-3 text-sm text-primary">
                       {formatDate(issue.created_at)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
+                    <td className="px-4 py-3 text-sm text-primary">
                       {issue.portfolio?.name || 'N/A'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{issue.issue_hour}:00</td>
+                    <td className="px-4 py-3 text-sm text-primary">{issue.issue_hour}:00</td>
                     <td className="px-4 py-3">
                       {/* Show badge based on issue description or status */}
                       {issue.description && issue.description.toLowerCase() === 'no issue' ? (
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-500 border border-green-500/30">
                           No
                         </span>
                       ) : issue.description && issue.description.trim() !== '' ? (
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-500/20 text-red-500 border border-red-500/30">
                           Yes
                         </span>
                       ) : (
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-subtle text-secondary">
                           -
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
+                    <td className="px-4 py-3 text-sm text-primary">
                       <div>
                         {issue.description || 'N/A'}
                         {(() => {
@@ -600,14 +600,14 @@ const IssueDetailsTable: React.FC = () => {
 
                           if (!cleanNote) return null
                           return (
-                            <div className="mt-1 text-xs text-gray-500 italic bg-gray-50 p-1 rounded">
+                            <div className="mt-1 text-xs text-secondary italic bg-main p-1 rounded">
                               Note: {cleanNote}
                             </div>
                           )
                         })()}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
+                    <td className="px-4 py-3 text-sm text-primary">
                       {Array.isArray(issue.monitored_by) && issue.monitored_by.length > 0
                         ? issue.monitored_by[0].split('@')[0]
                         : (issue.monitored_by || 'N/A')}
@@ -627,17 +627,6 @@ const IssueDetailsTable: React.FC = () => {
                           const authorEmailLower = authorEmail.toLowerCase().trim()
                           const username = userEmail.split('@')[0]
 
-                          // Debug logs to troubleshoot edit permission issues
-                          console.log('Permission Check:', {
-                            userEmail,
-                            username,
-                            authorEmail: authorEmailLower,
-                            matchExact: authorEmailLower === userEmail,
-                            matchUsername: authorEmailLower === username,
-                            matchStartsWith: userEmail.startsWith(authorEmailLower),
-                            rawAuthor: authorEmail
-                          })
-
                           // Allow edit if:
                           // 1. Exact email match
                           // 2. Author is just the username (legacy data)
@@ -650,11 +639,12 @@ const IssueDetailsTable: React.FC = () => {
 
                           return (
                             <button
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation()
                                 setEditingIssue(issue)
                                 setEditModalOpen(true)
                               }}
-                              className="text-blue-600 hover:text-blue-800 hover:underline hover:font-semibold text-sm transition-all duration-200"
+                              className="text-accent-green hover:underline hover:font-semibold text-sm transition-all duration-200"
                             >
                               Edit
                             </button>
@@ -662,11 +652,12 @@ const IssueDetailsTable: React.FC = () => {
                         })()}
                         {(user?.role === 'super_admin' || user?.role === 'tenant_admin') && (
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation()
                               setIssueToDelete(issue.id)
                               setDeleteConfirmOpen(true)
                             }}
-                            className="text-red-600 hover:text-red-800 hover:underline hover:font-semibold text-sm transition-all duration-200"
+                            className="text-red-500 hover:underline hover:font-semibold text-sm transition-all duration-200"
                             aria-label={`Delete issue from ${issue.portfolio?.name || 'portfolio'}`}
                           >
                             Delete

@@ -85,7 +85,7 @@ const IssueExportButtons: React.FC<IssueExportButtonsProps> = ({ filters = {}, c
 
       // Fetch issues with date range
       const allIssues = await issueService.getAll(exportFilters)
-      
+
       // Filter by date range
       let filteredIssues = allIssues.filter((issue) => {
         const issueDate = new Date(issue.created_at).toISOString().split('T')[0]
@@ -123,7 +123,7 @@ const IssueExportButtons: React.FC<IssueExportButtonsProps> = ({ filters = {}, c
     <div className={`flex flex-col gap-3 ${className}`}>
       {/* Export Buttons - Simplified, no separate date range */}
       <div className="flex items-center gap-3">
-        <span className="text-sm font-medium text-gray-700">Export:</span>
+        <span className="text-sm font-medium text-secondary">Export:</span>
         <Button
           onClick={() => handleExport('active')}
           disabled={isExporting}

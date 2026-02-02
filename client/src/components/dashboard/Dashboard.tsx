@@ -46,11 +46,11 @@ const Dashboard: React.FC = () => {
     <div className="flex w-full relative transition-all duration-300 gap-4">
       <div className="flex-1 min-w-0 space-y-6">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-2xl font-bold text-gray-900">Portfolio Monitoring</h1>
+          <h1 className="text-2xl font-bold text-primary">Portfolio Monitoring</h1>
 
           <div className="flex items-center gap-3">
             {/* Hour Indicator */}
-            <div className="px-3 py-1.5 text-white rounded-lg font-semibold text-sm" style={{ backgroundColor: '#87bb44' }}>
+            <div className="px-3 py-1.5 text-white rounded-lg font-semibold text-sm" style={{ backgroundColor: '#76ab3f' }}>
               Hour {selectedHour}
             </div>
 
@@ -73,7 +73,7 @@ const Dashboard: React.FC = () => {
                       switchTenant(val)
                     }
                   }}
-                  className="px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm font-medium text-gray-900"
+                  className="px-2 py-1.5 border border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-card text-sm font-medium text-primary transition-colors"
                   disabled={isSuperAdmin ? tenantsLoading : false}
                 >
                   {isSuperAdmin ? (

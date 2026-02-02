@@ -3,27 +3,30 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../context/AuthContext'
 import { useTenant } from '../../context/TenantContext'
+import { useTheme } from '../../context/ThemeContext'
 import toast from 'react-hot-toast'
 import ScrollToTop from '../common/ScrollToTop'
 import { getESTHour } from '../../utils/timezone'
+/* ... rest of imports ... */
 
 import Sidebar from './Sidebar'
 import UserProfileDrawer from './UserProfileDrawer'
 
 const MainLayout: React.FC = () => {
+  const { theme, toggleTheme } = useTheme()
   const queryClient = useQueryClient()
-  // const [currentHour, setCurrentHour] = useState(getESTHour()) - Removed as moved to Dashboard
+  /* ... state ... */
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [infoOpen, setInfoOpen] = useState(false)
 
-  // useEffect(() => { ... }) - Removed hour interval
-
-  const { user, logout } = useAuth() // availableTenants, switchTenant removed from here
-  const { selectedTenant } = useTenant() // Only need selectedTenant for Title
+  /* ... hooks ... */
+  const { user, logout } = useAuth()
+  const { selectedTenant } = useTenant()
   const navigate = useNavigate()
   const isSuperAdmin = user?.role === 'super_admin'
 
+  /* ... handlers ... */
   const handleLogout = async () => {
     try {
       await logout()
@@ -35,7 +38,7 @@ const MainLayout: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-main overflow-hidden">
       {/* Sidebar Navigation */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -49,7 +52,7 @@ const MainLayout: React.FC = () => {
       {/* Info Modal */}
       {infoOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setInfoOpen(false)}>
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+          <div className="bg-card rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
             <div className="bg-[#87bb44] px-6 py-4 flex items-center justify-between">
               <h3 className="text-white font-bold text-lg">About HLSC</h3>
               <button
@@ -62,27 +65,27 @@ const MainLayout: React.FC = () => {
               </button>
             </div>
             <div className="p-6">
-              <p className="text-gray-600 leading-relaxed text-sm">
-                The <span className="font-semibold text-gray-900">High Level System Check (HLSC)</span> application is designed for comprehensive portfolio monitoring and performance analytics.
+              <p className="text-secondary leading-relaxed text-sm">
+                The <span className="font-semibold text-primary">High Level System Check (HLSC)</span> application is designed for comprehensive portfolio monitoring and performance analytics.
               </p>
               <div className="mt-4 space-y-3">
                 <div className="flex items-start gap-3">
                   <div className="mt-1 min-w-[4px] h-4 rounded-full bg-[#87bb44]"></div>
-                  <p className="text-sm text-gray-600">Monitor system performance across multiple portfolios and clients.</p>
+                  <p className="text-sm text-secondary">Monitor system performance across multiple portfolios and clients.</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="mt-1 min-w-[4px] h-4 rounded-full bg-[#87bb44]"></div>
-                  <p className="text-sm text-gray-600">Track and log issues with detailed hourly breakdowns.</p>
+                  <p className="text-sm text-secondary">Track and log issues with detailed hourly breakdowns.</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="mt-1 min-w-[4px] h-4 rounded-full bg-[#87bb44]"></div>
-                  <p className="text-sm text-gray-600">Analyze user coverage and operational efficiency.</p>
+                  <p className="text-sm text-secondary">Analyze user coverage and operational efficiency.</p>
                 </div>
               </div>
               <div className="mt-6 flex justify-end">
                 <button
                   onClick={() => setInfoOpen(false)}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors text-sm"
+                  className="px-4 py-2 bg-main text-secondary font-medium rounded-lg hover:bg-subtle transition-colors text-sm"
                 >
                   Close
                 </button>
@@ -95,7 +98,7 @@ const MainLayout: React.FC = () => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header - Green Background */}
-        <header className="shadow-sm relative z-10 flex-shrink-0" style={{ backgroundColor: '#87bb44' }}>
+        <header className="shadow-sm relative z-10 flex-shrink-0" style={{ backgroundColor: 'var(--header-bg)' }}>
           <div className="px-4 py-2 flex items-center justify-between">
             {/* Left Side: Mobile Toggle (Visible only on mobile) */}
             <div className="flex items-center">
@@ -123,6 +126,23 @@ const MainLayout: React.FC = () => {
 
             {/* Right Side: Icons & Logo */}
             <div className="flex items-center justify-end gap-2">
+              {/* Theme Toggle Button */}
+              <button
+                onClick={toggleTheme}
+                className="p-1 md:p-1.5 rounded-lg bg-white/20 text-white hover:bg-white/30 transition-all duration-300"
+                title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+              >
+                {theme === 'light' ? (
+                  <svg className="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
+                ) : (
+                  <svg className="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                )}
+              </button>
+
               {/* Info Icon */}
               <button
                 onClick={() => setInfoOpen(true)}
@@ -150,7 +170,7 @@ const MainLayout: React.FC = () => {
         </header>
 
         {/* Scrollable Main Content */}
-        <main className="flex-1 overflow-y-auto bg-gray-50 px-4 py-6 sm:px-6 lg:px-8">
+        <main className="flex-1 overflow-y-auto bg-main px-4 py-6 sm:px-6 lg:px-8 transition-colors duration-300">
           <Outlet />
         </main>
       </div>

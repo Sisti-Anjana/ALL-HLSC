@@ -369,37 +369,37 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
 
   if (loading && portfolios.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+      <div className="bg-card rounded-lg shadow-md p-6 mb-6 transition-colors duration-300">
         {/* Header Skeleton */}
         <div className="mb-6 animate-pulse">
           <div className="flex justify-between items-center mb-4">
-            <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-            <div className="h-4 bg-gray-200 rounded w-48 hidden sm:block"></div>
+            <div className="h-8 bg-subtle rounded w-1/3"></div>
+            <div className="h-4 bg-subtle rounded w-48 hidden sm:block"></div>
           </div>
 
           {/* Legend Skeleton */}
-          <div className="flex gap-4 mb-6 pb-4 border-b border-gray-100">
-            <div className="h-4 bg-gray-200 rounded w-20"></div>
-            <div className="h-4 bg-gray-200 rounded w-20"></div>
-            <div className="h-4 bg-gray-200 rounded w-20"></div>
+          <div className="flex gap-4 mb-6 pb-4 border-b border-subtle">
+            <div className="h-4 bg-subtle rounded w-20"></div>
+            <div className="h-4 bg-subtle rounded w-20"></div>
+            <div className="h-4 bg-subtle rounded w-20"></div>
           </div>
 
           {/* Controls Skeleton */}
           <div className="flex justify-between items-center mb-6">
-            <div className="h-10 bg-gray-200 rounded w-64"></div>
-            <div className="h-10 bg-gray-200 rounded w-32"></div>
+            <div className="h-10 bg-subtle rounded w-64"></div>
+            <div className="h-10 bg-subtle rounded w-32"></div>
           </div>
         </div>
 
         {/* Grid Skeleton */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2 sm:gap-3">
           {[...Array(14)].map((_, i) => (
-            <div key={i} className="bg-gray-50 border-2 border-gray-100 rounded-lg p-2.5 h-20 animate-pulse flex flex-col justify-between">
+            <div key={i} className="bg-main border-2 border-subtle rounded-lg p-2.5 h-20 animate-pulse flex flex-col justify-between">
               <div className="flex justify-between items-start">
-                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                <div className="h-4 bg-gray-200 rounded w-8"></div>
+                <div className="h-4 bg-subtle rounded w-2/3"></div>
+                <div className="h-4 bg-subtle rounded w-8"></div>
               </div>
-              <div className="h-3 bg-gray-200 rounded w-1/2 mt-2"></div>
+              <div className="h-3 bg-subtle rounded w-1/2 mt-2"></div>
             </div>
           ))}
         </div>
@@ -408,12 +408,12 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+    <div className="bg-card rounded-lg shadow-md p-6 mb-6 transition-colors duration-300">
       {/* Header Section */}
       <div className="mb-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">Quick Portfolio Reference</h2>
-          <div className="text-xs sm:text-sm text-gray-700">
+          <h2 className="text-xl sm:text-2xl font-bold text-primary tracking-tight">Quick Portfolio Reference</h2>
+          <div className="text-xs sm:text-sm text-secondary">
             <span className="hidden sm:inline">Last updated (EST): </span>
             <span className="font-semibold">{formatTime(lastUpdated)}</span>
             <span className="hidden lg:inline"> (Auto-refreshes every 15s)</span>
@@ -421,23 +421,23 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-3 sm:gap-6 mb-4 pb-4 border-b border-gray-200 flex-wrap">
-          <span className="text-xs sm:text-sm font-medium text-gray-700">Legend:</span>
+        <div className="flex items-center gap-3 sm:gap-6 mb-4 pb-4 border-b border-subtle flex-wrap">
+          <span className="text-xs sm:text-sm font-medium text-secondary">Legend:</span>
           {['updated', '1h', '2h', '3h', 'no-activity'].map((status) => {
             const colors = getStatusColor(status).split(' ')
             const bgColor = colors[0]
             const borderColor = colors[1] || colors[0]
             return (
               <div key={status} className="flex items-center gap-1.5 sm:gap-2">
-                <div className={`w-3 h-3 sm:w-4 sm:h-4 rounded border-2 ${bgColor} ${borderColor}`}></div>
-                <span className="text-xs text-gray-600">{getStatusLabel(status)}</span>
+                <div className={`w-3 h-3 sm:w-4 sm:h-4 rounded border-2 ${bgColor} ${borderColor} dark:opacity-80`}></div>
+                <span className="text-xs text-secondary">{getStatusLabel(status)}</span>
               </div>
             )
           })}
           {/* Add Lock Legend */}
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <div className="w-3 h-3 sm:w-4 sm:h-4 rounded border-[4px] border-purple-600 bg-white"></div>
-            <span className="text-xs text-gray-600">Locked</span>
+            <div className="w-3 h-3 sm:w-4 sm:h-4 rounded border-[4px] border-purple-600 bg-card"></div>
+            <span className="text-xs text-secondary">Locked</span>
           </div>
         </div>
 
@@ -449,9 +449,9 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-1.5 pl-9 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-1.5 pl-9 text-sm border border-subtle bg-main text-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-green/50 transition-colors"
             />
-            <span className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+            <span className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-secondary text-sm">🔍</span>
           </div>
           <Button
             onClick={() => {
@@ -555,19 +555,19 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
               >
                 {/* Content Section - REVERTED - NAME ONLY */}
                 <div className="flex-1 pl-3 py-1 flex flex-col justify-center min-w-0 pr-14">
-                  <h3 className="font-bold text-black text-[14px] leading-tight truncate">
+                  <h3 className="font-bold text-black dark:text-gray-900 text-[14px] leading-tight truncate">
                     {isLocked && <span className="mr-1 text-[11px]">🔒</span>}
                     {portfolio.name}
                   </h3>
                   {portfolio.subtitle && (
-                    <p className="text-[12px] text-gray-700 font-medium truncate mt-0.5">
+                    <p className="text-[12px] text-gray-700 dark:text-gray-800 font-medium truncate mt-0.5">
                       {portfolio.subtitle}
                     </p>
                   )}
                 </div>
 
                 {/* Y/H Badge - Top Right Corner - REFINED SIZE */}
-                <div className="absolute top-1.5 right-1.5 bg-blue-600 text-white p-0 rounded-sm shadow-sm z-10 border border-blue-500/10">
+                <div className="absolute top-1.5 right-1.5 bg-blue-600 text-white p-0 rounded-sm shadow-sm z-10 border border-blue-500/10 dark:bg-blue-700 dark:border-blue-400/20">
                   <span className="text-[10.5px] font-black leading-none block px-1 py-0.5">
                     {portfolio.yValue.charAt(0)} {portfolio.yValue.slice(1)}
                   </span>
@@ -575,8 +575,8 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
 
                 {/* Hover Site Range Overlay - RESTORED HOVER ONLY */}
                 {portfolio.siteRange && (
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute inset-0 bg-white/95 flex items-center justify-center p-2 z-20 text-center pointer-events-none border-x border-blue-100">
-                    <span className="text-blue-700 font-bold text-xs">📍 {portfolio.siteRange}</span>
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute inset-0 bg-white/95 dark:bg-gray-800/95 flex items-center justify-center p-2 z-20 text-center pointer-events-none border-x border-blue-100 dark:border-blue-900/40">
+                    <span className="text-blue-700 dark:text-blue-400 font-bold text-xs">📍 {portfolio.siteRange}</span>
                   </div>
                 )}
               </div>
@@ -586,126 +586,130 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
       </div>
 
       {/* Hover Tooltip */}
-      {hoveredPortfolio && tooltipPosition && (() => {
-        const portfolio = portfolios.find(p => p.id === hoveredPortfolio)
-        if (!portfolio) return null
+      {
+        hoveredPortfolio && tooltipPosition && (() => {
+          const portfolio = portfolios.find(p => p.id === hoveredPortfolio)
+          if (!portfolio) return null
 
-        // Find ANY active lock for this portfolio
-        const lockInfo = (locks || []).find(l =>
-          String(l.portfolio_id || '').trim().toLowerCase() === String(portfolio.id).trim().toLowerCase()
-        )
-        // Only show as locked if there's actually a lock
-        const isLockedTooltip = !!lockInfo
+          // Find ANY active lock for this portfolio
+          const lockInfo = (locks || []).find(l =>
+            String(l.portfolio_id || '').trim().toLowerCase() === String(portfolio.id).trim().toLowerCase()
+          )
+          // Only show as locked if there's actually a lock
+          const isLockedTooltip = !!lockInfo
 
-        return (
-          <div
-            className="fixed z-[9999] bg-gray-900 text-white text-xs rounded-lg shadow-2xl p-4 pointer-events-none border border-gray-700"
-            style={{
-              top: `${tooltipPosition.top}px`,
-              left: `${tooltipPosition.left}px`,
-              transform: tooltipPosition.showAbove
-                ? 'translate(-50%, -100%) translateY(-8px)'
-                : 'translate(-50%, 0) translateY(8px)',
-              transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
-              opacity: hoveredPortfolio ? 1 : 0,
-            }}
-          >
-            <div className="font-bold text-sm mb-2 pb-2 border-b border-gray-700">
-              {portfolio.name}
-              {portfolio.siteRange && ` (${portfolio.siteRange})`}
-            </div>
-            <div className="space-y-2">
-              <div className="text-gray-200">
-                <span className="text-gray-400">Status:</span> {getStatusLabel(portfolio.status)}
+          return (
+            <div
+              className="fixed z-[9999] bg-gray-900 dark:bg-black text-white text-xs rounded-lg shadow-2xl p-4 pointer-events-none border border-gray-700 dark:border-gray-600"
+              style={{
+                top: `${tooltipPosition.top}px`,
+                left: `${tooltipPosition.left}px`,
+                transform: tooltipPosition.showAbove
+                  ? 'translate(-50%, -100%) translateY(-8px)'
+                  : 'translate(-50%, 0) translateY(8px)',
+                transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
+                opacity: hoveredPortfolio ? 1 : 0,
+              }}
+            >
+              <div className="font-bold text-sm mb-2 pb-2 border-b border-gray-700 dark:border-gray-600">
+                {portfolio.name}
+                {portfolio.siteRange && ` (${portfolio.siteRange})`}
               </div>
-              <div className="text-gray-200">
-                <span className="text-gray-400">Y/H Value:</span> {portfolio.yValue}
-              </div>
+              <div className="space-y-2">
+                <div className="text-gray-200">
+                  <span className="text-gray-400">Status:</span> {getStatusLabel(portfolio.status)}
+                </div>
+                <div className="text-gray-200">
+                  <span className="text-gray-400">Y/H Value:</span> {portfolio.yValue}
+                </div>
 
-              {/* Show "Logged by" - current lock owner if locked, or last worker if not locked */}
-              {(() => {
-                if (isLockedTooltip && lockInfo && lockInfo.monitored_by) {
-                  // Portfolio is locked for current hour - show current lock owner
-                  // Use case-insensitive email matching
-                  const lockUser = users.find(u =>
-                    u.email?.toLowerCase() === lockInfo.monitored_by?.toLowerCase()
-                  )
-                  const lockOwnerName = lockUser?.full_name || lockInfo.monitored_by?.split('@')[0] || 'Unknown'
-                  return (
-                    <div className="bg-gray-800 rounded px-2 py-1.5 border border-gray-700">
-                      <div className="text-gray-200 text-xs">
-                        <span className="text-gray-400">Logged by:</span> {lockOwnerName}
-                      </div>
-                    </div>
-                  )
-                } else {
-                  // Portfolio is not locked for current hour - show last person who logged issues
-                  const lastWorker = getLastWorker(portfolio.id)
-                  if (lastWorker) {
+                {/* Show "Logged by" - current lock owner if locked, or last worker if not locked */}
+                {(() => {
+                  if (isLockedTooltip && lockInfo && lockInfo.monitored_by) {
+                    // Portfolio is locked for current hour - show current lock owner
+                    // Use case-insensitive email matching
+                    const lockUser = users.find(u =>
+                      u.email?.toLowerCase() === lockInfo.monitored_by?.toLowerCase()
+                    )
+                    const lockOwnerName = lockUser?.full_name || lockInfo.monitored_by?.split('@')[0] || 'Unknown'
                     return (
-                      <div className="bg-gray-800 rounded px-2 py-1.5 border border-gray-700">
+                      <div className="bg-gray-800 dark:bg-gray-900 rounded px-2 py-1.5 border border-gray-700 dark:border-gray-600">
                         <div className="text-gray-200 text-xs">
-                          <span className="text-gray-400">Last logged by:</span> {lastWorker.displayName}
+                          <span className="text-gray-400">Logged by:</span> {lockOwnerName}
                         </div>
                       </div>
                     )
+                  } else {
+                    // Portfolio is not locked for current hour - show last person who logged issues
+                    const lastWorker = getLastWorker(portfolio.id)
+                    if (lastWorker) {
+                      return (
+                        <div className="bg-gray-800 dark:bg-gray-900 rounded px-2 py-1.5 border border-gray-700 dark:border-gray-600">
+                          <div className="text-gray-200 text-xs">
+                            <span className="text-gray-400">Last logged by:</span> {lastWorker.displayName}
+                          </div>
+                        </div>
+                      )
+                    }
                   }
-                }
-                return null
-              })()}
+                  return null
+                })()}
 
-              {/* Separate box for "Last Activity" */}
-              {portfolio.lastUpdated && (
-                <div className="bg-gray-800 rounded px-2 py-1.5 border border-gray-700">
-                  <div className="text-gray-200 text-xs">
-                    <span className="text-gray-400">Last Activity:</span> {formatTime(portfolio.lastUpdated)}
+                {/* Separate box for "Last Activity" */}
+                {portfolio.lastUpdated && (
+                  <div className="bg-gray-800 dark:bg-gray-900 rounded px-2 py-1.5 border border-gray-700 dark:border-gray-600">
+                    <div className="text-gray-200 text-xs">
+                      <span className="text-gray-400">Last Activity:</span> {formatTime(portfolio.lastUpdated)}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Separate box for lock info if locked */}
-              {isLockedTooltip && lockInfo && (
-                <div className="bg-purple-900/30 rounded px-2 py-1.5 border border-purple-500/30">
-                  <div className="text-purple-300 text-xs">
-                    🔒 Locked - Hour {lockInfo.issue_hour}:00
+                {/* Separate box for lock info if locked */}
+                {isLockedTooltip && lockInfo && (
+                  <div className="bg-purple-900/30 rounded px-2 py-1.5 border border-purple-500/30">
+                    <div className="text-purple-300 text-xs">
+                      🔒 Locked - Hour {lockInfo.issue_hour}:00
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* "Click for options" in blue, separate box */}
-              <div className="bg-blue-900/30 rounded px-2 py-1.5 border border-blue-500/30">
-                <div className="text-blue-400 text-xs font-semibold text-center">
-                  Click for options
+                {/* "Click for options" in blue, separate box */}
+                <div className="bg-blue-900/30 rounded px-2 py-1.5 border border-blue-500/30">
+                  <div className="text-blue-400 text-xs font-semibold text-center">
+                    Click for options
+                  </div>
                 </div>
               </div>
+              {/* Arrow pointing to card */}
+              <div
+                className={`absolute left-1/2 transform -translate-x-1/2 border-4 border-transparent ${tooltipPosition.showAbove
+                  ? 'top-full -mt-1 border-t-gray-900 dark:border-t-black'
+                  : 'bottom-full mb-1 border-b-gray-900 dark:border-b-black'
+                  }`}
+              ></div>
             </div>
-            {/* Arrow pointing to card */}
-            <div
-              className={`absolute left-1/2 transform -translate-x-1/2 border-4 border-transparent ${tooltipPosition.showAbove
-                ? 'top-full -mt-1 border-t-gray-900'
-                : 'bottom-full mb-1 border-b-gray-900'
-                }`}
-            ></div>
-          </div>
-        )
-      })()}
+          )
+        })()
+      }
 
       {/* Portfolio Detail Modal */}
-      {selectedPortfolioId && (
-        <PortfolioDetailModal
-          isOpen={!!selectedPortfolioId}
-          onClose={() => setSelectedPortfolioId(null)}
-          portfolioId={selectedPortfolioId}
-          selectedHour={selectedHour}
-          onLogIssue={(portfolioId, hour) => {
-            setSelectedPortfolioId(null) // Close modal
-            if (onPortfolioSelected) {
-              onPortfolioSelected(portfolioId, hour)
-            }
-          }}
-        />
-      )}
-    </div>
+      {
+        selectedPortfolioId && (
+          <PortfolioDetailModal
+            isOpen={!!selectedPortfolioId}
+            onClose={() => setSelectedPortfolioId(null)}
+            portfolioId={selectedPortfolioId}
+            selectedHour={selectedHour}
+            onLogIssue={(portfolioId, hour) => {
+              setSelectedPortfolioId(null) // Close modal
+              if (onPortfolioSelected) {
+                onPortfolioSelected(portfolioId, hour)
+              }
+            }}
+          />
+        )
+      }
+    </div >
   )
 }
 

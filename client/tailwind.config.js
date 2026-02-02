@@ -1,11 +1,24 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class',
   content: [
     "./src/**/*.{js,jsx,ts,tsx}",
     "./public/index.html"
   ],
   theme: {
     extend: {
+      backgroundColor: {
+        'main': 'var(--bg-main)',
+        'card': 'var(--bg-card)',
+        'sidebar': 'var(--bg-sidebar)',
+      },
+      textColor: {
+        'primary': 'var(--text-primary)',
+        'secondary': 'var(--text-secondary)',
+      },
+      borderColor: {
+        'subtle': 'var(--border-subtle)',
+      },
       fontFamily: {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'sans-serif'],
       },

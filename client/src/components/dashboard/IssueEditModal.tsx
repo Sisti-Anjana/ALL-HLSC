@@ -84,26 +84,26 @@ const IssueEditModal: React.FC<IssueEditModalProps> = ({ isOpen, onClose, issue,
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Edit Issue Details">
-            <div className="space-y-6 pt-2">
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm">
+            <div className="space-y-4">
+                <div className="bg-main border border-subtle rounded-lg p-3 text-sm">
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                         <div>
-                            <span className="text-gray-500">Portfolio:</span>
-                            <span className="ml-2 font-semibold text-gray-900">{issue?.portfolio?.name}</span>
+                            <span className="text-secondary">Portfolio:</span>
+                            <span className="ml-2 font-semibold text-primary">{issue?.portfolio?.name}</span>
                         </div>
                         <div>
-                            <span className="text-gray-500">Hour:</span>
-                            <span className="ml-2 font-semibold text-gray-900">{issue?.issue_hour}:00</span>
+                            <span className="text-secondary">Hour:</span>
+                            <span className="ml-2 font-semibold text-primary">{issue?.issue_hour}:00</span>
                         </div>
                         <div>
-                            <span className="text-gray-500">Monitored By:</span>
-                            <span className="ml-2 font-semibold text-gray-900">
+                            <span className="text-secondary">Monitored By:</span>
+                            <span className="ml-2 font-semibold text-primary">
                                 {Array.isArray(issue?.monitored_by) ? issue?.monitored_by[0] : issue?.monitored_by}
                             </span>
                         </div>
                         <div>
-                            <span className="text-gray-500">Created:</span>
-                            <span className="ml-2 font-semibold text-gray-900">
+                            <span className="text-secondary">Created:</span>
+                            <span className="ml-2 font-semibold text-primary">
                                 {issue?.created_at ? new Date(issue.created_at).toLocaleDateString() : ''}
                             </span>
                         </div>
@@ -111,7 +111,7 @@ const IssueEditModal: React.FC<IssueEditModalProps> = ({ isOpen, onClose, issue,
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Issue Present</label>
+                    <label className="block text-sm font-medium text-secondary mb-2">Issue Present</label>
                     <div className="flex gap-2">
                         <button
                             type="button"
@@ -120,8 +120,8 @@ const IssueEditModal: React.FC<IssueEditModalProps> = ({ isOpen, onClose, issue,
                                 if (description === 'No issue') setDescription('')
                             }}
                             className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${issuePresent === 'yes'
-                                ? 'bg-red-100 text-red-800 border-2 border-red-300'
-                                : 'bg-white text-gray-700 border-2 border-gray-300 hover:bg-gray-50'
+                                ? 'bg-red-500 text-white border-2 border-red-600'
+                                : 'bg-card text-secondary border-2 border-subtle hover:bg-main'
                                 }`}
                         >
                             Yes
@@ -134,8 +134,8 @@ const IssueEditModal: React.FC<IssueEditModalProps> = ({ isOpen, onClose, issue,
                                 setMissedBy('')
                             }}
                             className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${issuePresent === 'no'
-                                ? 'bg-green-100 text-green-800 border-2 border-green-300'
-                                : 'bg-white text-gray-700 border-2 border-gray-300 hover:bg-gray-50'
+                                ? 'bg-accent-green text-white border-2 border-accent-green'
+                                : 'bg-card text-secondary border-2 border-subtle hover:bg-main'
                                 }`}
                         >
                             No
@@ -178,12 +178,12 @@ const IssueEditModal: React.FC<IssueEditModalProps> = ({ isOpen, onClose, issue,
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Issues Missed By (optional)</label>
+                    <label className="block text-sm font-medium text-secondary mb-2">Issues Missed By (optional)</label>
                     <select
                         value={missedBy}
                         onChange={(e) => setMissedBy(e.target.value)}
                         disabled={issuePresent === 'no'}
-                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${issuePresent === 'no' ? 'bg-gray-100 cursor-not-allowed' : ''
+                        className={`w-full px-3 py-2 border border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-green/50 bg-main text-primary ${issuePresent === 'no' ? 'opacity-50 cursor-not-allowed' : ''
                             }`}
                     >
                         <option value="">Select</option>

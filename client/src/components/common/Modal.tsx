@@ -55,24 +55,24 @@ const Modal: React.FC<ModalProps> = ({
     >
       <div className="flex items-center justify-center min-h-screen px-2 sm:px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         <div
-          className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
+          className="fixed inset-0 transition-opacity bg-black/50 backdrop-blur-sm"
           onClick={handleBackdropClick}
         ></div>
 
         <div
-          className={`inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle ${sizes[size]} w-full max-h-[90vh] overflow-y-auto`}
+          className={`inline-block align-bottom bg-card rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle ${sizes[size]} w-full max-h-[90vh] overflow-y-auto border border-subtle`}
           onClick={(e) => e.stopPropagation()}
         >
           {title && (
-            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
+            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-subtle sticky top-0 bg-card z-10">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0 pr-2">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{title}</h3>
-                  {subtitle && <p className="text-xs sm:text-sm text-gray-600 mt-1 truncate">{subtitle}</p>}
+                  <h3 className="text-base sm:text-lg font-semibold text-primary truncate">{title}</h3>
+                  {subtitle && <p className="text-xs sm:text-sm text-secondary mt-1 truncate">{subtitle}</p>}
                 </div>
                 <button
                   onClick={onClose}
-                  className="text-gray-400 hover:text-gray-500 transition-colors flex-shrink-0 p-1"
+                  className="text-secondary hover:text-primary transition-colors flex-shrink-0 p-1"
                   aria-label="Close"
                 >
                   <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -82,7 +82,7 @@ const Modal: React.FC<ModalProps> = ({
               </div>
             </div>
           )}
-          <div className="px-4 sm:px-6 py-4">{children}</div>
+          <div className="px-4 sm:px-6 py-4 text-primary">{children}</div>
         </div>
       </div>
     </div>

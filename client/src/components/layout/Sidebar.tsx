@@ -80,7 +80,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
             {/* Sidebar */}
             <div
-                className={`fixed md:static inset-y-0 left-0 z-30 bg-white border-r border-gray-200 transform transition-all duration-300 ease-in-out 
+                className={`fixed md:static inset-y-0 left-0 z-30 bg-sidebar border-r border-subtle transform transition-all duration-300 ease-in-out 
           ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} 
           ${isCollapsed ? 'w-[88px]' : 'w-64'}
           flex flex-col`}
@@ -88,7 +88,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 {/* Toggle Button (Desktop Only) */}
                 <button
                     onClick={() => setIsCollapsed(!isCollapsed)}
-                    className="hidden md:flex absolute -right-3 top-20 bg-white border border-gray-200 rounded-full p-1 shadow-sm text-gray-500 hover:text-gray-700 z-50 items-center justify-center w-6 h-6"
+                    className="hidden md:flex absolute -right-3 top-20 bg-sidebar border border-subtle rounded-full p-1 shadow-sm text-secondary hover:text-primary z-50 items-center justify-center w-6 h-6"
                 >
                     <svg className={`w-4 h-4 transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -96,16 +96,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 </button>
 
                 {/* Logo Area */}
-                <div className={`h-24 flex items-center justify-center border-b border-gray-100 ${isCollapsed ? 'px-2' : 'px-4'}`}>
+                <div className={`h-24 flex items-center justify-center border-b border-subtle ${isCollapsed ? 'px-2' : 'px-4'}`}>
                     <img
                         src="/sidebar.png"
                         alt="AGS"
-                        className={`transition-all duration-300 ${isCollapsed ? 'h-12 w-auto' : 'h-20 w-auto'}`}
+                        className={`transition-all duration-300 ${isCollapsed ? 'h-12 w-auto' : 'h-20 w-auto'} ${isCollapsed ? '' : 'dark:brightness-110 dark:contrast-110'}`}
                     />
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 overflow-y-auto py-4 scrollbar-thin scrollbar-thumb-gray-200">
+                <nav className="flex-1 overflow-y-auto py-4 scrollbar-thin scrollbar-thumb-subtle">
                     <ul className="space-y-2 px-2">
                         {navItems.map((item) => {
                             const isActive = location.pathname === item.path || (item.path === '/' && location.pathname === '/')
@@ -118,14 +118,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                                             if (window.innerWidth < 768) onClose()
                                         }}
                                         title={isCollapsed ? item.label : ''}
-                                        className={`flex transition-all duration-200 rounded-lg group
+                                        className={`flex transition-all duration-200 rounded-lg group relative
                       ${isCollapsed
                                                 ? 'flex-col items-center justify-center py-3 px-1 gap-1'
                                                 : 'flex-row items-center gap-3 px-3 py-3'
                                             }
                       ${isActive
-                                                ? 'bg-[#f0f9f0] text-[#87bb44]'
-                                                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                                                ? 'bg-sidebar-active text-green-600 dark:text-[#87bb44]'
+                                                : 'text-secondary hover:bg-main hover:text-primary'
                                             }
                     `}
                                     >
@@ -156,7 +156,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 </nav>
 
                 {/* Footer - Logout */}
-                <div className={`border-t border-gray-100 ${isCollapsed ? 'p-1' : 'p-2'}`}>
+                <div className={`border-t border-subtle ${isCollapsed ? 'p-1' : 'p-2'}`}>
                     <button
                         onClick={logout}
                         title={isCollapsed ? "Logout" : ''}
@@ -165,7 +165,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                                 ? 'flex-col items-center justify-center py-3 px-1 gap-1'
                                 : 'flex-row items-center gap-3 px-3 py-3'
                             }
-                            text-gray-500 hover:bg-red-50 hover:text-red-600
+                            text-secondary hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600
                         `}
                     >
                         <div className={`${isCollapsed ? 'p-1' : ''}`}>

@@ -16,12 +16,14 @@ import { HourlyCoverage } from '../../types/analytics.types'
 import toast from 'react-hot-toast'
 import { getESTHour, getESTDateString } from '../../utils/timezone'
 import { useTenant } from '../../context/TenantContext'
+import { useTheme } from '../../context/ThemeContext'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 const HourlyCoverageAnalysis: React.FC = () => {
   const { selectedTenantId } = useTenant()
+  const { theme } = useTheme()
   const [startDate, setStartDate] = useState(getESTDateString())
   const [endDate, setEndDate] = useState(getESTDateString())
   const [selectedRange, setSelectedRange] = useState<'today' | 'week' | 'month'>('today')
@@ -109,9 +111,6 @@ const HourlyCoverageAnalysis: React.FC = () => {
     }
   })
 
-  // Debug: Log first few hours to verify data
-  console.log('Chart data sample (hours 0-6):', hourlyData.slice(0, 7).map(d => ({ hour: d.hour, coverage: d.coverage })))
-
   const chartData = {
     labels: Array.from({ length: 24 }, (_, i) => `${i}:00`),
     datasets: [
@@ -125,11 +124,12 @@ const HourlyCoverageAnalysis: React.FC = () => {
     ],
   }
 
+  const isDarkMode = theme === 'dark'
+
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     onClick: (event: any, elements: any) => {
-      // Logic for double-click is slightly different but we can use simple click + check if element exists
       if (elements.length > 0) {
         const dataIndex = elements[0].index
         const data = hourlyData[dataIndex]
@@ -151,13 +151,13 @@ const HourlyCoverageAnalysis: React.FC = () => {
         display: false,
       },
       tooltip: {
-        backgroundColor: 'rgba(255, 255, 255, 0.98)',
-        titleColor: '#000',
-        bodyColor: '#000',
+        backgroundColor: isDarkMode ? '#1e293b' : 'rgba(255, 255, 255, 0.98)',
+        titleColor: isDarkMode ? '#f8fafc' : '#000',
+        bodyColor: isDarkMode ? '#cbd5e1' : '#000',
         borderColor: '#76ab3f',
         borderWidth: 2,
         padding: 14,
-        displayColors: false, // Hide the color box in tooltip
+        displayColors: false,
         titleFont: {
           size: 14,
           weight: 'bold' as const,
@@ -167,13 +167,9 @@ const HourlyCoverageAnalysis: React.FC = () => {
         },
         boxPadding: 8,
         cornerRadius: 8,
-        shadowOffsetX: 0,
-        shadowOffsetY: 4,
-        shadowBlur: 12,
-        shadowColor: 'rgba(0, 0, 0, 0.15)',
         callbacks: {
           afterBody: (context: any) => {
-            return '\nDouble-click to see portfolios'
+            return '\nClick to see portfolios'
           },
           label: (context: any) => {
             const dataIndex = context.dataIndex
@@ -186,7 +182,7 @@ const HourlyCoverageAnalysis: React.FC = () => {
             ]
           },
           title: (context: any) => {
-            return context[0].label // Just show the hour like "5:00" or "11:00"
+            return context[0].label
           },
         },
       },
@@ -194,34 +190,41 @@ const HourlyCoverageAnalysis: React.FC = () => {
     scales: {
       y: {
         beginAtZero: true,
-        max: 60, // Match screenshot - max is 60%
+        max: 60,
         ticks: {
-          stepSize: 15, // Show ticks at 0, 15, 30, 45, 60
+          stepSize: 15,
+          color: isDarkMode ? '#94a3b8' : '#64748b',
           callback: function (value: any) {
             return value
           },
         },
         grid: {
-          color: '#e5e7eb', // Light gray grid lines
+          color: isDarkMode ? '#334155' : '#e2e8f0',
+        },
+        border: {
+          display: false,
         },
         title: {
           display: true,
           text: 'Coverage %',
+          color: isDarkMode ? '#94a3b8' : '#64748b',
           font: {
             size: 12,
+            weight: 600,
           },
         },
       },
       x: {
         grid: {
-          display: false, // No vertical grid lines
+          display: false,
         },
         ticks: {
           maxRotation: 0,
           minRotation: 0,
+          color: isDarkMode ? '#94a3b8' : '#64748b',
         },
-        title: {
-          display: false, // Hide x-axis title to match screenshot
+        border: {
+          display: false,
         },
       },
     },
@@ -252,45 +255,45 @@ const HourlyCoverageAnalysis: React.FC = () => {
   }
 
   return (
-    <Card className="mb-6">
+    <Card className="mb-6 transition-colors duration-300">
       {/* Header */}
       <div className="mb-4 sm:mb-6">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Hourly Coverage Analysis</h2>
-        <p className="text-gray-600 text-xs sm:text-sm">
+        <h2 className="text-xl sm:text-2xl font-bold text-primary mb-2">Hourly Coverage Analysis</h2>
+        <p className="text-secondary text-xs sm:text-sm">
           Portfolio risk distribution analysis based on temporal coverage theory.
         </p>
       </div>
 
       {/* Date Controls - Unified Single Line */}
-      <div className="mb-4 sm:mb-8 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+      <div className="mb-4 sm:mb-8 bg-main/50 p-4 rounded-xl border border-subtle">
         <div className="flex flex-wrap items-center justify-center gap-6">
           {/* Start Date */}
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-700 whitespace-nowrap">From:</span>
+            <span className="text-xs font-semibold text-secondary whitespace-nowrap">From:</span>
             <div className="relative w-40">
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm transition-all"
+                className="w-full px-3 py-1.5 text-xs border border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-green/50 bg-main text-primary shadow-sm transition-all"
               />
             </div>
           </div>
 
           {/* End Date */}
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-700 whitespace-nowrap">To:</span>
+            <span className="text-xs font-semibold text-secondary whitespace-nowrap">To:</span>
             <div className="relative w-40">
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm transition-all"
+                className="w-full px-3 py-1.5 text-xs border border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-green/50 bg-main text-primary shadow-sm transition-all"
               />
             </div>
           </div>
 
-          <div className="h-6 w-px bg-gray-200 hidden sm:block"></div>
+          <div className="h-6 w-px bg-subtle hidden sm:block"></div>
 
           {/* Quick Range */}
           <div className="flex items-center gap-2">
@@ -304,7 +307,7 @@ const HourlyCoverageAnalysis: React.FC = () => {
                 onClick={() => handleRangeClick(range.id as any)}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 ${selectedRange === range.id
                   ? 'text-white shadow-md'
-                  : 'bg-white text-gray-700 hover:bg-gray-200 border border-gray-300 shadow-sm'
+                  : 'bg-card text-secondary hover:bg-subtle border border-subtle shadow-sm'
                   }`}
                 style={selectedRange === range.id ? { backgroundColor: '#76ab3f' } : {}}
               >
@@ -314,40 +317,40 @@ const HourlyCoverageAnalysis: React.FC = () => {
           </div>
         </div>
       </div>
-      <p className="mt-2 text-xs text-gray-500">
-        Showing data for: <span className="font-semibold text-gray-700">{startDate || new Date().toISOString().split('T')[0]}</span>
+      <p className="mt-2 text-xs text-secondary">
+        Showing data for: <span className="font-semibold text-primary">{startDate || new Date().toISOString().split('T')[0]}</span>
       </p>
 
       {/* Chart Section */}
-      <div>
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+      <div className="mt-6">
+        <h3 className="text-xl font-semibold text-primary mb-2">
           Portfolio Risk Distribution by Hour
         </h3>
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-secondary mb-4">
           Visual representation of systemic risk concentration across the 24-hour cycle. Coverage percentage shows unique portfolios checked per hour.
         </p>
         {/* Color Legend */}
         <div className="flex items-center gap-4 mb-4 text-sm">
-          <span className="font-medium text-gray-700">Legend:</span>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-[#ef4444]"></div>
-            <span className="text-gray-600">0% coverage</span>
+          <span className="font-medium text-secondary">Legend:</span>
+          <div className="flex items-center gap-2 text-xs text-secondary">
+            <div className="w-4 h-4 rounded bg-[#ef4444] dark:opacity-80"></div>
+            <span>0% coverage</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-[#f59e0b]"></div>
-            <span className="text-gray-600">&lt; 50% coverage</span>
+          <div className="flex items-center gap-2 text-xs text-secondary">
+            <div className="w-4 h-4 rounded bg-[#f59e0b] dark:opacity-80"></div>
+            <span>&lt; 50% coverage</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-[#76AB3F]"></div>
-            <span className="text-gray-600">≥ 50% coverage</span>
+          <div className="flex items-center gap-2 text-xs text-secondary">
+            <div className="w-4 h-4 rounded bg-[#76AB3F] dark:opacity-80"></div>
+            <span>≥ 50% coverage</span>
           </div>
         </div>
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4 h-[200px] sm:h-[250px] md:h-[300px] min-h-[200px] sm:min-h-[250px] md:min-h-[300px]" style={{ backgroundColor: '#f9fafb', position: 'relative' }}>
+        <div className="bg-main border border-subtle rounded-lg p-3 sm:p-4 h-[200px] sm:h-[250px] md:h-[300px] min-h-[200px] sm:min-h-[250px] md:min-h-[300px] transition-colors" style={{ position: 'relative' }}>
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-                <p className="mt-3 text-gray-600 font-medium">Loading chart data...</p>
+                <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-accent-green"></div>
+                <p className="mt-3 text-secondary font-medium">Loading chart data...</p>
               </div>
             </div>
           ) : (
@@ -367,38 +370,37 @@ const HourlyCoverageAnalysis: React.FC = () => {
         size="sm"
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-secondary">
             The following portfolios were marked as checked during this hour.
           </p>
           <div className="max-h-[60vh] overflow-y-auto pr-2">
             {selectedHourDetails && selectedHourDetails.portfolios.length > 0 ? (
-              <ul className="divide-y divide-gray-100 border border-gray-100 rounded-lg overflow-hidden">
+              <ul className="divide-y divide-subtle border border-subtle rounded-lg overflow-hidden">
                 {selectedHourDetails.portfolios.map((name, index) => (
-                  <li key={index} className="px-4 py-3 bg-white hover:bg-gray-50 flex items-center gap-3">
+                  <li key={index} className="px-4 py-3 bg-card hover:bg-main flex items-center gap-3 transition-colors">
                     <div className="w-2 h-2 rounded-full bg-[#76ab3f]"></div>
-                    <span className="text-sm font-medium text-gray-900">{name}</span>
+                    <span className="text-sm font-medium text-primary">{name}</span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-200 text-gray-500 text-sm">
+              <div className="text-center py-8 bg-main rounded-lg border border-dashed border-subtle text-secondary text-sm">
                 No portfolios recorded for this hour.
               </div>
             )}
           </div>
-          <div className="pt-4 border-t border-gray-100">
+          <div className="pt-4 border-t border-subtle">
             <button
               onClick={() => setIsModalOpen(false)}
-              className="w-full py-2.5 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+              className="w-full py-2.5 bg-subtle text-primary rounded-lg font-semibold hover:opacity-80 transition-all"
             >
               Close
             </button>
           </div>
         </div>
       </Modal>
-    </Card >
+    </Card>
   )
 }
 
 export default HourlyCoverageAnalysis
-

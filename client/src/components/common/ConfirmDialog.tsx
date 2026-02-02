@@ -37,7 +37,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
       <div className="space-y-4">
-        <p className="text-gray-700">{message}</p>
+        <p className="text-primary">{message}</p>
         <div className="flex justify-end gap-3 pt-4">
           <Button
             variant="secondary"
