@@ -92,11 +92,15 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <QuickPortfolioReference
-          onPortfolioSelected={handlePortfolioSelected}
-          selectedHour={selectedHour}
-        />
-        <HourlyCoverageAnalysis />
+        <div id="quick-portfolio" className="scroll-mt-24">
+          <QuickPortfolioReference
+            onPortfolioSelected={handlePortfolioSelected}
+            selectedHour={selectedHour}
+          />
+        </div>
+        <div id="hourly-analysis" className="scroll-mt-24">
+          <HourlyCoverageAnalysis />
+        </div>
         <IssueDetailsTable />
       </div>
 

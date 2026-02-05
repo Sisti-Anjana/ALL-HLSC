@@ -11,6 +11,7 @@ import { getESTHour } from '../../utils/timezone'
 
 import Sidebar from './Sidebar'
 import UserProfileDrawer from './UserProfileDrawer'
+import HashScroller from '../common/HashScroller'
 
 const MainLayout: React.FC = () => {
   const { theme, toggleTheme } = useTheme()
@@ -19,6 +20,7 @@ const MainLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [infoOpen, setInfoOpen] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(true)
 
   /* ... hooks ... */
   const { user, logout } = useAuth()
@@ -40,7 +42,12 @@ const MainLayout: React.FC = () => {
   return (
     <div className="flex h-screen bg-main overflow-hidden">
       {/* Sidebar Navigation */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        isCollapsed={isCollapsed}
+        onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
+      />
 
       {/* User Profile Drawer Component */}
       <UserProfileDrawer
@@ -99,9 +106,9 @@ const MainLayout: React.FC = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header - Green Background */}
         <header className="shadow-sm relative z-10 flex-shrink-0" style={{ backgroundColor: 'var(--header-bg)' }}>
-          <div className="px-4 py-2 flex items-center justify-between">
-            {/* Left Side: Mobile Toggle (Visible only on mobile) */}
-            <div className="flex items-center">
+          <div className="relative flex items-center justify-center px-4 py-2 min-h-[64px]">
+            {/* Left Side: Mobile Toggle (Absolute) */}
+            <div className="absolute left-4 flex items-center">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 className="md:hidden p-2 text-white hover:bg-white/10 rounded-lg"
@@ -110,22 +117,25 @@ const MainLayout: React.FC = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
-              {/* Left spacer for desktop centering balance */}
-              <div className="hidden md:block w-10"></div>
             </div>
 
-            {/* Center Title */}
-            <div className="flex-1 flex flex-col items-center justify-center text-center">
-              <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight whitespace-nowrap drop-shadow-sm">
+            {/* Center Title (Main flex item) */}
+            <div
+              className="flex flex-col items-center justify-center text-center max-w-[50%] md:max-w-[55%] transition-transform duration-300 ease-in-out"
+              style={{
+                transform: `translateX(${window.innerWidth >= 768 ? (isCollapsed ? '-44px' : '-128px') : '0px'})`
+              }}
+            >
+              <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight whitespace-nowrap drop-shadow-sm truncate">
                 {isSuperAdmin ? (selectedTenant?.name || 'Select Client') : (user?.tenantName || 'Standard Solar')} - HLSC
               </h1>
-              <p className="text-xs md:text-sm text-white/90 font-medium mt-0.5 tracking-tight whitespace-nowrap">
+              <p className="text-xs md:text-sm text-white/90 font-medium mt-0.5 tracking-tight whitespace-nowrap truncate">
                 (High Level System Check)
               </p>
             </div>
 
-            {/* Right Side: Icons & Logo */}
-            <div className="flex items-center justify-end gap-2">
+            {/* Right Side: Icons & Logo (Absolute) */}
+            <div className="absolute right-4 flex items-center gap-2">
               {/* Theme Toggle Button */}
               <button
                 onClick={toggleTheme}
@@ -146,7 +156,7 @@ const MainLayout: React.FC = () => {
               {/* Info Icon */}
               <button
                 onClick={() => setInfoOpen(true)}
-                className="p-1 md:p-1.5 rounded-lg bg-white/20 text-white hover:bg-white/30 transition-colors mr-2"
+                className="p-1 md:p-1.5 rounded-lg bg-white/20 text-white hover:bg-white/30 transition-colors"
                 title="About Application"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -157,12 +167,12 @@ const MainLayout: React.FC = () => {
               {/* Company Logo Trigger */}
               <button
                 onClick={() => setProfileOpen(true)}
-                className="focus:outline-none transition-transform active:scale-95"
+                className="focus:outline-none transition-transform active:scale-95 ml-1"
               >
                 <img
                   src="/navbar.png"
                   alt="Profile"
-                  className="h-12 md:h-16 w-auto object-contain rounded transition-colors"
+                  className="h-10 md:h-12 w-auto object-contain rounded transition-colors"
                 />
               </button>
             </div>
@@ -176,6 +186,7 @@ const MainLayout: React.FC = () => {
       </div>
 
       <ScrollToTop />
+      <HashScroller />
     </div>
   )
 }

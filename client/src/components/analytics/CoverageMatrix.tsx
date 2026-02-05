@@ -911,7 +911,7 @@ const CoverageMatrix: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 scroll-mt-24" id="portfolio-coverage-matrix">
       {/* Date Filters Section */}
       <div>
         {/* Green Banner */}
@@ -1082,7 +1082,7 @@ const CoverageMatrix: React.FC = () => {
       {showCharts && (
         <div>
           {/* Green Banner */}
-          <div className="text-white py-4 px-6 rounded-t-lg shadow-md" style={{ backgroundColor: '#76ab3f' }}>
+          <div className="text-white py-4 px-6 rounded-t-lg shadow-md scroll-mt-24" style={{ backgroundColor: '#76ab3f' }} id="user-coverage-performance">
             <h2 className="text-3xl font-bold mb-1">User Coverage Performance</h2>
           </div>
 
@@ -1090,25 +1090,12 @@ const CoverageMatrix: React.FC = () => {
           <Card className="rounded-t-none">
             <div className="flex items-center justify-between mb-4">
               <div className="relative flex-1 max-w-md">
-                <svg
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
                 <input
                   type="text"
                   placeholder="Search user by name..."
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
-                  className="w-full pl-10 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <Button
@@ -1167,7 +1154,7 @@ const CoverageMatrix: React.FC = () => {
       {/* Coverage Matrix Table - Below User Coverage Performance Chart */}
       <div>
         {/* Green Banner */}
-        <div className="text-white py-4 px-6 rounded-t-lg shadow-md" style={{ backgroundColor: '#76ab3f' }}>
+        <div className="text-white py-4 px-6 rounded-t-lg shadow-md scroll-mt-24" style={{ backgroundColor: '#76ab3f' }} id="coverage-overview">
           <h2 className="text-3xl font-bold mb-1">Coverage Overview</h2>
         </div>
 
@@ -1200,20 +1187,20 @@ const CoverageMatrix: React.FC = () => {
             <table className="min-w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase sticky left-0 bg-gray-50 z-10 border-r border-gray-200">
+                  <th className="px-4 py-1 text-left text-xs font-semibold text-gray-700 uppercase sticky left-0 bg-gray-50 z-10 border-r border-gray-200">
                     User / Hour
                   </th>
                   {Array.from({ length: 24 }, (_, i) => (
                     <th
                       key={i}
-                      className={`px-2 py-2 text-center text-xs font-semibold uppercase min-w-[60px] cursor-pointer hover:bg-green-50 transition-colors ${hourFilter === i.toString() ? 'bg-green-100 text-green-800 border-b-2 border-green-600' : 'text-gray-700'} `}
+                      className={`px-2 py-1 text-center text-xs font-semibold uppercase min-w-[60px] cursor-pointer hover:bg-green-50 transition-colors ${hourFilter === i.toString() ? 'bg-green-100 text-green-800 border-b-2 border-green-600' : 'text-gray-700'} `}
                       onClick={() => setHourFilter(hourFilter === i.toString() ? 'all' : i.toString())}
                       title={`Click to filter page by ${i}:00`}
                     >
                       {i}:00
                     </th>
                   ))}
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase bg-gray-100 border-l border-gray-200">
+                  <th className="px-4 py-1 text-center text-xs font-semibold text-gray-700 uppercase bg-gray-100 border-l border-gray-200">
                     Total Portfolios
                   </th>
                 </tr>
@@ -1245,17 +1232,17 @@ const CoverageMatrix: React.FC = () => {
                       return (
                         <tr key={row.userName} className="hover:bg-gray-50">
                           <td
-                            className="px-4 py-2 text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 border-r border-gray-200 cursor-pointer hover:text-blue-600"
+                            className="px-4 py-1 text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 border-r border-gray-200 cursor-pointer hover:text-blue-600"
                             onClick={() => setSelectedUser(row)}
                           >
-                            {row.displayName} ({row.totalPortfolios} portfolios summary)
+                            {row.displayName}
                           </td>
                           {Array.from({ length: 24 }, (_, hour) => {
                             const count = row.hours[hour]?.completionsCount || 0
                             return (
                               <td
                                 key={hour}
-                                className={`px-2 py-2 text-center text-xs font-semibold cursor-pointer transition-colors ${getCellColorClass(
+                                className={`px-2 py-1 text-center text-xs font-semibold cursor-pointer transition-colors ${getCellColorClass(
                                   count
                                 )} `}
                                 onMouseEnter={(e) => handleCellMouseEnter(e, row.userName, hour)}
@@ -1265,7 +1252,7 @@ const CoverageMatrix: React.FC = () => {
                               </td>
                             )
                           })}
-                          <td className="px-4 py-2 text-center text-sm font-bold text-gray-900 bg-gray-100 border-l border-gray-200">
+                          <td className="px-4 py-1 text-center text-sm font-bold text-gray-900 bg-gray-100 border-l border-gray-200">
                             {row.totalPortfolios}
                           </td>
                         </tr>
@@ -1273,7 +1260,7 @@ const CoverageMatrix: React.FC = () => {
                     })}
                     {/* Hour Totals Row */}
                     <tr className="bg-gray-100 font-bold">
-                      <td className="px-4 py-2 text-sm text-gray-900 sticky left-0 bg-gray-100 z-10 border-r border-gray-200">
+                      <td className="px-4 py-1 text-sm text-gray-900 sticky left-0 bg-gray-100 z-10 border-r border-gray-200">
                         Hour Totals
                       </td>
                       {Array.from({ length: 24 }, (_, hour) => {
@@ -1282,12 +1269,12 @@ const CoverageMatrix: React.FC = () => {
                           0
                         )
                         return (
-                          <td key={hour} className="px-2 py-2 text-center text-xs text-gray-900">
+                          <td key={hour} className="px-2 py-1 text-center text-xs text-gray-900">
                             {count > 0 ? count : ''}
                           </td>
                         )
                       })}
-                      <td className="px-4 py-2 text-center text-sm text-gray-900 bg-gray-200 border-l border-gray-200">
+                      <td className="px-4 py-1 text-center text-sm text-gray-900 bg-gray-200 border-l border-gray-200">
                         {matrixData.reduce((sum, user) => sum + user.totalPortfolios, 0)}
                       </td>
                     </tr>

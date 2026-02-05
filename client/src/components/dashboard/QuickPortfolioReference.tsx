@@ -449,9 +449,8 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-1.5 pl-9 text-sm border border-subtle bg-main text-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-green/50 transition-colors"
+              className="w-full px-3 py-1.5 text-sm border border-subtle bg-main text-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-green/50 transition-colors"
             />
-            <span className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-secondary text-sm">🔍</span>
           </div>
           <Button
             onClick={() => {

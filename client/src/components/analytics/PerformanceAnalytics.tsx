@@ -529,7 +529,7 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
   const consistentHours = hourlyCoverage.filter((h) => h.coverage >= 70).length
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto scroll-mt-24" id="performance-analytics">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Performance Analytics</h1>
@@ -699,7 +699,7 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
       </div>
 
       {/* Main Graph - User Activity Overview */}
-      <Card className="mb-6">
+      <Card className="mb-6 scroll-mt-24" id="user-activity-overview">
         <h2 className="text-lg font-bold text-gray-900 mb-4" style={{ fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>User Activity Overview</h2>
         <div style={{ height: '300px' }}>
           <Bar
@@ -787,7 +787,7 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
       {/* Bottom Section - Top Performers + Team Performance */}
       <div className="grid grid-cols-12 gap-4 max-w-7xl">
         {/* Top Performers - Left Side */}
-        <div className="col-span-5">
+        <div className="col-span-5 scroll-mt-24" id="top-performers">
           <Card>
             <h2 className="text-lg font-bold text-gray-900 mb-1" style={{ fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>Top Performers</h2>
             <p className="text-xs text-gray-500 mb-5" style={{ fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>Leaders by coverage and findings.</p>
