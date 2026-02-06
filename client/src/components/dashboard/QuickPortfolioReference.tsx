@@ -41,7 +41,7 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
 
   // Helper to compute Y/H value using EST timezone
   const computeESTYValue = (lastUpdated: Date | string | null) => {
-    if (!lastUpdated) return { yValue: 'Y0', yValueNumber: 0, daysDiff: 0, hour: 0 }
+    if (!lastUpdated) return { yValue: 'N/A', yValueNumber: 0, daysDiff: 0, hour: 0 }
 
     const date = new Date(lastUpdated)
     const nowEST = getESTTime()
@@ -88,7 +88,7 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
         const nowEST = getESTTime()
         const currentHourEST = getESTHour()
         const todayEST = getESTDateString()
-        let yValue = 'Y0'
+        let yValue = 'N/A'
         let yValueNumber = 0
         let status: 'no-activity' | '3h' | '2h' | '1h' | 'updated' = 'no-activity'
         let lastCheckedDate: Date | null = null
@@ -568,7 +568,7 @@ const QuickPortfolioReference: React.FC<QuickPortfolioReferenceProps> = ({
                 {/* Y/H Badge - Top Right Corner - REFINED SIZE */}
                 <div className="absolute top-1.5 right-1.5 bg-blue-600 text-white p-0 rounded-sm shadow-sm z-10 border border-blue-500/10 dark:bg-blue-700 dark:border-blue-400/20">
                   <span className="text-[10.5px] font-black leading-none block px-1 py-0.5">
-                    {portfolio.yValue.charAt(0)} {portfolio.yValue.slice(1)}
+                    {portfolio.yValue === 'N/A' ? 'N/A' : `${portfolio.yValue.charAt(0)} ${portfolio.yValue.slice(1)}`}
                   </span>
                 </div>
 

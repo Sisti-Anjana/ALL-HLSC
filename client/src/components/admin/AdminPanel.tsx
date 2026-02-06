@@ -11,15 +11,20 @@ import PortfolioForm from '../portfolio/PortfolioForm'
 import Badge from '../common/Badge'
 import Spinner from '../common/Spinner'
 import EmptyState from '../common/EmptyState'
+import Modal from '../common/Modal'
 import Button from '../common/Button'
 import Input from '../common/Input'
-import Modal from '../common/Modal'
+import { issueService } from '../../services/issueService'
+
+import { useTenant } from '../../context/TenantContext'
+// @ts-ignore
+import * as XLSX from 'xlsx'
 
 const AdminPanel: React.FC = () => {
   const { user } = useAuth()
   const isSuperAdmin = user?.role === 'super_admin'
 
-  const [activeTab, setActiveTab] = useState<'portfolios' | 'users' | 'locks' | 'logs' | 'clients'>(
+  const [activeTab, setActiveTab] = useState<'portfolios' | 'users' | 'locks' | 'logs' | 'clients' | 'history'>(
     'portfolios'
   )
 
@@ -36,6 +41,7 @@ const AdminPanel: React.FC = () => {
             { id: 'locks', label: 'Active Locks' },
             { id: 'logs', label: 'Admin Logs' },
             ...(isSuperAdmin ? [{ id: 'clients', label: 'Clients' }] : []),
+            { id: 'history', label: 'Historical Data' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -58,6 +64,7 @@ const AdminPanel: React.FC = () => {
         {activeTab === 'locks' && <LocksTab />}
         {activeTab === 'logs' && <LogsTab />}
         {activeTab === 'clients' && isSuperAdmin && <ClientsTab />}
+        {activeTab === 'history' && <HistoricalDataTab />}
       </div>
     </div>
   )
@@ -789,4 +796,21 @@ const ClientsTab: React.FC = () => {
   )
 }
 
+const HistoricalDataTab: React.FC = () => {
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Historical Data Management</h2>
+          <p className="text-gray-600 mt-1">Historical data features are currently disabled.</p>
+        </div>
+      </div>
+
+      <EmptyState
+        title="Feature Disabled"
+        description="The historical data import and document storage features have been removed as requested."
+      />
+    </div>
+  )
+}
 export default AdminPanel

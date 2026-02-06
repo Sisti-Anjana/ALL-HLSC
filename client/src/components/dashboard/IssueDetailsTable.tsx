@@ -323,17 +323,19 @@ const IssueDetailsTable: React.FC = () => {
   }
 
   const handleQuickRange = (range: 'today' | 'yesterday' | 'week' | 'month' | 'all') => {
-    const today = getESTDateString()
-    const todayObj = new Date(today)
-    const yesterday = new Date(todayObj)
-    yesterday.setDate(todayObj.getDate() - 1)
+    const today = getESTDateString() // "YYYY-MM-DD"
+    const [year, month, day] = today.split('-').map(Number)
+
+    // Construct dates using local time components to avoid UTC shifts
+    const todayObj = new Date(year, month - 1, day)
+
+    const yesterday = new Date(year, month - 1, day - 1)
     const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`
 
-    const weekStart = new Date(todayObj)
-    weekStart.setDate(todayObj.getDate() - todayObj.getDay()) // Start of week (Sunday)
+    const weekStart = new Date(year, month - 1, day - todayObj.getDay()) // Start of week (Sunday)
     const weekStartStr = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`
 
-    const monthStart = new Date(todayObj.getFullYear(), todayObj.getMonth(), 1)
+    const monthStart = new Date(year, month - 1, 1)
     const monthStartStr = `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, '0')}-${String(monthStart.getDate()).padStart(2, '0')}`
 
     switch (range) {
@@ -415,7 +417,7 @@ const IssueDetailsTable: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search issues..."
-                className="w-full px-3 py-2 text-sm border border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-green/50 bg-main text-primary"
+                className="w-full px-3 py-2 text-sm border border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/50 bg-main text-primary"
               />
             </div>
 
@@ -423,7 +425,7 @@ const IssueDetailsTable: React.FC = () => {
             <select
               value={selectedPortfolio}
               onChange={(e) => setSelectedPortfolio(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-green/50 font-medium bg-main text-primary"
+              className="w-full px-3 py-2 text-sm border border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/50 font-medium bg-main text-primary"
             >
               <option value="all" className="bg-card">All Portfolios</option>
               {portfolios.map((p) => (
@@ -435,7 +437,7 @@ const IssueDetailsTable: React.FC = () => {
             <select
               value={issueFilter}
               onChange={(e) => setIssueFilter(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-green/50 font-medium bg-main text-primary"
+              className="w-full px-3 py-2 text-sm border border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/50 font-medium bg-main text-primary"
             >
               <option value="active" className="bg-card">Active Issues (Default)</option>
               <option value="all" className="bg-card">All Issues</option>
@@ -445,7 +447,7 @@ const IssueDetailsTable: React.FC = () => {
             <select
               value={hourFilter}
               onChange={(e) => setHourFilter(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-green/50 font-medium bg-main text-primary"
+              className="w-full px-3 py-2 text-sm border border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/50 font-medium bg-main text-primary"
             >
               <option value="all" className="bg-card">All Hours</option>
               {Array.from({ length: 24 }, (_, i) => (
@@ -459,7 +461,7 @@ const IssueDetailsTable: React.FC = () => {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-green/50 bg-main text-primary"
+                className="w-full px-3 py-2 text-sm border border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/50 bg-main text-primary"
               />
             </div>
 
@@ -469,7 +471,7 @@ const IssueDetailsTable: React.FC = () => {
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-green/50 bg-main text-primary"
+                className="w-full px-3 py-2 text-sm border border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/50 bg-main text-primary"
               />
             </div>
           </div>
@@ -493,8 +495,8 @@ const IssueDetailsTable: React.FC = () => {
                     handleQuickRange(range.id as any)
                   }}
                   className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 ${quickRange === range.id
-                    ? 'bg-accent-green text-white shadow-md'
-                    : 'bg-main text-secondary hover:bg-subtle border border-subtle'
+                    ? 'bg-[#76ab3f] text-white shadow-md hover:bg-[#5f8a32]'
+                    : 'bg-main text-secondary hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-primary border border-subtle'
                     }`}
                 >
                   {range.label}
@@ -559,7 +561,7 @@ const IssueDetailsTable: React.FC = () => {
                 issues.map((issue) => (
                   <tr
                     key={issue.id}
-                    className="hover:bg-main hover:shadow-sm transition-all duration-200 cursor-pointer border-l-4 border-l-transparent hover:border-l-accent-green"
+                    className="hover:bg-main hover:shadow-sm transition-all duration-200 cursor-pointer border-l-4 border-l-transparent hover:border-l-green-500"
                   >
                     <td className="px-4 py-3 text-sm text-primary">
                       {formatDate(issue.created_at)}
@@ -641,7 +643,7 @@ const IssueDetailsTable: React.FC = () => {
                                 setEditingIssue(issue)
                                 setEditModalOpen(true)
                               }}
-                              className="text-accent-green hover:underline hover:font-semibold text-sm transition-all duration-200"
+                              className="text-green-500 hover:underline hover:font-semibold text-sm transition-all duration-200"
                             >
                               Edit
                             </button>

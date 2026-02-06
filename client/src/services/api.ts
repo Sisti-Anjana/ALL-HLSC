@@ -18,7 +18,7 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
-    
+
     // Add tenant_id query parameter for super admin if selected
     // Only add if it's a valid non-empty value (not null or empty string)
     const selectedTenantId = localStorage.getItem('selectedTenantId')
@@ -30,7 +30,7 @@ api.interceptors.request.use(
       // Add tenant_id to params
       config.params.tenant_id = selectedTenantId
     }
-    
+
     return config
   },
   (error) => {
@@ -55,17 +55,27 @@ api.interceptors.response.use(
         error.message = error.message || 'Network error. Please check your connection and try again.'
       }
     }
-    
+
     // Handle HTTP errors
     if (error.response?.status === 401) {
       const currentPath = window.location.pathname
+
+      // If the request had a tenant_id, it might be invalid (bad cache)
+      // Clear it and reload/redirect to dashboard
+      if (error.config?.params?.tenant_id) {
+        console.warn('❌ Invalid Tenant ID detected, clearing cache and reloading...')
+        localStorage.removeItem('selectedTenantId')
+        window.location.href = '/'
+        return Promise.reject(error)
+      }
+
       if (currentPath !== '/login' && currentPath !== '/admin/login') {
         localStorage.removeItem('auth_token')
         localStorage.removeItem('user')
         window.location.href = '/login'
       }
     }
-    
+
     return Promise.reject(error)
   }
 )

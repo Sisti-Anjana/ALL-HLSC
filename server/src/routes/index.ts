@@ -5,6 +5,7 @@ import issueRoutes from './issue.routes'
 import analyticsRoutes from './analytics.routes'
 import adminRoutes from './admin.routes'
 
+
 const router = Router()
 
 router.use('/auth', authRoutes)
@@ -12,6 +13,7 @@ router.use('/portfolios', portfolioRoutes)
 router.use('/issues', issueRoutes)
 router.use('/analytics', analyticsRoutes)
 router.use('/admin', adminRoutes)
+
 
 export default router
 
