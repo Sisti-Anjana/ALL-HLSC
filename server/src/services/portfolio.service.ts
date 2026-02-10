@@ -1,4 +1,5 @@
 import { supabase } from '../config/database.config'
+import { getESTHour } from '../utils/timezone.util'
 
 export const portfolioService = {
   getAll: async (tenantId: string | null) => {
@@ -118,6 +119,9 @@ export const portfolioService = {
     const sessionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}` // Generate unique session ID
 
     // Parallelize cleanup and initial check to save time
+    // Parallelize cleanup and initial check to save time
+    const currentEstHour = getESTHour()
+
     const [existingUserLocksResponse] = await Promise.all([
       // 0. PRE-CHECK: Ensure user doesn't already have an active lock system-wide
       supabase
@@ -126,13 +130,15 @@ export const portfolioService = {
         .eq('monitored_by', userEmail)
         .gt('expires_at', new Date().toISOString()),
 
-      // First, clean up expired locks for this tenant and user (Fire and forget - improve speed)
+      // Aggressive Cleanup: Remove any locks for this user that are either:
+      // 1. Expired
+      // 2. For a different hour (stale)
+      // We do this globally (removed tenant_id check) to enforce "one lock per user" strictly
       supabase
         .from('hour_reservations')
         .delete()
-        .eq('tenant_id', tenantId)
         .eq('monitored_by', userEmail)
-        .lt('expires_at', new Date().toISOString())
+        .or(`expires_at.lt.${new Date().toISOString()},issue_hour.neq.${currentEstHour}`)
     ])
 
     const { data: existingUserLocks, error: existingUserLocksError } = existingUserLocksResponse

@@ -251,6 +251,12 @@ const LocksTab: React.FC = () => {
     refetchInterval: 30000, // Auto-refresh every 30 seconds
   })
 
+  // Fetch users to map emails to names
+  const { data: users = [] } = useQuery({
+    queryKey: ['admin-users'],
+    queryFn: adminService.getUsers,
+  })
+
   const unlockMutation = useMutation({
     mutationFn: adminService.unlockPortfolio,
     onSuccess: () => {
@@ -346,6 +352,7 @@ const LocksTab: React.FC = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Portfolio</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Locked By</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hour</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reserved At</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expires At</th>
@@ -357,6 +364,14 @@ const LocksTab: React.FC = () => {
                 <tr key={lock.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {lock.portfolio?.name || `Portfolio ID: ${lock.portfolio_id || 'N/A'}`}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {(() => {
+                      const email = lock.monitored_by
+                      if (!email) return '-'
+                      const user = users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase())
+                      return user?.full_name || email
+                    })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lock.issue_hour}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

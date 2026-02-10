@@ -72,5 +72,19 @@ export const issueController = {
       res.status(400).json({ success: false, error: error.message })
     }
   },
+
+  bulkCreate: async (req: AuthRequest, res: Response) => {
+    try {
+      if (!req.tenantId) {
+        return res.status(400).json({ success: false, error: 'Please select a client first' })
+      }
+
+      const issues = await issueService.bulkCreate(req.tenantId, req.body.issues)
+      res.json({ success: true, data: issues, count: issues.length })
+    } catch (error: any) {
+      console.error('Bulk create controller error:', error)
+      res.status(400).json({ success: false, error: error.message })
+    }
+  },
 }
 

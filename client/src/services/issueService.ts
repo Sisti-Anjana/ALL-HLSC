@@ -48,5 +48,10 @@ export const issueService = {
     const response = await api.post<ApiResponse<any>>('/issues/export', { filters })
     return response.data.data
   },
+
+  bulkCreate: async (issues: any[]): Promise<any> => {
+    const response = await api.post<ApiResponse<any>>('/issues/bulk', { issues })
+    return response.data
+  },
 }
 

@@ -1,0 +1,22 @@
+[
+  {
+    "tenant_id": "efe6334f-2a03-4ace-9ff0-e384d5824edd",
+    "name": "CleanLeaf"
+  },
+  {
+    "tenant_id": "110483fd-d20f-4c6a-a259-9149d82a82d3",
+    "name": "PureSky"
+  },
+  {
+    "tenant_id": "2a155948-068d-4852-9894-1e2d7cb19ef8",
+    "name": "TSR Energy"
+  },
+  {
+    "tenant_id": "59dd1187-4f12-4e2d-b34f-6b153018d279",
+    "name": "Standard Solar"
+  },
+  {
+    "tenant_id": "20106dbc-1681-4832-85bd-5636522a877b",
+    "name": "METLEN"
+  }
+]

@@ -13,6 +13,7 @@ router.get('/:id', issueController.getById)
 router.post('/', issueController.create)
 router.put('/:id', issueController.update)
 router.delete('/:id', issueController.delete)
+router.post('/bulk', issueController.bulkCreate)
 router.post('/export', issueController.export)
 
 export default router

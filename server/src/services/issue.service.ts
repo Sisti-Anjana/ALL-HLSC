@@ -271,5 +271,62 @@ export const issueService = {
     if (error) throw new Error(`Failed to delete issue: ${error.message}`)
     return { success: true }
   },
+
+  bulkCreate: async (tenantId: string, issuesData: any[]) => {
+    if (!issuesData || !Array.isArray(issuesData) || issuesData.length === 0) {
+      return []
+    }
+
+    // Map and clean each issue
+    const mappedIssues = issuesData.map(issue => {
+      const cleaned: any = {
+        tenant_id: tenantId,
+        portfolio_id: issue.portfolio_id,
+        issue_hour: typeof issue.issue_hour === 'number' ? issue.issue_hour : parseInt(issue.issue_hour) || 0,
+        description: issue.description || 'No issue',
+        // Map case_number to notes since the database doesn't have a case_number column
+        notes: issue.case_number ? `Case #: ${issue.case_number}${issue.notes ? ' | ' + issue.notes : ''}` : (issue.notes || null),
+        site_name: issue.site_name || null,
+        severity: issue.severity ? issue.severity.toLowerCase() : 'medium',
+        status: (issue.status || 'open').toLowerCase(),
+        // Map monitored_by from array to string if needed
+        monitored_by: Array.isArray(issue.monitored_by)
+          ? issue.monitored_by[0] || ''
+          : (issue.monitored_by || ''),
+        // Ensure missed_by is an array
+        missed_by: Array.isArray(issue.missed_by) ? issue.missed_by : [],
+        // Use provided created_at or default to now
+        created_at: issue.created_at || new Date().toISOString()
+      }
+
+      // Cleanup undefined/null fields
+      Object.keys(cleaned).forEach(key => {
+        if (cleaned[key] === undefined) {
+          delete cleaned[key]
+        }
+      })
+
+      return cleaned
+    })
+
+    console.log(`Bulk creating ${mappedIssues.length} issues for tenant ${tenantId}`)
+
+    const { data, error } = await supabase
+      .from('issues')
+      .insert(mappedIssues)
+      .select('*, portfolio:portfolios(*)')
+
+    if (error) {
+      console.error('Error in bulk create:', error)
+      throw new Error(`Failed to bulk create issues: ${error.message}`)
+    }
+
+    // Map monitored_by back to array for frontend compatibility
+    return (data || []).map(issue => ({
+      ...issue,
+      id: issue.issue_id || issue.id,
+      monitored_by: issue.monitored_by ? [issue.monitored_by] : []
+    }))
+  }
 }
 

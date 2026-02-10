@@ -14,16 +14,17 @@ export interface AuthRequest extends Request {
 export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '')
-    
+
     if (!token) {
       return res.status(401).json({ success: false, error: 'No token provided' })
     }
 
     const decoded = verifyToken(token)
     req.user = decoded as any
-    
+
     next()
   } catch (error: any) {
+    console.error('❌ Auth error:', error.message)
     res.status(401).json({ success: false, error: 'Invalid or expired token' })
   }
 }

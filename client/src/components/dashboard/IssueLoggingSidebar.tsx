@@ -354,8 +354,8 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
 
   // Update all sites checked status mutation
   const updateStatusMutation = useMutation({
-    mutationFn: (data: { allSitesChecked: 'Yes' | 'No'; sitesCheckedDetails?: string }) => {
-      if (!hasIssuesAtThisHour) {
+    mutationFn: (data: { allSitesChecked: 'Yes' | 'No'; sitesCheckedDetails?: string; force?: boolean }) => {
+      if (!data.force && !hasIssuesAtThisHour) {
         throw new Error('Please log at least one issue before marking sites as checked.')
       }
 
@@ -623,7 +623,18 @@ const IssueLoggingSidebar: React.FC<IssueLoggingSidebarProps> = ({
         }
       })
 
-      createMutation.mutate(issueData)
+      createMutation.mutateAsync(issueData)
+        .then(() => {
+          // Auto-mark as checked (force=true to bypass the "has issues" check since we JUST created one)
+          // This will also trigger the auto-unlock and close the sidebar
+          updateStatusMutation.mutate({
+            allSitesChecked: 'Yes',
+            force: true
+          })
+        })
+        .catch(err => {
+          console.error("Failed to create 'No Issue' log:", err)
+        })
     }
 
     // Check lock status
