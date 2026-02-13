@@ -32,9 +32,7 @@ const IssueDetailsTable: React.FC = () => {
   const debouncedSearchQuery = useDebounce(searchQuery, 300) // Debounce search by 300ms
   const [dateFilter, setDateFilter] = useState('')
   // If portfolio param exists, use hour param or current hour; otherwise 'all'
-  const [hourFilter, setHourFilter] = useState<string>(
-    portfolioParam ? (hourParam || currentHour) : 'all'
-  )
+  const [hourFilter, setHourFilter] = useState<string>(hourParam || 'all')
   const [issueFilter, setIssueFilter] = useState<string>('active')
   // If portfolio param exists, default to that portfolio; otherwise 'all'
   const [selectedPortfolio, setSelectedPortfolio] = useState<string>(

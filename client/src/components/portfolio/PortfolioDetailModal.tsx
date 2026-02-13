@@ -396,8 +396,7 @@ const PortfolioDetailModal: React.FC<PortfolioDetailModalProps> = ({
 
   const handleViewIssues = () => {
     onClose()
-    const currentHour = getESTHour()
-    navigate(`/issues?portfolio=${portfolioId}&hour=${currentHour}`)
+    navigate(`/issues?portfolio=${portfolioId}`)
   }
 
   const handleLogNewIssue = () => {

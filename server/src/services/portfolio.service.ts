@@ -114,7 +114,8 @@ export const portfolioService = {
   lock: async (tenantId: string, portfolioId: string, userEmail: string, issueHour: number) => {
     // Locks expire exactly 1 hour after creation (not at top of next hour)
     const now = new Date()
-    const expiresAt = new Date(now.getTime() + 60 * 60 * 1000) // Exactly 1 hour from now
+    const expiresAt = new Date(now)
+    expiresAt.setHours(expiresAt.getHours() + 1, 0, 0, 0) // Start of the next hour
 
     const sessionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}` // Generate unique session ID
 
