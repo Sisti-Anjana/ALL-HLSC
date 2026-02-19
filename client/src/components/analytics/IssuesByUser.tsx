@@ -165,6 +165,14 @@ const IssuesByUser: React.FC = () => {
   const filteredIssuesForTable = useMemo(() => {
     let filtered = allIssues
 
+    // User filter from the top dropdown
+    if (filterByUser) {
+      filtered = filtered.filter((issue) => {
+        const monitoredBy = issue.monitored_by?.[0] || ''
+        return monitoredBy.toLowerCase().includes(filterByUser.toLowerCase())
+      })
+    }
+
     // Global search
     if (globalSearch) {
       const searchLower = globalSearch.toLowerCase()
@@ -245,6 +253,7 @@ const IssuesByUser: React.FC = () => {
     searchMonitoredBy,
     fromDate,
     toDate,
+    filterByUser,
   ])
 
   // Keep this for backward compatibility but use selectedUserForDisplay in UI
