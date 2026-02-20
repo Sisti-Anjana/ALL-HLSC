@@ -19,19 +19,27 @@ export const adminService = {
     return (data || []).map(user => ({ ...user, id: user.user_id }))
   },
 
+  checkUserGlobally: async (email: string) => {
+    if (!email) throw new Error('Email is required')
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('user_id, email, full_name, role')
+      .eq('email', email.toLowerCase().trim())
+      .limit(1)
+      .maybeSingle()
+
+    if (error) throw new Error(`Failed to check user globally: ${error.message}`)
+    return data
+  },
+
   createUser: async (tenantId: string, userData: any) => {
     // Validate required fields
     if (!userData.email) {
       throw new Error('Email is required')
     }
-    if (!userData.password) {
-      throw new Error('Password is required')
-    }
     if (!userData.fullName) {
       throw new Error('Full name is required')
-    }
-    if (userData.password.length < 8) {
-      throw new Error('Password must be at least 8 characters')
     }
 
     // Validate full_name - ensure it's not a password
@@ -48,7 +56,33 @@ export const adminService = {
     }
 
     const email = userData.email.toLowerCase().trim()
-    const passwordHash = await hashPassword(userData.password)
+    let passwordHash = ''
+
+    // Check if user exists globally to reuse credentials
+    const existingGlobalUser = await adminService.checkUserGlobally(email)
+
+    if (existingGlobalUser) {
+      console.log('Found existing global user, reusing credentials for:', email)
+      // Retrieve original password hash
+      const { data: originalUser, error: fetchError } = await supabase
+        .from('users')
+        .select('password_hash')
+        .eq('user_id', existingGlobalUser.user_id)
+        .single()
+
+      if (fetchError || !originalUser) {
+        throw new Error('Failed to retrieve existing user credentials')
+      }
+      passwordHash = originalUser.password_hash
+    } else {
+      if (!userData.password) {
+        throw new Error('Password is required for new users')
+      }
+      if (userData.password.length < 8) {
+        throw new Error('Password must be at least 8 characters')
+      }
+      passwordHash = await hashPassword(userData.password)
+    }
 
     const { data, error } = await supabase
       .from('users')

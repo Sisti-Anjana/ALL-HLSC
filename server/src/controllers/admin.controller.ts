@@ -234,5 +234,15 @@ export const adminController = {
       res.status(400).json({ success: false, error: error.message })
     }
   },
+
+  checkUser: async (req: AuthRequest, res: Response) => {
+    try {
+      const email = req.params.email
+      const user = await adminService.checkUserGlobally(email)
+      res.json({ success: true, data: user })
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message })
+    }
+  },
 }
 

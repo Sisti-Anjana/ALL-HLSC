@@ -24,6 +24,8 @@ const UserManagement: React.FC = () => {
     fullName: '',
     role: 'user',
   })
+  const [isExistingUser, setIsExistingUser] = useState(false)
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false)
 
   const queryClient = useQueryClient()
 
@@ -39,6 +41,7 @@ const UserManagement: React.FC = () => {
       toast.success('User created successfully')
       setShowModal(false)
       setFormData({ email: '', password: '', fullName: '', role: 'user' })
+      setIsExistingUser(false)
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || 'Failed to create user')
@@ -70,11 +73,44 @@ const UserManagement: React.FC = () => {
     },
   })
 
+  const handleEmailBlur = async () => {
+    if (editingUser) return
+    if (!formData.email) {
+      setIsExistingUser(false)
+      return
+    }
+
+    setIsCheckingEmail(true)
+    try {
+      const existingUser = await adminService.checkUserExists(formData.email)
+      if (existingUser) {
+        setIsExistingUser(true)
+        setFormData(prev => ({
+          ...prev,
+          fullName: prev.fullName || existingUser.full_name || '',
+          role: existingUser.role as any || 'user'
+        }))
+        toast.success(`User found: ${existingUser.full_name}. Password not required.`)
+      } else {
+        setIsExistingUser(false)
+      }
+    } catch (error) {
+      console.error('Error checking user email:', error)
+    } finally {
+      setIsCheckingEmail(false)
+    }
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (editingUser) {
       updateMutation.mutate({ id: editingUser.id, data: formData })
     } else {
+      // Validate password for new users only
+      if (!isExistingUser && (!formData.password || formData.password.length < 8)) {
+        toast.error('Password must be at least 8 characters')
+        return
+      }
       createMutation.mutate(formData)
     }
   }
@@ -99,6 +135,7 @@ const UserManagement: React.FC = () => {
             if (isReadOnly) return
             setEditingUser(null)
             setFormData({ email: '', password: '', fullName: '', role: 'user' })
+            setIsExistingUser(false)
             setShowModal(true)
           }}
           disabled={isReadOnly}
@@ -125,6 +162,7 @@ const UserManagement: React.FC = () => {
             onClick: () => {
               setEditingUser(null)
               setFormData({ email: '', password: '', fullName: '', role: 'user' })
+              setIsExistingUser(false)
               setShowModal(true)
             },
           }}
@@ -186,6 +224,7 @@ const UserManagement: React.FC = () => {
                         onClick={() => {
                           if (isReadOnly) return
                           setEditingUser(user)
+                          setIsExistingUser(false)
                           // If name is invalid, suggest a better name - preserve casing after first letter
                           const suggestedFullName = isInvalidName
                             ? suggestedName.charAt(0).toUpperCase() + suggestedName.slice(1)
@@ -231,6 +270,7 @@ const UserManagement: React.FC = () => {
         onClose={() => {
           setShowModal(false)
           setEditingUser(null)
+          setIsExistingUser(false)
         }}
         title={editingUser ? 'Edit User' : 'Create User'}
         size="md"
@@ -242,17 +282,27 @@ const UserManagement: React.FC = () => {
             type="email"
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            onBlur={handleEmailBlur}
             required
             disabled={!!editingUser}
+            helperText={isCheckingEmail ? 'Checking email...' : undefined}
           />
 
-          {!editingUser && (
+          {!editingUser && isExistingUser && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700 mb-4 flex items-center gap-2">
+              <span>👤</span>
+              <span>This user already exists in the system. Their current password will be used for this tenant.</span>
+            </div>
+          )}
+
+          {!editingUser && !isExistingUser && (
             <Input
               label="Password"
               type="password"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              required={!editingUser}
+              required={!editingUser && !isExistingUser}
+              helperText="Set a password for this new user"
             />
           )}
 

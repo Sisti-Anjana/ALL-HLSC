@@ -405,6 +405,7 @@ const LocksTab: React.FC = () => {
 
 const LogsTab: React.FC = () => {
   const [showModal, setShowModal] = useState(false)
+  const [showTodayOnly, setShowTodayOnly] = useState(true)
   const [formData, setFormData] = useState({
     actionType: '',
     actionDescription: '',
@@ -437,18 +438,57 @@ const LogsTab: React.FC = () => {
     )
   }
 
+  // Filter logs for today
+  const today = new Date().toLocaleDateString()
+  const todayLogs = logs?.filter(log => new Date(log.created_at).toLocaleDateString() === today) || []
+  const filteredLogs = showTodayOnly ? todayLogs : (logs || [])
+
   return (
     <div>
       <div className="flex justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Admin Activity Logs</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-gray-900">Admin Activity Logs</h2>
+            {todayLogs.length > 0 && (
+              <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                {todayLogs.length} New Today
+              </span>
+            )}
+          </div>
           <p className="text-gray-600 mt-1">View activity history and add custom log entries</p>
         </div>
-        <Button onClick={() => setShowModal(true)}>+ Add Log Entry</Button>
+        <div className="flex items-center gap-3">
+          <div className="flex bg-gray-100 p-1 rounded-lg mr-2">
+            <button
+              onClick={() => setShowTodayOnly(true)}
+              className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${showTodayOnly
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Today
+            </button>
+            <button
+              onClick={() => setShowTodayOnly(false)}
+              className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${!showTodayOnly
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              All History
+            </button>
+          </div>
+          <Button onClick={() => setShowModal(true)}>+ Add Log Entry</Button>
+        </div>
       </div>
 
-      {logs && logs.length === 0 ? (
-        <EmptyState title="No logs yet" description="Admin activity will appear here" />
+      {filteredLogs.length === 0 ? (
+        <EmptyState
+          title={showTodayOnly ? "No activity today" : "No logs yet"}
+          description={showTodayOnly ? "Switch to 'All History' to see older logs" : "Admin activity will appear here"}
+          action={showTodayOnly ? {
+            label: 'Show All History',
+            onClick: () => setShowTodayOnly(false)
+          } : undefined}
+        />
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
@@ -461,7 +501,7 @@ const LogsTab: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {logs?.map((log) => (
+              {filteredLogs.map((log) => (
                 <tr key={log.log_id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{log.admin_name}</td>
                   <td className="px-6 py-4 whitespace-nowrap">

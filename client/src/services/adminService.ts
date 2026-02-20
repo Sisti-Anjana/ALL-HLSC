@@ -68,6 +68,11 @@ export const adminService = {
     return response.data.data!
   },
 
+  checkUserExists: async (email: string): Promise<User | null> => {
+    const response = await api.get<ApiResponse<User | null>>(`/admin/users/check/${email}`)
+    return response.data.data || null
+  },
+
   updateUser: async (id: string, data: UpdateUserData): Promise<User> => {
     const response = await api.put<ApiResponse<User>>(`/admin/users/${id}`, data)
     return response.data.data!

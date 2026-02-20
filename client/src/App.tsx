@@ -18,6 +18,7 @@ import PerformanceAnalytics from './components/analytics/PerformanceAnalytics'
 import IssuesByUser from './components/analytics/IssuesByUser'
 import CoverageMatrix from './components/analytics/CoverageMatrix'
 import MyCoverageMatrix from './components/analytics/MyCoverageMatrix'
+import ChangeLogs from './components/admin/ChangeLogs'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -67,6 +68,7 @@ function App() {
                     }
                   />
                   <Route path="/admin" element={<AdminPanel />} />
+                  <Route path="/changelogs" element={<ChangeLogs />} />
                 </Route>
               </Routes>
             </Router>

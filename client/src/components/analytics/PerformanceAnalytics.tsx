@@ -24,7 +24,7 @@ import Button from '../common/Button'
 import Modal from '../common/Modal'
 import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
-import { getESTDateString } from '../../utils/timezone'
+import { getESTDateString, getESTRelativeDateString } from '../../utils/timezone'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement)
 
@@ -98,16 +98,14 @@ const PerformanceAnalytics: React.FC<PerformanceAnalyticsProps> = ({
         start = todayStr
         end = todayStr
       } else if (selectedRange === 'yesterday') {
-        const yesterday = new Date(today)
-        yesterday.setDate(yesterday.getDate() - 1)
-        const yesterdayStr = yesterday.toISOString().split('T')[0]
+        const yesterdayStr = getESTRelativeDateString(-1)
         start = yesterdayStr
         end = yesterdayStr
       } else if (selectedRange === 'week') {
-        const weekAgo = new Date(today)
-        weekAgo.setDate(today.getDate() - 7)
-        start = weekAgo.toISOString().split('T')[0]
-        end = today.toISOString().split('T')[0]
+        const todayStr = getESTDateString()
+        const weekAgoStr = getESTRelativeDateString(-7)
+        start = weekAgoStr
+        end = todayStr
       } else if (selectedRange === 'custom' && customStartDate && customEndDate) {
         start = customStartDate
         end = customEndDate

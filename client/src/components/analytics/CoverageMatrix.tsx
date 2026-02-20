@@ -22,7 +22,7 @@ import Card from '../common/Card'
 import Button from '../common/Button'
 import Modal from '../common/Modal'
 import toast from 'react-hot-toast'
-import { getESTHour, getESTDateString } from '../../utils/timezone'
+import { getESTHour, getESTDateString, formatESTDateISO } from '../../utils/timezone'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
@@ -128,7 +128,7 @@ const CoverageMatrix: React.FC = () => {
       // Use date string comparison to avoid timezone issues
       filtered = filtered.filter((issue) => {
         if (!issue.created_at) return false
-        const issueDateStr = new Date(issue.created_at).toISOString().split('T')[0]
+        const issueDateStr = formatESTDateISO(issue.created_at)
         return issueDateStr >= fromDate && issueDateStr <= toDate
       })
     }
@@ -233,7 +233,7 @@ const CoverageMatrix: React.FC = () => {
       const logHour = typeof rawHour === 'string' ? parseInt(rawHour) : Number(rawHour)
 
       // Use meta date or creation date for grouping
-      let logDate = new Date(log.created_at).toISOString().split('T')[0]
+      let logDate = formatESTDateISO(log.created_at)
       if (meta?.date) {
         logDate = meta.date.split('T')[0]
       }

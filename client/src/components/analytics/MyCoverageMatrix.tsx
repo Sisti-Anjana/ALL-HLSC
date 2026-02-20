@@ -9,7 +9,7 @@ import { User } from '../../types/user.types'
 import { useAuth } from '../../context/AuthContext'
 import Card from '../common/Card'
 import Button from '../common/Button'
-import { getESTHour, getESTDateString } from '../../utils/timezone'
+import { getESTHour, getESTDateString, getESTRelativeDateString, formatESTDateISO } from '../../utils/timezone'
 import Spinner from '../common/Spinner'
 
 interface UserHourData {
@@ -49,27 +49,23 @@ const MyCoverageMatrix: React.FC = () => {
     })
 
     const handleQuickRange = (range: 'today' | 'yesterday' | 'week' | 'month') => {
-        const today = new Date()
-        const formatDate = (date: Date) => date.toISOString().split('T')[0]
+        const todayStr = getESTDateString()
 
         if (range === 'today') {
-            setFromDate(formatDate(today))
-            setToDate(formatDate(today))
+            setFromDate(todayStr)
+            setToDate(todayStr)
         } else if (range === 'yesterday') {
-            const yesterday = new Date(today)
-            yesterday.setDate(yesterday.getDate() - 1)
-            setFromDate(formatDate(yesterday))
-            setToDate(formatDate(yesterday))
+            const yesterdayStr = getESTRelativeDateString(-1)
+            setFromDate(yesterdayStr)
+            setToDate(yesterdayStr)
         } else if (range === 'week') {
-            const weekAgo = new Date(today)
-            weekAgo.setDate(today.getDate() - 7)
-            setFromDate(formatDate(weekAgo))
-            setToDate(formatDate(today))
+            const weekAgoStr = getESTRelativeDateString(-7)
+            setFromDate(weekAgoStr)
+            setToDate(todayStr)
         } else if (range === 'month') {
-            const monthAgo = new Date(today)
-            monthAgo.setMonth(today.getMonth() - 1)
-            setFromDate(formatDate(monthAgo))
-            setToDate(formatDate(today))
+            const monthAgoStr = getESTRelativeDateString(-30)
+            setFromDate(monthAgoStr)
+            setToDate(todayStr)
         }
     }
 
@@ -107,7 +103,7 @@ const MyCoverageMatrix: React.FC = () => {
             if (log.action_type !== 'PORTFOLIO_CHECKED') return
             if ((log.admin_name || '').toLowerCase() !== userEmail) return
 
-            let checkDate = new Date(log.created_at).toISOString().split('T')[0]
+            let checkDate = formatESTDateISO(log.created_at)
             let meta = log.metadata
             if (typeof meta === 'string') {
                 try { meta = JSON.parse(meta) } catch (e) { }
@@ -152,7 +148,7 @@ const MyCoverageMatrix: React.FC = () => {
             const isCurrentUser = checkedByValue === userEmail || checkedByValue === String(currentUser.userId).toLowerCase()
             if (!isCurrentUser) return
 
-            const checkedDateStr = portfolio.all_sites_checked_date.split('T')[0]
+            const checkedDateStr = formatESTDateISO(portfolio.all_sites_checked_date)
             if (normalizedFromDate && checkedDateStr < normalizedFromDate) return
             if (normalizedToDate && checkedDateStr > normalizedToDate) return
 
@@ -235,7 +231,7 @@ const MyCoverageMatrix: React.FC = () => {
                     <Button
                         variant="secondary"
                         onClick={() => handleQuickRange('today')}
-                        className={fromDate === new Date().toISOString().split('T')[0] && toDate === new Date().toISOString().split('T')[0] ? 'bg-green-50 text-green-600 border-green-200' : ''}
+                        className={fromDate === getESTDateString() && toDate === getESTDateString() ? 'bg-green-50 text-green-600 border-green-200' : ''}
                     >
                         Today
                     </Button>
