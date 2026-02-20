@@ -9,7 +9,7 @@ import Card from '../common/Card'
 import Button from '../common/Button'
 import toast from 'react-hot-toast'
 import IssueExportButtons from '../common/IssueExportButtons'
-import { getESTDateString } from '../../utils/timezone'
+import { getESTDateString, getESTRelativeDateString, formatESTDateISO } from '../../utils/timezone'
 
 const IssuesByUser: React.FC = () => {
   const { user: currentUser } = useAuth()
@@ -50,7 +50,7 @@ const IssuesByUser: React.FC = () => {
     if (periodFilter === 'today') {
       const todayStr = getESTDateString()
       filtered = filtered.filter((issue) => {
-        const issueDateStr = new Date(issue.created_at).toISOString().split('T')[0]
+        const issueDateStr = formatESTDateISO(issue.created_at)
         return issueDateStr === todayStr
       })
     } else if (periodFilter === 'month' && selectedMonth) {
@@ -241,29 +241,16 @@ const IssuesByUser: React.FC = () => {
 
     // Date range - EST AWARE
     if (fromDate) {
-      // Treat input YYYY-MM-DD as EST, so start is 05:00 UTC (or 04:00 DST)
-      // Simple approximate fix for EST (UTC-5)
-      const start = new Date(`${fromDate}T05:00:00.000Z`)
       filtered = filtered.filter((issue) => {
-        const issueDate = new Date(issue.created_at)
-        return issueDate >= start
+        const issueDateStr = formatESTDateISO(issue.created_at)
+        return issueDateStr >= fromDate
       })
     }
 
     if (toDate) {
-      // Treat input YYYY-MM-DD as EST, so end is 04:59:59 UTC Next Day (covering full late shift)
-      // We add 1 day to toDate string, then set to 05:00:00Z minus 1ms? 
-      // Simpler: `${toDate}T23:59:59` is EST. Convert to UTC implies adding 5 hours => Next Day 04:59 UTC
-      const end = new Date(`${toDate}T23:59:59.999`) // Browser treats T-time as local? No, standard is tricky.
-      // Robust way: Create UTC date for 05:00 on NEXT day
-      const d = new Date(toDate)
-      d.setDate(d.getDate() + 1)
-      const nextDayStr = d.toISOString().split('T')[0]
-      const endT = new Date(`${nextDayStr}T04:59:59.999Z`) // 23:59 EST is roughly 04:59 UTC next day
-
       filtered = filtered.filter((issue) => {
-        const issueDate = new Date(issue.created_at)
-        return issueDate <= endT
+        const issueDateStr = formatESTDateISO(issue.created_at)
+        return issueDateStr <= toDate
       })
     }
 
@@ -308,29 +295,21 @@ const IssuesByUser: React.FC = () => {
   }
 
   const handleQuickRange = (range: 'today' | 'yesterday' | 'week' | 'month') => {
-    // Use EST Date String as the source of truth for "Today"
     const todayStr = getESTDateString()
-    const today = new Date(todayStr + 'T12:00:00') // Use noon to avoid timezone shift on day subtraction
 
     if (range === 'today') {
       setFromDate(todayStr)
       setToDate(todayStr)
     } else if (range === 'yesterday') {
-      const yesterday = new Date(today)
-      yesterday.setDate(today.getDate() - 1)
-      const yesterdayStr = yesterday.toISOString().split('T')[0]
+      const yesterdayStr = getESTRelativeDateString(-1)
       setFromDate(yesterdayStr)
       setToDate(yesterdayStr)
     } else if (range === 'week') {
-      const weekAgo = new Date(today)
-      weekAgo.setDate(today.getDate() - 7)
-      const weekAgoStr = weekAgo.toISOString().split('T')[0]
+      const weekAgoStr = getESTRelativeDateString(-7)
       setFromDate(weekAgoStr)
       setToDate(todayStr)
     } else if (range === 'month') {
-      const monthAgo = new Date(today)
-      monthAgo.setMonth(today.getMonth() - 1)
-      const monthAgoStr = monthAgo.toISOString().split('T')[0]
+      const monthAgoStr = getESTRelativeDateString(-30)
       setFromDate(monthAgoStr)
       setToDate(todayStr)
     }
@@ -649,26 +628,25 @@ const IssuesByUser: React.FC = () => {
         <div className="space-y-4">
           <h2 className="text-lg font-semibold text-gray-900">Filter & Search Issues</h2>
 
-          {/* Quick Search */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Quick Search</label>
-            <input
-              type="text"
-              value={globalSearch}
-              onChange={(e) => setGlobalSearch(e.target.value)}
-              placeholder="Type to search by name, portfolio, issue details, or case number..."
-              className="w-full px-3 py-1.5 text-sm border-2 border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            />
-          </div>
+          {/* Filters Row 1: Search and Main Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div className="md:col-span-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Quick Search</label>
+              <input
+                type="text"
+                value={globalSearch}
+                onChange={(e) => setGlobalSearch(e.target.value)}
+                placeholder="Search name, portfolio..."
+                className="w-full px-3 py-1.5 text-xs border-2 border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              />
+            </div>
 
-          {/* Filters Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Issue Filter</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Issue Filter</label>
               <select
                 value={issueFilter}
                 onChange={(e) => setIssueFilter(e.target.value as 'active' | 'all')}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="active">Active Issues (Default)</option>
                 <option value="all">All Issues</option>
@@ -676,144 +654,143 @@ const IssuesByUser: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Search By "Missed By" Name</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">"Missed By" Name</label>
               <input
                 type="text"
                 value={searchMissedBy}
                 onChange={(e) => setSearchMissedBy(e.target.value)}
-                placeholder="Type person's name who missed issues..."
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Search missed by..."
+                className="w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Search By "Monitored By" Name</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">"Monitored By" Name</label>
               <input
                 type="text"
                 value={searchMonitoredBy}
                 onChange={(e) => setSearchMonitoredBy(e.target.value)}
-                placeholder="Type person's name who monitored..."
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Search monitored by..."
+                className="w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
 
-          {/* Checkbox */}
-          <div>
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                id="missedAlertsOnly"
-                checked={showMissedAlertsOnly}
-                onChange={(e) => setShowMissedAlertsOnly(e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <span className="ml-2 text-sm text-gray-700">Show Missed Alerts Only</span>
-            </label>
-          </div>
+          {/* Row 2: Options and Buttons - Grid Cols 4 */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center py-1">
+            <div className="flex items-center py-1">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="missedAlertsOnly"
+                  checked={showMissedAlertsOnly}
+                  onChange={(e) => setShowMissedAlertsOnly(e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <span className="ml-2 text-sm text-gray-700 font-medium">Missed Alerts Only</span>
+              </label>
+            </div>
 
-          {/* Date Range Buttons */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => handleQuickRange('today')}
-              className={`px-3 py-1.5 text-sm rounded-md transition-all ${fromDate === getESTDateString() && toDate === getESTDateString()
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-            >
-              Today
-            </button>
-            <button
-              onClick={() => handleQuickRange('yesterday')}
-              className={`px-3 py-1.5 text-sm rounded-md transition-all ${fromDate && toDate && fromDate === toDate && fromDate !== getESTDateString()
-                ? 'bg-purple-100 text-purple-700'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-            >
-              Yesterday
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleQuickRange('today')}
+                className={`flex-1 px-2.5 py-1 text-xs rounded-md font-medium transition-all ${fromDate === getESTDateString() && toDate === getESTDateString()
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+              >
+                Today
+              </button>
+              <button
+                onClick={() => handleQuickRange('yesterday')}
+                className={`flex-1 px-2.5 py-1 text-xs rounded-md font-medium transition-all ${fromDate && toDate && fromDate === toDate && fromDate === getESTRelativeDateString(-1)
+                  ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+              >
+                Yesterday
+              </button>
+            </div>
+
             <button
               onClick={() => handleQuickRange('week')}
-              className={`px-3 py-1.5 text-sm rounded-md transition-all bg-gray-100 text-gray-700 hover:bg-gray-200`}
+              className="w-full px-2.5 py-1 text-xs rounded-md font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
             >
               Last 7 Days
             </button>
-            <button
-              onClick={() => handleQuickRange('month')}
-              className={`px-3 py-1.5 text-sm rounded-md transition-all bg-gray-100 text-gray-700 hover:bg-gray-200`}
-            >
-              Last 30 Days
-            </button>
+
             <button
               onClick={() => {
                 const todayStr = getESTDateString()
-                const todayDate = new Date(todayStr)
-                const firstDay = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1)
-                const firstDayStr = firstDay.toISOString().split('T')[0]
+                const [year, month] = todayStr.split('-').map(Number)
+                const firstDayStr = `${year}-${String(month).padStart(2, '0')}-01`
                 setFromDate(firstDayStr)
                 setToDate(todayStr)
               }}
-              className={`px-3 py-1.5 text-sm rounded-md transition-all bg-green-100 text-green-700 hover:bg-green-200`}
+              className="w-full px-2.5 py-1 text-xs rounded-md font-medium bg-green-100 text-green-700 hover:bg-green-200"
             >
               This Month
             </button>
           </div>
 
-          {/* Date Inputs */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">From Date</label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
+          {/* Row 3: Dates and Action Buttons - Fluid Grid for Space Optimization */}
+          <div className="grid grid-cols-1 md:grid-cols-[max-content_max-content_1fr_max-content] gap-4 items-end border-t border-gray-100 pt-4">
+            <div className="w-[110px]">
+              <label className="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase tracking-wider">From Date</label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="w-full px-2 py-0.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+              />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">To Date</label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-            </div>
-          </div>
 
-          {/* Action Buttons and Summary */}
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-2">
-              <Button variant="secondary" size="sm" onClick={handleClearFilters}>
-                Clear filters
-              </Button>
-              <Button variant="primary" size="sm" onClick={handleExportCSV} style={{ backgroundColor: '#76ab3f' }}>
-                Export to CSV
-              </Button>
+            <div className="w-[110px]">
+              <label className="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase tracking-wider">To Date</label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="w-full px-2 py-0.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+              />
             </div>
-            <p className="text-sm text-gray-600 bg-gray-100 px-3 py-1.5 rounded-md">
-              Showing {filteredIssuesForTable.length} of {allIssues.length} issues
-            </p>
+
+            <div className="flex items-center gap-2 mb-1 overflow-hidden">
+              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-none bg-gray-50 px-2 py-1.5 rounded-md border border-gray-100 whitespace-nowrap">
+                {filteredIssuesForTable.length} / {allIssues.length} issues
+              </p>
+              <button
+                onClick={handleClearFilters}
+                className="text-[9px] font-bold text-blue-500 hover:text-blue-700 uppercase tracking-widest transition-colors duration-200 whitespace-nowrap"
+              >
+                Clear Filters
+              </button>
+            </div>
+
+            <div className="flex items-center gap-1 justify-end">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleExportCSV}
+                style={{ backgroundColor: '#76ab3f' }}
+                className="px-2 text-[9px] h-6 font-bold whitespace-nowrap"
+              >
+                Export CSV
+              </Button>
+              <IssueExportButtons
+                className="!flex-row !p-0"
+                hideLabel={true}
+                compact={true}
+                filters={{
+                  ...(searchMonitoredBy && { search: searchMonitoredBy }),
+                  ...(issueFilter === 'active' && { description: '!No issue' })
+                }}
+                startDate={fromDate || undefined}
+                endDate={toDate || undefined}
+              />
+            </div>
           </div>
         </div>
-      </Card>
-
-      {/* Export Section */}
-      <Card>
-        <IssueExportButtons filters={{
-          ...(searchMonitoredBy && { search: searchMonitoredBy }),
-          ...(issueFilter === 'active' && { description: '!No issue' })
-        }} startDate={fromDate || undefined} endDate={toDate || undefined} />
       </Card>
 
       {/* Issues Table */}
@@ -908,5 +885,3 @@ const IssuesByUser: React.FC = () => {
 }
 
 export default IssuesByUser
-
-
