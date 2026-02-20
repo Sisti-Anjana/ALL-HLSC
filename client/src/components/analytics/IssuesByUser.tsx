@@ -14,7 +14,7 @@ import { getESTDateString } from '../../utils/timezone'
 const IssuesByUser: React.FC = () => {
   const { user: currentUser } = useAuth()
   const [userSearch, setUserSearch] = useState('')
-  const [periodFilter, setPeriodFilter] = useState<'all' | 'month' | 'quarter' | 'custom'>('all')
+  const [periodFilter, setPeriodFilter] = useState<'all' | 'today' | 'month' | 'quarter' | 'custom'>('today')
   const [selectedMonth, setSelectedMonth] = useState('')
   const [selectedQuarter, setSelectedQuarter] = useState('')
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString())
@@ -47,7 +47,13 @@ const IssuesByUser: React.FC = () => {
   const filteredIssuesByPeriod = useMemo(() => {
     let filtered = allIssues
 
-    if (periodFilter === 'month' && selectedMonth) {
+    if (periodFilter === 'today') {
+      const todayStr = getESTDateString()
+      filtered = filtered.filter((issue) => {
+        const issueDateStr = new Date(issue.created_at).toISOString().split('T')[0]
+        return issueDateStr === todayStr
+      })
+    } else if (periodFilter === 'month' && selectedMonth) {
       const [year, month] = selectedMonth.split('-')
       const start = new Date(parseInt(year), parseInt(month) - 1, 1)
       const end = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59, 999)
@@ -161,15 +167,33 @@ const IssuesByUser: React.FC = () => {
     )
   }, [userAnalytics, userSearch])
 
+  // Find selected user for analytics display - use filterByUser or search result
+  const selectedUserForDisplay = useMemo(() => {
+    if (filterByUser) {
+      return filteredUsers.find((u) => u.user === filterByUser) || null
+    }
+    if (userSearch.trim() && filteredUsers.length === 1) {
+      return filteredUsers[0]
+    }
+    if (userSearch.trim()) {
+      return filteredUsers.find((u) =>
+        u.displayName.toLowerCase() === userSearch.toLowerCase() ||
+        u.user.toLowerCase() === userSearch.toLowerCase()
+      ) || null
+    }
+    return null
+  }, [filterByUser, userSearch, filteredUsers])
+
   // Filter issues for table
   const filteredIssuesForTable = useMemo(() => {
     let filtered = allIssues
 
-    // User filter from the top dropdown
-    if (filterByUser) {
+    // User filter (Dropdown or Search match)
+    const activeUserEmail = selectedUserForDisplay?.user
+    if (activeUserEmail) {
       filtered = filtered.filter((issue) => {
-        const monitoredBy = issue.monitored_by?.[0] || ''
-        return monitoredBy.toLowerCase().includes(filterByUser.toLowerCase())
+        const monitoredByEmail = issue.monitored_by?.[0] || ''
+        return monitoredByEmail.toLowerCase() === activeUserEmail.toLowerCase()
       })
     }
 
@@ -254,6 +278,7 @@ const IssuesByUser: React.FC = () => {
     fromDate,
     toDate,
     filterByUser,
+    selectedUserForDisplay,
   ])
 
   // Keep this for backward compatibility but use selectedUserForDisplay in UI
@@ -344,22 +369,6 @@ const IssuesByUser: React.FC = () => {
     return `${month}/${day}/${year}, ${hours}:${minutes}`
   }
 
-  // Find selected user for analytics display - use filterByUser or search result
-  const selectedUserForDisplay = useMemo(() => {
-    if (filterByUser) {
-      return filteredUsers.find((u) => u.user === filterByUser) || null
-    }
-    if (userSearch.trim() && filteredUsers.length === 1) {
-      return filteredUsers[0]
-    }
-    if (userSearch.trim()) {
-      return filteredUsers.find((u) =>
-        u.displayName.toLowerCase() === userSearch.toLowerCase() ||
-        u.user.toLowerCase() === userSearch.toLowerCase()
-      ) || null
-    }
-    return null
-  }, [filterByUser, userSearch, filteredUsers])
 
   return (
     <div className="space-y-6">
@@ -377,15 +386,16 @@ const IssuesByUser: React.FC = () => {
         </div>
 
         <div className="px-6 pb-6 space-y-4">
-          {/* Period Filter */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Main Filters Row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Period Type</label>
+              <label className="block text-xs font-semibold text-gray-600 uppercase mb-1.5 tracking-wider">Period Type</label>
               <select
                 value={periodFilter}
                 onChange={(e) => setPeriodFilter(e.target.value as any)}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white transition-all shadow-sm"
               >
+                <option value="today">Today</option>
                 <option value="all">All Time</option>
                 <option value="month">By Month</option>
                 <option value="quarter">By Quarter</option>
@@ -394,11 +404,11 @@ const IssuesByUser: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Filter by User (Optional)</label>
+              <label className="block text-xs font-semibold text-gray-600 uppercase mb-1.5 tracking-wider">Filter by User</label>
               <select
                 value={filterByUser}
                 onChange={(e) => setFilterByUser(e.target.value)}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white transition-all shadow-sm"
               >
                 <option value="">All Users</option>
                 {filteredUsers.map((u) => (
@@ -408,92 +418,94 @@ const IssuesByUser: React.FC = () => {
                 ))}
               </select>
             </div>
-          </div>
 
-          {/* Month/Quarter/Custom Filters */}
-          {periodFilter === 'month' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Select Month</label>
-              <input
-                type="month"
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          )}
-
-          {periodFilter === 'quarter' && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Quarter</label>
-                <select
-                  value={selectedQuarter}
-                  onChange={(e) => setSelectedQuarter(e.target.value)}
-                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select</option>
-                  <option value="1">Q1</option>
-                  <option value="2">Q2</option>
-                  <option value="3">Q3</option>
-                  <option value="4">Q4</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Year</label>
+              <label className="block text-xs font-semibold text-gray-600 uppercase mb-1.5 tracking-wider">Search Users</label>
+              <div className="relative">
                 <input
-                  type="number"
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(e.target.value)}
-                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  type="text"
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  placeholder="Type name..."
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white transition-all shadow-sm pl-9"
                 />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
               </div>
             </div>
-          )}
-
-          {periodFilter === 'custom' && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
-                <input
-                  type="date"
-                  value={customStartDate}
-                  onChange={(e) => setCustomStartDate(e.target.value)}
-                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
-                <input
-                  type="date"
-                  value={customEndDate}
-                  onChange={(e) => setCustomEndDate(e.target.value)}
-                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* User Search */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1 relative">
-              <input
-                type="text"
-                value={userSearch}
-                onChange={(e) => setUserSearch(e.target.value)}
-                placeholder="Search users by name..."
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <Button
-              variant="primary"
-              size="sm"
-              className="shadow-sm"
-              style={{ backgroundColor: '#76ab3f' }}
-            >
-              {filteredUsers.length} Matching User{filteredUsers.length !== 1 ? 's' : ''}
-            </Button>
           </div>
+
+
+          {/* Month/Quarter/Custom Filters - Conditional Rows */}
+          <div className="space-y-4">
+            {periodFilter === 'month' && (
+              <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1.5 tracking-wider">Select Month</label>
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="w-full max-w-xs px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white transition-all shadow-sm"
+                />
+              </div>
+            )}
+
+            {periodFilter === 'quarter' && (
+              <div className="grid grid-cols-2 gap-4 max-w-sm animate-in fade-in slide-in-from-top-2 duration-200">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 uppercase mb-1.5 tracking-wider">Quarter</label>
+                  <select
+                    value={selectedQuarter}
+                    onChange={(e) => setSelectedQuarter(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white shadow-sm"
+                  >
+                    <option value="">Select</option>
+                    <option value="1">Q1</option>
+                    <option value="2">Q2</option>
+                    <option value="3">Q3</option>
+                    <option value="4">Q4</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 uppercase mb-1.5 tracking-wider">Year</label>
+                  <input
+                    type="number"
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white shadow-sm"
+                  />
+                </div>
+              </div>
+            )}
+
+            {periodFilter === 'custom' && (
+              <div className="grid grid-cols-2 gap-4 max-w-md animate-in fade-in slide-in-from-top-2 duration-200">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 uppercase mb-1.5 tracking-wider">Start Date</label>
+                  <input
+                    type="date"
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white shadow-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 uppercase mb-1.5 tracking-wider">End Date</label>
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white shadow-sm"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="h-px bg-gray-100 my-2"></div>
 
           {/* Empty State or User Analytics */}
           {!selectedUserForDisplay ? (
@@ -704,7 +716,7 @@ const IssuesByUser: React.FC = () => {
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => handleQuickRange('today')}
-              className={`px-3 py-1.5 text-sm rounded-md transition-all ${fromDate === new Date().toISOString().split('T')[0] && toDate === new Date().toISOString().split('T')[0]
+              className={`px-3 py-1.5 text-sm rounded-md transition-all ${fromDate === getESTDateString() && toDate === getESTDateString()
                 ? 'bg-blue-600 text-white shadow-md'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
@@ -713,7 +725,7 @@ const IssuesByUser: React.FC = () => {
             </button>
             <button
               onClick={() => handleQuickRange('yesterday')}
-              className={`px-3 py-1.5 text-sm rounded-md transition-all ${fromDate && toDate && fromDate === toDate && fromDate !== new Date().toISOString().split('T')[0]
+              className={`px-3 py-1.5 text-sm rounded-md transition-all ${fromDate && toDate && fromDate === toDate && fromDate !== getESTDateString()
                 ? 'bg-purple-100 text-purple-700'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
@@ -734,10 +746,12 @@ const IssuesByUser: React.FC = () => {
             </button>
             <button
               onClick={() => {
-                const today = new Date()
-                const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
-                setFromDate(firstDay.toISOString().split('T')[0])
-                setToDate(today.toISOString().split('T')[0])
+                const todayStr = getESTDateString()
+                const todayDate = new Date(todayStr)
+                const firstDay = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1)
+                const firstDayStr = firstDay.toISOString().split('T')[0]
+                setFromDate(firstDayStr)
+                setToDate(todayStr)
               }}
               className={`px-3 py-1.5 text-sm rounded-md transition-all bg-green-100 text-green-700 hover:bg-green-200`}
             >

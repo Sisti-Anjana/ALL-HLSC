@@ -92,47 +92,47 @@ const IssueForm: React.FC<IssueFormProps> = ({
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Case #</label>
+                <label className="block text-sm font-medium text-secondary mb-2">Case #</label>
                 <input
                     type="text"
                     value={caseNumber}
                     onChange={(e) => setCaseNumber(e.target.value)}
                     placeholder="Case number"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-subtle bg-card text-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                 />
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Issue Description</label>
+                <label className="block text-sm font-medium text-secondary mb-2">Issue Description</label>
                 <textarea
                     value={issueDescription}
                     onChange={(e) => setIssueDescription(e.target.value)}
                     placeholder={issuePresent === '' ? "Select issue present first" : issuePresent === 'no' ? "No issue" : "Describe the problem..."}
                     disabled={issuePresent === 'no'}
                     rows={4}
-                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${issuePresent === 'no' ? 'bg-gray-100 cursor-not-allowed' : ''
+                    className={`w-full px-3 py-2 border border-subtle bg-card text-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${issuePresent === 'no' ? 'opacity-50 cursor-not-allowed bg-subtle' : ''
                         }`}
                 />
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Note</label>
+                <label className="block text-sm font-medium text-secondary mb-2">Note</label>
                 <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Add additional notes here..."
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-subtle bg-card text-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                 />
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Issues Missed By (optional)</label>
+                <label className="block text-sm font-medium text-secondary mb-2">Issues Missed By (optional)</label>
                 <select
                     value={missedAlertsBy}
                     onChange={(e) => setMissedAlertsBy(e.target.value)}
                     disabled={issuePresent === 'no' || issuePresent === ''}
-                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${issuePresent === 'no' || issuePresent === '' ? 'bg-gray-100 cursor-not-allowed' : ''
+                    className={`w-full px-3 py-2 border border-subtle bg-card text-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${issuePresent === 'no' || issuePresent === '' ? 'opacity-50 cursor-not-allowed bg-subtle' : ''
                         }`}
                 >
                     <option value="">Select</option>

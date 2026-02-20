@@ -22,7 +22,7 @@ import Card from '../common/Card'
 import Button from '../common/Button'
 import Modal from '../common/Modal'
 import toast from 'react-hot-toast'
-import { getESTHour } from '../../utils/timezone'
+import { getESTHour, getESTDateString } from '../../utils/timezone'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
@@ -46,12 +46,8 @@ const CoverageMatrix: React.FC = () => {
   const [userSearch, setUserSearch] = useState('')
   const [hourFilter, setHourFilter] = useState<string>('all')
   const [issueFilter, setIssueFilter] = useState<'all' | 'active'>('all')
-  const [fromDate, setFromDate] = useState(() => {
-    return new Date().toISOString().split('T')[0]
-  })
-  const [toDate, setToDate] = useState(() => {
-    return new Date().toISOString().split('T')[0]
-  })
+  const [fromDate, setFromDate] = useState(() => getESTDateString())
+  const [toDate, setToDate] = useState(() => getESTDateString())
   const [showCharts, setShowCharts] = useState(true)
   const [selectedUser, setSelectedUser] = useState<UserMatrixData | null>(null)
   const [showDebug, setShowDebug] = useState(false)
@@ -249,8 +245,17 @@ const CoverageMatrix: React.FC = () => {
         return
       }
 
-      // Find user
       const userStr = monitoredBy
+
+      // Track the key to prevent double-counting the latest session from the portfolios table
+      // Normalize portfolioId to string for consistent keys
+      const key = `${String(portfolioId)}_${logDate}_${logHour}_${userStr}`
+
+      // Check for duplicates within logs
+      if (completionKeys.has(key)) return
+      completionKeys.add(key)
+
+      // Find user
       const foundUser = users.find(u => u.email?.toLowerCase() === userStr)
       let displayName = monitoredBy.split('@')[0]
       if (foundUser?.full_name) displayName = foundUser.full_name
@@ -258,19 +263,18 @@ const CoverageMatrix: React.FC = () => {
       const user = getOrInitUser(userStr, displayName)
       const hourData = initHour(user, logHour)
 
-      // Increment completionsCount for every log entry (cumulative)
+      // Increment completionsCount for every unique log entry
       hourData.completionsCount++
       user.totalPortfolios++
 
       const portfolio = portfolios.find(p => p.id === portfolioId)
       if (portfolio) {
-        const portfolioDetail = `${portfolio.name}${portfolio.site_range ? ` (${portfolio.site_range})` : ''} `
-        hourData.portfolios.push(portfolioDetail)
+        const portfolioDetail = `${portfolio.name}${portfolio.site_range ? ` (${portfolio.site_range})` : ''}`
+        // Only add if not already in the list for this hour (robust display check)
+        if (!hourData.portfolios.includes(portfolioDetail)) {
+          hourData.portfolios.push(portfolioDetail)
+        }
       }
-
-      // Track the key to prevent double-counting the latest session from the portfolios table
-      const key = `${portfolioId}_${logDate}_${logHour}_${userStr} `
-      completionKeys.add(key)
     })
 
     portfolios.forEach((portfolio) => {
@@ -420,15 +424,16 @@ const CoverageMatrix: React.FC = () => {
       }) */
 
       const portfolioId = portfolio.id || (portfolio as any).portfolio_id
-      const key = `${portfolioId}_${normalizedCheckedDate}_${completionHour}_${userEmail.toLowerCase()} `
+      const key = `${String(portfolioId)}_${normalizedCheckedDate}_${completionHour}_${userEmail.toLowerCase()}`
 
-      // Check if we already have this completion session from the logs to avoid double counting the latest session
+      // Check if we already have this completion session (from logs or earlier fallback)
       if (completionKeys.has(key)) {
-        /* console.log('⏭️ Fallback Skipped (In Logs):', key) */
+        /* console.log('⏭️ Duplicate Skipped:', key) */
         return
       }
 
-      /* console.log('✅ Fallback Counted:', key) */
+      /* console.log('✅ Unique Check Counted:', key) */
+      completionKeys.add(key)
 
       const user = getOrInitUser(userEmail.toLowerCase(), displayName)
       const hourData = initHour(user, completionHour)
@@ -438,11 +443,10 @@ const CoverageMatrix: React.FC = () => {
 
       // Add portfolio details
       const siteRange = portfolio.site_range ? ` (${portfolio.site_range})` : ''
-      const portfolioDetail = `${portfolio.name}${siteRange} `
-      hourData.portfolios.push(portfolioDetail)
-
-      // Mark as seen so we don't count it again if there are multiple fallback iterations (though there shouldn't be)
-      completionKeys.add(key)
+      const portfolioDetail = `${portfolio.name}${siteRange}`
+      if (!hourData.portfolios.includes(portfolioDetail)) {
+        hourData.portfolios.push(portfolioDetail)
+      }
     })
 
     // Now process issues to count issues (not portfolios) per user per hour

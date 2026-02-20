@@ -16,11 +16,10 @@ const Input: React.FC<InputProps> = ({ label, error, helperText, className = '',
         </label>
       )}
       <input
-        className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 shadow-sm hover:border-gray-400 ${
-          error
+        className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 shadow-sm bg-card text-primary placeholder:text-muted ${error
             ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-            : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-        } ${className}`}
+            : 'border-subtle focus:ring-blue-500 focus:border-blue-500 hover:border-text-muted'
+          } ${className}`}
         style={{ letterSpacing: '-0.01em', lineHeight: '1.5', fontSize: '0.9375rem' }}
         {...props}
       />

@@ -58,6 +58,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, isCollapsed, onToggl
                 </svg>
             )
         },
+        {
+            path: '/my-coverage-matrix',
+            label: 'My Coverage Matrix',
+            icon: (
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7-4h14M2 20h20a2 2 0 002-2V6a2 2 0 00-2-2H2a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+            )
+        },
     ]
 
     // Admin-only navigation items

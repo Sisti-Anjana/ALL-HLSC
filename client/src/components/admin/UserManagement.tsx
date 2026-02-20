@@ -122,7 +122,11 @@ const UserManagement: React.FC = () => {
           description="Create your first user account"
           action={{
             label: 'Add User',
-            onClick: () => setShowModal(true),
+            onClick: () => {
+              setEditingUser(null)
+              setFormData({ email: '', password: '', fullName: '', role: 'user' })
+              setShowModal(true)
+            },
           }}
         />
       ) : (

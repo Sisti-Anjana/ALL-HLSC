@@ -17,6 +17,7 @@ import AdminPanel from './components/admin/AdminPanel'
 import PerformanceAnalytics from './components/analytics/PerformanceAnalytics'
 import IssuesByUser from './components/analytics/IssuesByUser'
 import CoverageMatrix from './components/analytics/CoverageMatrix'
+import MyCoverageMatrix from './components/analytics/MyCoverageMatrix'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -47,6 +48,7 @@ function App() {
                   <Route path="/issues" element={<IssueDetailsTable />} />
                   <Route path="/issues/:id" element={<IssueDetailsTable />} />
                   <Route path="/issues-by-user" element={<IssuesByUser />} />
+                  <Route path="/my-coverage-matrix" element={<MyCoverageMatrix />} />
                   {/* Admin-only routes - only accessible to super_admin and tenant_admin */}
                   <Route
                     path="/analytics"

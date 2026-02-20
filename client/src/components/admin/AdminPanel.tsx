@@ -540,6 +540,15 @@ const ClientsTab: React.FC = () => {
       toast.success('Client created successfully!')
       setShowModal(false)
       setEditingTenant(null)
+      setFormData({
+        name: '',
+        subdomain: '',
+        contactEmail: '',
+        status: 'active',
+        adminEmail: '',
+        adminPassword: '',
+        adminName: '',
+      })
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || 'Failed to create client')
