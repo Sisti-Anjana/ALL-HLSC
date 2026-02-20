@@ -127,10 +127,10 @@ const MainLayout: React.FC = () => {
               }}
             >
               <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight whitespace-nowrap drop-shadow-sm truncate">
-                {isSuperAdmin ? (selectedTenant?.name || 'Select Client') : (user?.tenantName || 'Standard Solar')} - HLSC
+                HLSC
               </h1>
               <p className="text-xs md:text-sm text-white/90 font-medium mt-0.5 tracking-tight whitespace-nowrap truncate">
-                (High Level System Check)
+                High Level System Check
               </p>
             </div>
 

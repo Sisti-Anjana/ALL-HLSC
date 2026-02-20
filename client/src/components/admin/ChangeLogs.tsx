@@ -41,6 +41,15 @@ const ChangeLogs: React.FC = () => {
                         'Added a dedicated Change Logs page with versioning and categorized updates.',
                         'Integrated quick-access link in the User Profile menu for better transparency.'
                     ]
+                },
+                {
+                    type: 'Update',
+                    title: 'Header Branding Refinement',
+                    description: [
+                        'Simplified the application header Branding for a cleaner, unified look.',
+                        'Updated main title to "HLSC" and subheading to "High Level System Check".',
+                        'Removed client-specific name logic from the primary header area.'
+                    ]
                 }
             ]
         }
