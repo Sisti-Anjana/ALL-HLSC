@@ -57,7 +57,15 @@ const ChangeLogs: React.FC = () => {
                     description: [
                         'Added real-time summary cards to the "My Coverage Matrix" page.',
                         'Users can now see at-a-glance portfolio checks for Today, This Week, and Current Month.',
-                        'Integrated premium icons and progress-aware color coding for better performance tracking.'
+                        'Integrated a centered, premium layout with progress-aware color coding for better performance tracking.'
+                    ]
+                },
+                {
+                    type: 'Update',
+                    title: 'Portfolio Subtitles',
+                    description: [
+                        'Added portfolio subtitles to the "Issue Results" table for enhanced site identification at a glance.',
+                        'Refined table layout for improved readability and site context.'
                     ]
                 }
             ]
