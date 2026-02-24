@@ -192,6 +192,69 @@ const MyCoverageMatrix: React.FC = () => {
         return userData
     }, [adminLogs, allIssues, fromDate, toDate, portfolios, currentUser, usersLoading])
 
+    const summaryStats = useMemo(() => {
+        if (!currentUser || usersLoading) return { today: 0, yesterday: 0, week: 0, month: 0 }
+
+        const userEmail = currentUser.email.toLowerCase()
+        const todayStr = getESTDateString()
+        const yesterdayStr = getESTRelativeDateString(-1)
+        const weekAgoStr = getESTRelativeDateString(-7)
+        const monthStartStr = `${todayStr.substring(0, 7)}-01`
+
+        let today = 0
+        let yesterday = 0
+        let week = 0
+        let month = 0
+
+        const processedKeys = new Set<string>()
+
+        // Helper to process a potential completion
+        const processCompletion = (logDate: string, logUser: string, pId: string, hour: number) => {
+            if (logUser !== userEmail) return
+
+            const key = `${pId}_${logDate}_${hour}`
+            if (processedKeys.has(key)) return
+            processedKeys.add(key)
+
+            if (logDate === todayStr) today++
+            if (logDate === yesterdayStr) yesterday++
+            if (logDate >= weekAgoStr) week++
+            if (logDate >= monthStartStr) month++
+        }
+
+        // Process from logs
+        adminLogs.forEach(log => {
+            if (log.action_type !== 'PORTFOLIO_CHECKED') return
+            let checkDate = formatESTDateISO(log.created_at)
+            let meta = log.metadata
+            if (typeof meta === 'string') {
+                try { meta = JSON.parse(meta) } catch (e) { }
+            }
+            if (meta?.date) checkDate = meta.date.split('T')[0]
+            const rawHour = meta?.hour !== undefined ? meta.hour : new Date(log.created_at).getHours()
+
+            processCompletion(checkDate, (log.admin_name || '').toLowerCase(), String(log.related_portfolio_id), Number(rawHour))
+        })
+
+        // Process from portfolios (fallback)
+        portfolios.forEach(portfolio => {
+            if (portfolio.all_sites_checked !== 'Yes') return
+            if (!portfolio.all_sites_checked_by || !portfolio.all_sites_checked_date) return
+
+            const checkedByValue = String(portfolio.all_sites_checked_by).toLowerCase()
+            const isCurrentUser = checkedByValue === userEmail || checkedByValue === String(currentUser.userId).toLowerCase()
+            if (!isCurrentUser) return
+
+            const checkedDateStr = formatESTDateISO(portfolio.all_sites_checked_date)
+            const completionHour = portfolio.all_sites_checked_hour ?? 0
+            const portfolioId = portfolio.id || (portfolio as any).portfolio_id
+
+            processCompletion(checkedDateStr, userEmail, String(portfolioId), Number(completionHour))
+        })
+
+        return { today, yesterday, week, month }
+    }, [adminLogs, portfolios, currentUser, usersLoading])
+
     const getCellColorClass = (count: number) => {
         if (count === 0) return 'bg-white dark:bg-gray-800 border border-subtle text-muted'
         if (count >= 3) return 'bg-green-600 text-white font-semibold'
@@ -206,6 +269,31 @@ const MyCoverageMatrix: React.FC = () => {
             </div>
         )
     }
+
+    const StatCard = ({ label, value, total, subtext, color }: { label: string, value: number, total?: number, subtext: string, color: string }) => (
+        <Card className="flex-1 max-w-[200px] border-l-4 !p-4" style={{ borderLeftColor: color }}>
+            <div className="flex flex-col">
+                <p className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-0.5">{label}</p>
+                <div className="flex items-baseline gap-1.5">
+                    <h3 className="text-2xl font-extrabold text-primary">
+                        {value}
+                        {total !== undefined && (
+                            <span className="text-sm text-secondary font-medium ml-1">
+                                / {total}
+                            </span>
+                        )}
+                    </h3>
+                    <span className="text-[9px] font-bold text-secondary">Portfolios</span>
+                </div>
+                <p className="text-[9px] text-muted font-medium mt-1.5 flex items-center gap-1">
+                    <svg className="w-2.5 h-2.5 text-[#87bb44]" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    {subtext}
+                </p>
+            </div>
+        </Card>
+    )
 
     return (
         <div className="space-y-6">
@@ -254,6 +342,36 @@ const MyCoverageMatrix: React.FC = () => {
                         This Month
                     </Button>
                 </div>
+            </div>
+
+            {/* Summary Visualization Cards */}
+            <div className="flex justify-start gap-6">
+                <StatCard
+                    label="Today's Checks"
+                    value={summaryStats.today}
+                    total={portfolios.length}
+                    subtext="Targeting full coverage today"
+                    color="#87bb44"
+                />
+                <StatCard
+                    label="Yesterday"
+                    value={summaryStats.yesterday}
+                    total={portfolios.length}
+                    subtext="Total checks completed yesterday"
+                    color="#fbbf24"
+                />
+                <StatCard
+                    label="This Week"
+                    value={summaryStats.week}
+                    subtext="Total checks in last 7 days"
+                    color="#3b82f6"
+                />
+                <StatCard
+                    label="Current Month"
+                    value={summaryStats.month}
+                    subtext="Total checks this month"
+                    color="#ec4899"
+                />
             </div>
 
             <Card className="overflow-hidden">

@@ -50,6 +50,15 @@ const ChangeLogs: React.FC = () => {
                         'Updated main title to "HLSC" and subheading to "High Level System Check".',
                         'Removed client-specific name logic from the primary header area.'
                     ]
+                },
+                {
+                    type: 'New',
+                    title: 'Coverage Matrix Visualizations',
+                    description: [
+                        'Added real-time summary cards to the "My Coverage Matrix" page.',
+                        'Users can now see at-a-glance portfolio checks for Today, This Week, and Current Month.',
+                        'Integrated premium icons and progress-aware color coding for better performance tracking.'
+                    ]
                 }
             ]
         }
