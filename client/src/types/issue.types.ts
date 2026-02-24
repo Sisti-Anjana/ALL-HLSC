@@ -5,6 +5,7 @@ export interface Issue {
   portfolio?: {
     id: string
     name: string
+    subtitle?: string
   }
   site_name: string
   issue_hour: number

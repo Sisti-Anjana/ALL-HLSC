@@ -565,7 +565,14 @@ const IssueDetailsTable: React.FC = () => {
                       {formatDate(issue.created_at)}
                     </td>
                     <td className="px-4 py-3 text-sm text-primary">
-                      {issue.portfolio?.name || 'N/A'}
+                      <div className="flex flex-col">
+                        <span className="font-medium">{issue.portfolio?.name || 'N/A'}</span>
+                        {issue.portfolio?.subtitle && (
+                          <span className="text-xs text-secondary italic mt-0.5">
+                            {issue.portfolio.subtitle}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-primary">{issue.issue_hour}:00</td>
                     <td className="px-4 py-3">
