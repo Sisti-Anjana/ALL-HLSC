@@ -345,7 +345,7 @@ const MyCoverageMatrix: React.FC = () => {
             </div>
 
             {/* Summary Visualization Cards */}
-            <div className="flex justify-start gap-6">
+            <div className="flex justify-center gap-6">
                 <StatCard
                     label="Today's Checks"
                     value={summaryStats.today}
